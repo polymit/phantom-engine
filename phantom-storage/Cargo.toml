@@ -1,0 +1,20 @@
+[package]
+name = "phantom-storage"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+rusqlite = { version = "=0.31", features = ["bundled"] }
+sled = "*"
+cookie_store = "*"
+zstd = "*"
+sha2 = "*"
+thiserror = "1"
+tracing = "*"
+
+# BANNED CRATES — never add these under any circumstances:
+# reqwest       → uses rustls, produces detectable TLS
+# rquest        → missing JA4H controls, replaced by wreq
+# rusty_v8      → old unmaintained crate name, use v8
+# openssl-sys   → symbol conflicts with boring-sys
+# native-tls    → system TLS, detectable fingerprint

@@ -1,0 +1,26 @@
+[package]
+name    = "phantom-net"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+wreq      = { version = "=6.0.0-rc.28", features = ["prefix-symbols"] }
+wreq-util = "=3.0.0-rc.10"
+rand      = "=0.8"
+rand_distr = "=0.4"
+rusqlite  = { version = "=0.31", features = ["bundled"] }
+tokio     = { version = "1", features = ["full"] }
+http      = "1.0"
+tracing   = "0.1"
+thiserror = "1"
+
+# DEFERRED TO v0.2 — BoringSSL linker conflict with wreq's boring2
+# tokio-quiche = "=0.16.1"
+# quiche       = { version = "=0.24.6", features = ["boringssl-boring-crate"] }
+# boring       = "^4.3"
+
+# BANNED — never add these
+# reqwest     → rustls, detectable TLS
+# rquest      → missing JA4H controls
+# openssl-sys → conflicts with boring-sys
+# native-tls  → system TLS fingerprint

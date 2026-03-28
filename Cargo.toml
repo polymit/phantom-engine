@@ -1,0 +1,12 @@
+[workspace]
+resolver = "2"
+members = [
+    "phantom-net",
+    "phantom-core",
+    "phantom-js",
+    "phantom-serializer",
+    "phantom-session",
+    "phantom-storage",
+    "phantom-mcp",
+    "phantom-anti-detect"
+]

@@ -1,0 +1,20 @@
+[package]
+name = "phantom-core"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+html5ever = "0.38"
+cssparser = "*"
+taffy = "0.9"
+indextree = "*"
+selectors = "0.25"
+thiserror = "1"
+tracing = "*"
+
+# BANNED CRATES — never add these under any circumstances:
+# reqwest       → uses rustls, produces detectable TLS
+# rquest        → missing JA4H controls, replaced by wreq
+# rusty_v8      → old unmaintained crate name, use v8
+# openssl-sys   → symbol conflicts with boring-sys
+# native-tls    → system TLS, detectable fingerprint

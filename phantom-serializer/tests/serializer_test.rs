@@ -115,4 +115,30 @@ mod tests {
         assert!(first_line.contains("mode=full"));
         println!("Page header: {}", first_line);
     }
+    
+    #[test]
+    fn test_serialise_performance_detailed() {
+        use std::time::Instant;
+        let html = make_page(200);
+        let page = process_html(&html, "https://perf.test", 1280.0, 720.0).unwrap();
+        let config = SerialiserConfig {
+            url: "https://perf.test".to_string(),
+            ..Default::default()
+        };
+
+        // Warm up (first call initialises buffer pool)
+        let _ = HeadlessSerializer::serialise(&page, &config);
+
+        // Measure subsequent calls (hot path)
+        let iterations = 10;
+        let start = Instant::now();
+        for _ in 0..iterations {
+            let _ = HeadlessSerializer::serialise(&page, &config);
+        }
+        let total = start.elapsed();
+        let avg_ms = total.as_millis() as f64 / iterations as f64;
+
+        println!("Average serialisation time: {:.2}ms", avg_ms);
+        println!("Target: <5ms (goal), <10ms (minimum)");
+    }
 }

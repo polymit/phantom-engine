@@ -1889,6 +1889,7 @@ name = "phantom-serializer"
 version = "0.1.0"
 dependencies = [
  "indextree",
+ "once_cell",
  "parking_lot 0.12.5",
  "phantom-core",
  "rayon",

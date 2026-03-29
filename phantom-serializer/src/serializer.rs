@@ -11,6 +11,7 @@ use crate::zindex::resolve_zindex;
 use crate::semantic::extract_semantics;
 use crate::id_stabilizer::stabilise_ids;
 use crate::selective::{compute_relevance, should_include_in_selective};
+use crate::buffer_pool::BUFFER_POOL;
 
 #[derive(Clone)]
 pub struct SerialiserConfig {
@@ -43,8 +44,7 @@ pub struct HeadlessSerializer;
 
 impl HeadlessSerializer {
     pub fn serialise(page: &ParsedPage, config: &SerialiserConfig) -> String {
-        let node_count = page.tree.arena.count();
-        let mut buffer = String::with_capacity(node_count * 80);
+        let mut buffer = BUFFER_POOL.acquire();
 
         let viewport = ViewportBounds::new(
             config.scroll_x,
@@ -174,12 +174,14 @@ impl HeadlessSerializer {
                     relevance: if actual_mode == SerialiserMode::Selective { Some(relevance_score) } else { None },
                 };
 
-                buffer.push_str(&cct_node.to_cct_line());
+                cct_node.serialise_into(&mut buffer);
                 buffer.push('\n');
             }
         }
 
-        buffer
+        let final_string = buffer.clone();
+        BUFFER_POOL.release(buffer);
+        final_string
     }
 
     pub fn node_count_from_output(cct: &str) -> usize {

@@ -44,13 +44,13 @@ pub fn compute_visibility(
 fn process_node_visibility(
     tree: &DomTree,
     layout: &LayoutEngine,
-    viewport: &ViewportBounds,
+    _viewport: &ViewportBounds,
     node_id: NodeId,
     map: &mut VisibilityMap,
 ) {
     let children: Vec<NodeId> = node_id.children(&tree.arena).collect();
     for &child in &children {
-        process_node_visibility(tree, layout, viewport, child, map);
+        process_node_visibility(tree, layout, _viewport, child, map);
     }
 
     let dom_node = tree.get(node_id);

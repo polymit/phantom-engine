@@ -1,4 +1,5 @@
 pub mod cct_types;
+pub mod delta;
 pub mod geometry;
 pub mod id_stabilizer;
 pub mod selective;
@@ -11,6 +12,7 @@ pub use cct_types::{
     BoundsConfidence, CctAriaRole, CctDelta, CctEvents, CctNode, CctPageHeader, CctState,
     ElementType, IdConfidence, LandmarkType, SerialiserMode,
 };
+pub use delta::{DeltaEngine, RawMutation};
 pub use geometry::{extract_geometry, GeometryMap};
 pub use id_stabilizer::{stabilise_ids, StableIdMap};
 pub use selective::{compute_relevance, should_include_in_selective};

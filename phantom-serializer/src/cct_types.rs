@@ -465,6 +465,7 @@ impl CctNode {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SerialiserMode {
     Full,
     Selective,

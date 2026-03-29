@@ -4,9 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-html5ever = "0.38"
-cssparser = "*"
-taffy = "0.9"
+html5ever = "0.38.0"
+markup5ever = "0.38.0"
+cssparser = "=0.37.0"
+taffy = "=0.9.2"
 indextree = "*"
 selectors = "0.25"
 thiserror = "1"

@@ -1836,6 +1836,7 @@ dependencies = [
  "cssparser 0.37.0",
  "html5ever",
  "indextree",
+ "markup5ever",
  "selectors",
  "taffy",
  "thiserror 1.0.69",

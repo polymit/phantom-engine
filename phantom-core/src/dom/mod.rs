@@ -1,5 +1,6 @@
 pub mod node;
 pub mod sink;
+pub mod query;
 
 use indextree::{Arena, NodeId};
 pub use self::node::{AriaRole, Display, DomNode, EventListenerType, NodeData, PointerEvents, Visibility};
@@ -64,5 +65,57 @@ impl DomTree {
             }
         }
         String::new()
+    }
+
+    pub fn query_selector(&self, selector: &str) -> Option<NodeId> {
+        if let Some(root) = self.document_root {
+            self.query_selector_from(selector, root)
+        } else {
+            None
+        }
+    }
+
+    pub fn query_selector_all(&self, selector: &str) -> Vec<NodeId> {
+        if let Some(root) = self.document_root {
+            crate::dom::query::query_node_with_selectors(root, &self.arena, selector, false)
+        } else {
+            Vec::new()
+        }
+    }
+
+    pub fn query_selector_from(&self, selector: &str, context_node: NodeId) -> Option<NodeId> {
+        let results = crate::dom::query::query_node_with_selectors(context_node, &self.arena, selector, true);
+        results.into_iter().next()
+    }
+
+    pub fn get_element_by_id(&self, id: &str) -> Option<NodeId> {
+        if let Some(root) = self.document_root {
+            for descendant_id in root.descendants(&self.arena) {
+                let node = self.get(descendant_id);
+                if let NodeData::Element { attributes, .. } = &node.data {
+                    if let Some(val) = attributes.get("id") {
+                        if val == id {
+                            return Some(descendant_id);
+                        }
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    pub fn get_elements_by_tag_name(&self, tag: &str) -> Vec<NodeId> {
+        let mut results = Vec::new();
+        if let Some(root) = self.document_root {
+            for descendant_id in root.descendants(&self.arena) {
+                let node = self.get(descendant_id);
+                if let NodeData::Element { tag_name, .. } = &node.data {
+                    if tag_name.eq_ignore_ascii_case(tag) {
+                        results.push(descendant_id);
+                    }
+                }
+            }
+        }
+        results
     }
 }

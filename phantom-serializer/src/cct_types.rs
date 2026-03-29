@@ -1,5 +1,6 @@
 use phantom_core::dom::{AriaRole, Display, EventListenerType, PointerEvents, Visibility};
 use std::collections::HashMap;
+use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ElementType {
@@ -284,21 +285,18 @@ impl CctState {
         state
     }
 
-    #[allow(clippy::inherent_to_string)]
-    pub fn to_string(&self) -> String {
-        format!(
+
+}
+
+impl fmt::Display for CctState {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
             "s:{},{},{},{},{},{},{},{},{},{},{}",
-            self.disabled as u8,
-            self.checked as u8,
-            self.selected as u8,
-            self.expanded as u8,
-            self.required as u8,
-            self.loading as u8,
-            self.readonly as u8,
-            self.error as u8,
-            self.focused as u8,
-            self.busy as u8,
-            self.invalid as u8,
+            self.disabled as u8, self.checked as u8, self.selected as u8,
+            self.expanded as u8, self.required as u8, self.loading as u8,
+            self.readonly as u8, self.error as u8, self.focused as u8,
+            self.busy as u8, self.invalid as u8,
         )
     }
 }
@@ -357,20 +355,23 @@ impl CctEvents {
         evts
     }
 
-    #[allow(clippy::inherent_to_string)]
-    pub fn to_string(&self) -> String {
-        let mut res = Vec::new();
-        if self.click { res.push("c"); }
-        if self.focus { res.push("f"); }
-        if self.blur { res.push("b"); }
-        if self.input { res.push("i"); }
-        if self.submit { res.push("s"); }
-        if self.keypress { res.push("k"); }
 
-        if res.is_empty() {
-            "-".to_string()
+}
+
+impl fmt::Display for CctEvents {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut buf = String::with_capacity(12);
+        if self.click   { buf.push_str("c,"); }
+        if self.focus   { buf.push_str("f,"); }
+        if self.blur    { buf.push_str("b,"); }
+        if self.input   { buf.push_str("i,"); }
+        if self.submit  { buf.push_str("s,"); }
+        if self.keypress{ buf.push_str("k,"); }
+        if buf.is_empty() {
+            f.write_str("-")
         } else {
-            res.join(",")
+            // Trim trailing comma added above for convenience
+            f.write_str(buf.trim_end_matches(','))
         }
     }
 }
@@ -406,6 +407,8 @@ pub struct CctNode {
 }
 
 impl CctNode {
+/// Produces a single pipe-delimited CCT v0.2 node line.
+/// Format: `id|type|role|x,y,w,h|display,vis,opacity,pe|name|text|events|parent|flags|state|confidence[|r:score]`
     pub fn to_cct_line(&self) -> String {
         let t_code = self.element_type.to_cct_code();
         let r_code = self.aria_role.to_cct_code();
@@ -448,10 +451,10 @@ impl CctNode {
             self.pointer_events.to_char(),
             acc_name,
             vis_text,
-            self.events.to_string(),
+            self.events,
             self.parent_id,
             self.flags,
-            self.state.to_string()
+            self.state
         );
 
         line.push('|');
@@ -483,14 +486,14 @@ pub struct CctPageHeader {
     pub mode: SerialiserMode,
 }
 
-impl CctPageHeader {
-    #[allow(clippy::inherent_to_string)]
-    pub fn to_string(&self) -> String {
+impl fmt::Display for CctPageHeader {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let m = match self.mode {
             SerialiserMode::Full => "full",
             SerialiserMode::Selective => "selective",
         };
-        format!(
+        write!(
+            f,
             "##PAGE url={} scroll={},{} viewport={}x{} total={},{} nodes={} mode={}",
             self.url,
             self.scroll_x, self.scroll_y,
@@ -515,26 +518,23 @@ pub enum CctDelta {
     },
 }
 
-impl CctDelta {
-    #[allow(clippy::inherent_to_string)]
-    pub fn to_string(&self) -> String {
+impl fmt::Display for CctDelta {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Add(node) => format!("+ {}", node.to_cct_line()),
-            Self::Remove(id) => format!("- {}", id),
+            Self::Add(node) => write!(f, "+ {}", node.to_cct_line()),
+            Self::Remove(id) => write!(f, "- {}", id),
             Self::Update { node_id, display, bounds } => {
-                let mut parts = Vec::new();
-                parts.push(format!("~ {}", node_id));
-                if let Some(d) = display {
-                    parts.push(d.to_char().to_string());
-                } else {
-                    parts.push("-".to_string()); // Omit display change logic? Example "38|b|100,200,140,36". So ID|b|x,y,w,h
+                write!(f, "~ {}", node_id)?;
+                match display {
+                    Some(d) => write!(f, "|{}", d.to_char())?,
+                    None    => write!(f, "|-")?,
                 }
                 if let Some((x, y, w, h)) = bounds {
-                    parts.push(format!("{},{},{},{}", x, y, w, h));
+                    write!(f, "|{},{},{},{}", x, y, w, h)?;
                 }
-                parts.join("|")
+                Ok(())
             }
-            Self::Scroll { x, y } => format!("##SCROLL {},{}", x, y),
+            Self::Scroll { x, y } => write!(f, "##SCROLL {},{}", x, y),
         }
     }
 }

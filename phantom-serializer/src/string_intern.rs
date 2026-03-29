@@ -64,10 +64,10 @@ impl CctNode {
             self.pointer_events.to_char(),
             s_acc,
             s_vis,
-            self.events.to_string(),
+            self.events,
             self.parent_id,
             self.flags,
-            self.state.to_string(),
+            self.state,
             self.id_confidence.to_char()
         );
 

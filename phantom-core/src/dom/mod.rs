@@ -6,6 +6,9 @@ use indextree::{Arena, NodeId};
 pub use self::node::{AriaRole, Display, DomNode, EventListenerType, NodeData, PointerEvents, Visibility};
 pub use self::sink::DomSink;
 
+/// The live DOM tree produced by the HTML parser.
+/// Nodes are stored in an arena indexed by [`NodeId`]; the tree is navigable
+/// through indextree's parent/child/sibling relationships.
 #[derive(Debug, Clone)]
 pub struct DomTree {
     pub arena: Arena<DomNode>,

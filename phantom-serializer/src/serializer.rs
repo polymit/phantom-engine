@@ -43,6 +43,9 @@ impl Default for SerialiserConfig {
 pub struct HeadlessSerializer;
 
 impl HeadlessSerializer {
+    /// Runs the full 8-stage CCT pipeline over `page` and returns the complete
+    /// CCT v0.2 string. Acquires a pre-allocated buffer from the global pool,
+    /// then clones and releases it — the caller receives an owned `String`.
     pub fn serialise(page: &ParsedPage, config: &SerialiserConfig) -> String {
         let mut buffer = BUFFER_POOL.acquire();
 

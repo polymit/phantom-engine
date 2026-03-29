@@ -14,6 +14,11 @@ pub enum RawMutation {
     ScrollChanged { x: f32, y: f32 },
 }
 
+/// Batches raw DOM mutations and coalesces them into minimal CCT deltas.
+/// Accumulates events for `window_ms` (default 16 ms, matching one 60fps frame)
+/// before exposing them via [`DeltaEngine::coalesce`]. Implements four rules:
+/// no-op cancellation, last-attr-wins, parent-removal dominance, and
+/// rapid insert-remove cancellation.
 pub struct DeltaEngine {
     pending: VecDeque<RawMutation>,
     batch_start: Option<std::time::Instant>,

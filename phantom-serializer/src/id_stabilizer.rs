@@ -36,6 +36,10 @@ impl Default for StableIdMap {
     }
 }
 
+/// Assigns a stable, human-readable CCT ID to every node in the tree.
+/// Priority: `data-agent-id` → `data-testid` → aria-label hash → DOM id
+/// → visible-text hash → structural-path hash. Deduplicates collisions with
+/// a suffix counter. Returns a [`StableIdMap`] covering the full arena.
 pub fn stabilise_ids(
     tree: &DomTree,
     _visible_nodes: &VisibilityMap,

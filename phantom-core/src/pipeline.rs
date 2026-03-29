@@ -18,6 +18,9 @@ pub struct ParsedPage {
     pub url: String,
 }
 
+/// Parses `html` into a DOM tree, applies CSS cascade, computes layout, and
+/// returns a [`ParsedPage`] ready for CCT serialisation. Returns an error if
+/// the layout pass fails.
 pub fn process_html(html: &str, url: &str, viewport_width: f32, viewport_height: f32) -> Result<ParsedPage, CoreError> {
     let mut tree = crate::parser::parse_html(html);
     

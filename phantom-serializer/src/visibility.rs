@@ -27,6 +27,10 @@ impl Default for VisibilityMap {
     }
 }
 
+/// Walks the DOM tree and builds a [`VisibilityMap`] flagging each node as
+/// visible or hidden. Hides a node if `display:none`, `visibility:hidden`,
+/// `opacity:0`, or its bounds are negative. Hidden ancestors propagate
+/// invisibility to all descendants.
 pub fn compute_visibility(
     tree: &DomTree,
     layout: &LayoutEngine,

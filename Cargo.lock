@@ -1893,6 +1893,7 @@ dependencies = [
  "parking_lot 0.12.5",
  "phantom-core",
  "rayon",
+ "rustc-hash 1.1.0",
  "serde",
  "thiserror 1.0.69",
  "tracing",

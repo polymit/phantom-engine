@@ -406,65 +406,6 @@ pub struct CctNode {
     pub relevance: Option<f32>,
 }
 
-impl CctNode {
-/// Produces a single pipe-delimited CCT v0.2 node line.
-/// Format: `id|type|role|x,y,w,h|display,vis,opacity,pe|name|text|events|parent|flags|state|confidence[|r:score]`
-    pub fn to_cct_line(&self) -> String {
-        let t_code = self.element_type.to_cct_code();
-        let r_code = self.aria_role.to_cct_code();
-        
-        let mut acc_name = self.accessible_name.as_str();
-        if acc_name.is_empty() {
-            acc_name = "-";
-        } else if acc_name.chars().count() > 100 {
-            if let Some((idx, _)) = acc_name.char_indices().nth(100) {
-                acc_name = &acc_name[..idx];
-            }
-        }
-        
-        let mut vis_text = self.visible_text.as_str();
-        if vis_text.is_empty() {
-            vis_text = "-";
-        } else if vis_text.chars().count() > 100 {
-            if let Some((idx, _)) = vis_text.char_indices().nth(100) {
-                vis_text = &vis_text[..idx];
-            }
-        }
-
-        let b_unrel = match self.bounds_confidence {
-            BoundsConfidence::Reliable => "",
-            BoundsConfidence::Unreliable => "~",
-        };
-
-        let mut line = format!(
-            "{}|{}|{}|{},{},{},{}{}|{},{},{:.1},{}|{}|{}|{}|{}|{}|{}",
-            self.node_id,
-            t_code,
-            r_code,
-            self.x, self.y, self.w, self.h, b_unrel,
-            self.display.to_char(),
-            self.visibility.to_char(),
-            self.opacity,
-            self.pointer_events.to_char(),
-            acc_name,
-            vis_text,
-            self.events,
-            self.parent_id,
-            self.flags,
-            self.state
-        );
-
-        line.push('|');
-        line.push(self.id_confidence.to_char());
-
-        if let Some(r) = self.relevance {
-            line.push_str(&format!("|r:{}", r));
-        }
-
-        line
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SerialiserMode {
     Full,
@@ -502,7 +443,7 @@ impl fmt::Display for CctPageHeader {
 }
 
 pub enum CctDelta {
-    Add(CctNode),
+    Add(indextree::NodeId),
     Remove(String),
     Update {
         node_id: String,
@@ -513,27 +454,6 @@ pub enum CctDelta {
         x: f32,
         y: f32,
     },
-}
-
-impl fmt::Display for CctDelta {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Add(node) => write!(f, "+ {}", node.to_cct_line()),
-            Self::Remove(id) => write!(f, "- {}", id),
-            Self::Update { node_id, display, bounds } => {
-                write!(f, "~ {}", node_id)?;
-                match display {
-                    Some(d) => write!(f, "|{}", d.to_char())?,
-                    None    => write!(f, "|-")?,
-                }
-                if let Some((x, y, w, h)) = bounds {
-                    write!(f, "|{},{},{},{}", x, y, w, h)?;
-                }
-                Ok(())
-            }
-            Self::Scroll { x, y } => write!(f, "##SCROLL {},{}", x, y),
-        }
-    }
 }
 
 pub enum LandmarkType {

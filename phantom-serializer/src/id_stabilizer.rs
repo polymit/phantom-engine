@@ -1,6 +1,5 @@
 use std::collections::{HashMap, HashSet};
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
+use std::hash::{BuildHasher, Hash, Hasher};
 use indextree::NodeId;
 use phantom_core::dom::{DomTree, NodeData};
 use crate::cct_types::{CctAriaRole, IdConfidence};
@@ -78,7 +77,7 @@ fn process_node_ids(
             }
             // Priority 3
             else if let Some(label) = attributes.get("aria-label").or(attributes.get("alt")) {
-                let mut hasher = DefaultHasher::new();
+                let mut hasher = rustc_hash::FxHasher::default();
                 label.hash(&mut hasher);
                 role_code.hash(&mut hasher);
                 (format!("n_{:x}", hasher.finish()), IdConfidence::High)
@@ -90,21 +89,23 @@ fn process_node_ids(
             else {
                 let text = tree.get_text_content(node_id);
                 if !text.is_empty() {
-                    let mut hasher = DefaultHasher::new();
+                    let mut hasher = rustc_hash::FxHasher::default();
                     text.hash(&mut hasher);
                     role_code.hash(&mut hasher);
                     (format!("n_{:x}", hasher.finish()), IdConfidence::Medium)
                 }
                 // Priority 6: structural path hash
                 else {
-                    let mut hasher = DefaultHasher::new();
+                    let mut hasher = rustc_hash::FxHasher::default();
                     path.hash(&mut hasher);
                     (format!("n_{:x}", hasher.finish()), IdConfidence::Low)
                 }
             }
         }
         NodeData::Text { content } => {
-            let mut hasher = DefaultHasher::new();
+            let mut hasher = rustc_hash::FxHashSet::<u8>::default()
+                .hasher()
+                .build_hasher();
             path.hash(&mut hasher);
             content.hash(&mut hasher);
             (format!("n_{:x}", hasher.finish()), IdConfidence::Low)

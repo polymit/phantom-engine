@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use indextree::NodeId;
-use phantom_core::dom::{DomTree, NodeData};
+use phantom_core::dom::{Display, DomTree, NodeData, Visibility};
+use phantom_core::layout::bounds::ViewportBounds;
 use crate::geometry::GeometryMap;
 
 pub struct ZIndexMap {
@@ -23,11 +24,22 @@ impl Default for ZIndexMap {
     }
 }
 
+fn intersection_area(a: &ViewportBounds, b: &ViewportBounds) -> f32 {
+    let x_overlap = (a.x + a.width).min(b.x + b.width) - a.x.max(b.x);
+    let y_overlap = (a.y + a.height).min(b.y + b.height) - a.y.max(b.y);
+    if x_overlap <= 0.0 || y_overlap <= 0.0 {
+        0.0
+    } else {
+        x_overlap * y_overlap
+    }
+}
+
 pub fn resolve_zindex(
     tree: &DomTree,
     geometry: &GeometryMap,
 ) -> ZIndexMap {
     let mut map = ZIndexMap::new();
+    const MIN_OCCLUSION_AREA: f32 = 100.0;
 
     if let Some(root) = tree.document_root {
         let mut elements_with_bounds = Vec::new();
@@ -38,20 +50,36 @@ pub fn resolve_zindex(
             if matches!(dom_node.data, NodeData::Element { .. }) {
                 if let Some(bounds) = geometry.get(node_id) {
                     let z = dom_node.z_index.unwrap_or(0);
-                    elements_with_bounds.push((node_id, z, bounds.clone()));
+                    let has_explicit_z = dom_node.z_index.is_some();
+                    let can_occlude = dom_node.computed_display != Display::None
+                        && dom_node.computed_visibility != Visibility::Hidden
+                        && dom_node.computed_opacity > 0.0;
+                    elements_with_bounds.push((node_id, z, has_explicit_z, can_occlude, bounds.clone()));
                 }
             }
         }
         
-        for &(node_id, node_z, ref bounds) in &elements_with_bounds {
+        for &(node_id, node_z, node_explicit_z, _, ref bounds) in &elements_with_bounds {
             let mut is_occluded = false;
             
             // For Phase 1, any element sharing the viewport with a strictly higher Z-index
             // is considered to occlude it if bounding boxes intersect.
             // TODO: fully conform to CSS stacking context algorithms
-            for &(other_id, other_z, ref other_bounds) in &elements_with_bounds {
+            for &(other_id, other_z, other_explicit_z, other_can_occlude, ref other_bounds) in &elements_with_bounds {
                 if other_id == node_id { continue; }
-                if other_z > node_z && bounds.intersects(other_bounds) {
+                if !node_explicit_z || !other_explicit_z {
+                    continue;
+                }
+                if !other_can_occlude {
+                    continue;
+                }
+                if other_z <= node_z {
+                    continue;
+                }
+                if intersection_area(bounds, other_bounds) < MIN_OCCLUSION_AREA {
+                    continue;
+                }
+                if bounds.intersects(other_bounds) {
                     is_occluded = true;
                     break;
                 }

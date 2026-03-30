@@ -10,17 +10,6 @@ pub enum Position {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum CssValue {
-    Keyword(String),
-    Number(f32),
-    Length(f32),
-    Percentage(f32),
-    None,
-    Inherit,
-    Initial,
-}
-
-#[derive(Debug, Clone, PartialEq)]
 pub struct ComputedStyle {
     pub display: Display,
     pub visibility: Visibility,

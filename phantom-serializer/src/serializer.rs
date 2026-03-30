@@ -68,6 +68,8 @@ impl HeadlessSerializer {
                 }
             }
         }
+        let visible_set: std::collections::HashSet<indextree::NodeId> =
+            visible_ids.iter().copied().collect();
 
         let mut actual_mode = config.mode.clone();
         if visible_ids.len() > 500 && actual_mode == SerialiserMode::Full {
@@ -97,7 +99,7 @@ impl HeadlessSerializer {
 
         if let Some(root) = page.tree.document_root {
             for node_id in root.descendants(&page.tree.arena) {
-                if !visible_ids.contains(&node_id) {
+                if !visible_set.contains(&node_id) {
                     continue;
                 }
                 

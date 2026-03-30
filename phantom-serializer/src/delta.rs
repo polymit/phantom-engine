@@ -1,9 +1,7 @@
 use std::collections::{VecDeque, HashMap, HashSet};
+use std::time::Instant;
 use indextree::NodeId;
-use crate::cct_types::{
-    CctDelta, CctNode, ElementType, CctAriaRole, CctDisplay, CctVisibility, 
-    CctPointerEvents, BoundsConfidence, CctEvents, CctState, IdConfidence
-};
+use crate::cct_types::CctDelta;
 
 #[derive(Debug, Clone)]
 pub enum RawMutation {
@@ -15,13 +13,12 @@ pub enum RawMutation {
 }
 
 /// Batches raw DOM mutations and coalesces them into minimal CCT deltas.
-/// Accumulates events for `window_ms` (default 16 ms, matching one 60fps frame)
-/// before exposing them via [`DeltaEngine::coalesce`]. Implements four rules:
+/// Implements four rules:
 /// no-op cancellation, last-attr-wins, parent-removal dominance, and
 /// rapid insert-remove cancellation.
 pub struct DeltaEngine {
     pending: VecDeque<RawMutation>,
-    batch_start: Option<std::time::Instant>,
+    batch_start: Option<Instant>,
     window_ms: u64,
 }
 
@@ -36,23 +33,20 @@ impl DeltaEngine {
 
     pub fn push(&mut self, mutation: RawMutation) {
         if self.pending.is_empty() {
-            self.batch_start = Some(std::time::Instant::now());
+            self.batch_start = Some(Instant::now());
         }
         self.pending.push_back(mutation);
     }
 
-    pub fn is_ready(&self) -> bool {
+    pub fn coalesce(&mut self) -> Vec<CctDelta> {
         if self.pending.is_empty() {
-            return false;
+            return Vec::new();
         }
         if let Some(start) = self.batch_start {
-            start.elapsed().as_millis() as u64 >= self.window_ms
-        } else {
-            false
+            if (start.elapsed().as_millis() as u64) < self.window_ms {
+                return Vec::new();
+            }
         }
-    }
-
-    pub fn coalesce(&mut self) -> Vec<CctDelta> {
         let mutations: Vec<RawMutation> = self.pending.drain(..).collect();
         self.batch_start = None;
         apply_coalescing(mutations)
@@ -125,26 +119,7 @@ fn apply_coalescing(mutations: Vec<RawMutation>) -> Vec<CctDelta> {
 
     // Process Inserts
     for id in inserted {
-        let dummy = CctNode {
-            node_id: format!("n_{}", id),
-            element_type: ElementType::Div,
-            aria_role: CctAriaRole::None,
-            x: 0.0, y: 0.0, w: 0.0, h: 0.0,
-            bounds_confidence: BoundsConfidence::Reliable,
-            display: CctDisplay::B,
-            visibility: CctVisibility::V,
-            opacity: 1.0,
-            pointer_events: CctPointerEvents::A,
-            accessible_name: "-".to_string(),
-            visible_text: text_map.remove(&id).unwrap_or_else(|| "-".to_string()),
-            events: CctEvents::empty(),
-            parent_id: "root".to_string(),
-            flags: 0,
-            state: CctState::empty(),
-            id_confidence: IdConfidence::Low,
-            relevance: None,
-        };
-        final_muts.push(CctDelta::Add(dummy));
+        final_muts.push(CctDelta::Add(id));
     }
 
     // Process Updates

@@ -20,10 +20,6 @@ impl ViewportBounds {
             && self.y + self.height > other.y
     }
 
-    pub fn contains_point(&self, px: f32, py: f32) -> bool {
-        px >= self.x && px <= self.x + self.width && py >= self.y && py <= self.y + self.height
-    }
-
     pub fn is_empty(&self) -> bool {
         self.width == 0.0 || self.height == 0.0
     }

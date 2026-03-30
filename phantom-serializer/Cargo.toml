@@ -12,3 +12,4 @@ thiserror = "1"
 serde = { version = "1", features = ["derive"] }
 indextree = "4"
 once_cell = "1.21.4"
+rustc-hash = "1"

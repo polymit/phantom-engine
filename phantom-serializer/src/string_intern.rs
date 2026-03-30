@@ -1,29 +1,5 @@
-use crate::cct_types::{CctNode, BoundsConfidence};
-use std::fmt::Write;
-
-pub const CCT_BTN:  &str = "btn";
-pub const CCT_INPT: &str = "inpt";
-pub const CCT_DIV:  &str = "div";
-pub const CCT_LNK:  &str = "lnk";
-pub const CCT_FRM:  &str = "frm";
-pub const CCT_SEL:  &str = "sel";
-pub const CCT_TXT:  &str = "txt";
-pub const CCT_CANV: &str = "canv";
-pub const CCT_SVG:  &str = "svg";
-pub const CCT_NAV:  &str = "nav";
-pub const CCT_MAIN: &str = "main";
-pub const CCT_HDR:  &str = "hdr";
-pub const CCT_FTR:  &str = "ftr";
-pub const CCT_IMG:  &str = "img";
-pub const CCT_SPAN: &str = "span";
-
-pub const PIPE: char = '|';
-
-pub const DISP_B: char = 'b';
-pub const DISP_N: char = 'n';
-pub const DISP_I: char = 'i';
-pub const DISP_F: char = 'f';
-pub const DISP_G: char = 'g';
+use crate::cct_types::{BoundsConfidence, CctDelta, CctNode};
+use std::fmt::{self, Write};
 
 impl CctNode {
     pub fn serialise_into(&self, buf: &mut String) {
@@ -73,6 +49,27 @@ impl CctNode {
 
         if let Some(r) = self.relevance {
             let _ = write!(buf, "|r:{}", r);
+        }
+    }
+}
+
+impl fmt::Display for CctDelta {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Add(node_id) => write!(f, "+ {}", node_id),
+            Self::Remove(id) => write!(f, "- {}", id),
+            Self::Update { node_id, display, bounds } => {
+                write!(f, "~ {}", node_id)?;
+                match display {
+                    Some(d) => write!(f, "|{}", d.to_char())?,
+                    None => write!(f, "|-")?,
+                }
+                if let Some((x, y, w, h)) = bounds {
+                    write!(f, "|{},{},{},{}", x, y, w, h)?;
+                }
+                Ok(())
+            }
+            Self::Scroll { x, y } => write!(f, "##SCROLL {},{}", x, y),
         }
     }
 }

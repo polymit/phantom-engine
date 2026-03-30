@@ -6,7 +6,6 @@ use html5ever::tendril::StrTendril;
 use html5ever::tree_builder::{ElementFlags, NodeOrText, QuirksMode, TreeSink};
 use markup5ever::{Attribute, ExpandedName, QualName};
 
-use crate::css::CssEngine;
 use crate::dom::node::{AriaRole, DomNode, NodeData};
 use crate::dom::DomTree;
 
@@ -79,7 +78,6 @@ impl TreeSink for DomSink {
         let mut attributes = HashMap::new();
         let mut aria_role = None;
         let mut aria_label = None;
-        let mut computed_style = crate::css::properties::ComputedStyle::default();
 
         for attr in attrs {
             let key = attr.name.local.to_string();
@@ -104,8 +102,6 @@ impl TreeSink for DomSink {
                 };
             } else if key == "aria-label" {
                 aria_label = Some(val.clone());
-            } else if key == "style" {
-                computed_style = CssEngine::parse_inline_style(&val);
             }
 
             attributes.insert(key, val);
@@ -119,11 +115,6 @@ impl TreeSink for DomSink {
         let mut dom_node = DomNode::new(node_data);
         dom_node.aria_role = aria_role;
         dom_node.aria_label = aria_label;
-        dom_node.computed_display = computed_style.display;
-        dom_node.computed_visibility = computed_style.visibility;
-        dom_node.computed_opacity = computed_style.opacity;
-        dom_node.computed_pointer_events = computed_style.pointer_events;
-        dom_node.z_index = computed_style.z_index;
 
         let node_id = self.tree.borrow_mut().arena.new_node(dom_node);
         self.names.borrow_mut().insert(node_id, name);

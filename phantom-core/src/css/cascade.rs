@@ -35,6 +35,9 @@ impl CssEngine {
                         current_val.push(' ');
                     }
                 }
+                Token::Delim('-') if !in_value => {
+                    current_prop.push('-');
+                }
                 t => {
                     if in_value {
                         current_val.push_str(&t.to_css_string());

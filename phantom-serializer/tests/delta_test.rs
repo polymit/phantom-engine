@@ -20,27 +20,9 @@ mod tests {
     #[test]
     fn test_add_delta_format() {
         use phantom_serializer::cct_types::CctDelta;
-        use phantom_serializer::cct_types::*;
-        let node = CctNode {
-            node_id: "n_50".to_string(),
-            element_type: ElementType::Btn,
-            aria_role: CctAriaRole::Btn,
-            x: 10.0, y: 10.0, w: 100.0, h: 30.0,
-            bounds_confidence: BoundsConfidence::Reliable,
-            display: CctDisplay::B,
-            visibility: CctVisibility::V,
-            opacity: 1.0,
-            pointer_events: CctPointerEvents::A,
-            accessible_name: "-".to_string(),
-            visible_text: "-".to_string(),
-            events: CctEvents::empty(),
-            parent_id: "n_root".to_string(),
-            flags: 0,
-            state: CctState::empty(),
-            id_confidence: IdConfidence::High,
-            relevance: None,
-        };
-        let delta = CctDelta::Add(node);
-        assert!(delta.to_string().starts_with("+ n_50|btn|btn|"));
+        let mut arena = indextree::Arena::<()>::new();
+        let node_id = arena.new_node(());
+        let delta = CctDelta::Add(node_id);
+        assert_eq!(delta.to_string(), format!("+ {}", node_id));
     }
 }

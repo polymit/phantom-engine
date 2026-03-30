@@ -62,13 +62,12 @@ fn process_node_geometry(
     bounds.y += parent_offset_y;
 
     if matches!(dom_node.data, NodeData::Element { .. }) {
-        if !is_in_viewport(&bounds, viewport) {
-            // Early subtree rejection for off-screen content
-            map.inner.insert(node_id, ViewportBounds::zero());
-            return;
-        }
-
-        map.inner.insert(node_id, bounds.clone());
+        let node_bounds = if is_in_viewport(&bounds, viewport) {
+            bounds.clone()
+        } else {
+            ViewportBounds::zero()
+        };
+        map.inner.insert(node_id, node_bounds);
 
         for child in node_id.children(&tree.arena) {
             process_node_geometry(tree, layout, viewport, child, bounds.x, bounds.y, map);

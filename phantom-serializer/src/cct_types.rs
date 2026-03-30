@@ -444,9 +444,9 @@ impl fmt::Display for CctPageHeader {
 
 pub enum CctDelta {
     Add(indextree::NodeId),
-    Remove(String),
+    Remove(indextree::NodeId),
     Update {
-        node_id: String,
+        node_id: indextree::NodeId,
         display: Option<CctDisplay>,
         bounds: Option<(f32, f32, f32, f32)>,
     },

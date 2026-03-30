@@ -57,7 +57,7 @@ impl fmt::Display for CctDelta {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Add(node_id) => write!(f, "+ {}", node_id),
-            Self::Remove(id) => write!(f, "- {}", id),
+            Self::Remove(node_id) => write!(f, "- {}", node_id),
             Self::Update { node_id, display, bounds } => {
                 write!(f, "~ {}", node_id)?;
                 match display {

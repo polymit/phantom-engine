@@ -112,13 +112,17 @@ fn apply_coalescing(mutations: Vec<RawMutation>) -> Vec<CctDelta> {
         }
     }
 
-    // Process Removes
-    for id in removed {
-        final_muts.push(CctDelta::Remove(format!("n_{}", id)));
+    // Process Removes (deterministic order)
+    let mut removed_ids: Vec<_> = removed.into_iter().collect();
+    removed_ids.sort_by_key(|id| id.to_string());
+    for id in removed_ids {
+        final_muts.push(CctDelta::Remove(id));
     }
 
-    // Process Inserts
-    for id in inserted {
+    // Process Inserts (deterministic order)
+    let mut inserted_ids: Vec<_> = inserted.into_iter().collect();
+    inserted_ids.sort_by_key(|id| id.to_string());
+    for id in inserted_ids {
         final_muts.push(CctDelta::Add(id));
     }
 
@@ -131,9 +135,11 @@ fn apply_coalescing(mutations: Vec<RawMutation>) -> Vec<CctDelta> {
         updated_nodes.insert(node_id);
     }
     
-    for id in updated_nodes {
+    let mut updated_ids: Vec<_> = updated_nodes.into_iter().collect();
+    updated_ids.sort_by_key(|id| id.to_string());
+    for id in updated_ids {
         final_muts.push(CctDelta::Update {
-            node_id: format!("n_{}", id),
+            node_id: id,
             display: None,
             bounds: None,
         });

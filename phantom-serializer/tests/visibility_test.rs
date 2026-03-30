@@ -41,13 +41,15 @@ mod tests {
     fn test_opacity_zero_invisible() {
         let page = process_html(
             r#"<html><body style="width:1280px; height:720px;">
-                <button style="opacity:0; width: 50px; height: 30px;">Hidden button</button>
+                <button id="hidden-btn" style="opacity:0; width: 50px; height: 30px;">Hidden button</button>
             </body></html>"#,
             "https://test.com", 1280.0, 720.0
         ).unwrap();
 
         let viewport = ViewportBounds::new(0.0, 0.0, 1280.0, 720.0);
-        let _vis_map = compute_visibility(&page.tree, &page.layout, &viewport);
-        // Does not panic — smoke test
+        let vis_map = compute_visibility(&page.tree, &page.layout, &viewport);
+        
+        let hidden_btn = page.tree.get_element_by_id("hidden-btn").unwrap();
+        assert!(!vis_map.is_visible(hidden_btn), "opacity: 0 element must be invisible");
     }
 }

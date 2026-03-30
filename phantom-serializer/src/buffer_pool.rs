@@ -19,8 +19,7 @@ impl BufferPool {
 
     pub fn acquire(&self) -> String {
         let mut p = self.pool.lock();
-        if let Some(mut buf) = p.pop() {
-            buf.clear();
+        if let Some(buf) = p.pop() {
             buf
         } else {
             String::with_capacity(self.default_capacity)

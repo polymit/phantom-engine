@@ -413,26 +413,23 @@ impl CctNode {
         let t_code = self.element_type.to_cct_code();
         let r_code = self.aria_role.to_cct_code();
         
-        // Truncate to 100 chars
-        let acc_name = if self.accessible_name.is_empty() {
-            "-".to_string()
-        } else {
-            let mut s = self.accessible_name.clone();
-            if s.chars().count() > 100 {
-                s = s.chars().take(100).collect();
+        let mut acc_name = self.accessible_name.as_str();
+        if acc_name.is_empty() {
+            acc_name = "-";
+        } else if acc_name.chars().count() > 100 {
+            if let Some((idx, _)) = acc_name.char_indices().nth(100) {
+                acc_name = &acc_name[..idx];
             }
-            s
-        };
+        }
         
-        let vis_text = if self.visible_text.is_empty() {
-            "-".to_string()
-        } else {
-            let mut s = self.visible_text.clone();
-            if s.chars().count() > 100 {
-                s = s.chars().take(100).collect();
+        let mut vis_text = self.visible_text.as_str();
+        if vis_text.is_empty() {
+            vis_text = "-";
+        } else if vis_text.chars().count() > 100 {
+            if let Some((idx, _)) = vis_text.char_indices().nth(100) {
+                vis_text = &vis_text[..idx];
             }
-            s
-        };
+        }
 
         let b_unrel = match self.bounds_confidence {
             BoundsConfidence::Reliable => "",

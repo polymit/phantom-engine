@@ -39,7 +39,7 @@ pub fn compute_visibility(
     let mut map = VisibilityMap::new();
 
     if let Some(root) = tree.document_root {
-        process_node_visibility(tree, layout, viewport, root, true, &mut map);
+        process_node_visibility(tree, layout, viewport, root, true, (0.0, 0.0), &mut map);
     }
 
     map
@@ -51,38 +51,42 @@ fn process_node_visibility(
     viewport: &ViewportBounds,
     node_id: NodeId,
     parent_visible: bool,
+    parent_offset: (f32, f32),
     map: &mut VisibilityMap,
 ) {
     if !parent_visible {
         map.set(node_id, false);
         for child in node_id.children(&tree.arena) {
-            process_node_visibility(tree, layout, viewport, child, false, map);
+            process_node_visibility(tree, layout, viewport, child, false, parent_offset, map);
         }
         return;
     }
 
     let dom_node = tree.get(node_id);
-    let visible = match &dom_node.data {
-        NodeData::Document => true,
-        NodeData::Comment { .. } => false,
+    let (visible, next_offset) = match &dom_node.data {
+        NodeData::Document => (true, parent_offset),
+        NodeData::Comment { .. } => (false, parent_offset),
         NodeData::Text { content } => {
-            !content.trim().is_empty()
+            (!content.trim().is_empty(), parent_offset)
         }
         NodeData::Element { .. } => {
-            let bounds = layout.get_bounds(node_id);
+            let mut bounds = layout.get_bounds(node_id);
+            bounds.x += parent_offset.0;
+            bounds.y += parent_offset.1;
+
             let c1 = dom_node.computed_display != Display::None;
             let c2 = dom_node.computed_visibility != Visibility::Hidden;
             let c3 = dom_node.computed_opacity > 0.0;
             let c4 = bounds.width > 0.0;
             let c5 = bounds.height > 0.0;
             let c6 = bounds.intersects(viewport);
-            c1 && c2 && c3 && c4 && c5 && c6
+            (c1 && c2 && c3 && c4 && c5 && c6, (bounds.x, bounds.y))
         }
     };
 
     map.set(node_id, visible);
 
     for child in node_id.children(&tree.arena) {
-        process_node_visibility(tree, layout, viewport, child, visible, map);
+        process_node_visibility(tree, layout, viewport, child, visible, next_offset, map);
     }
 }

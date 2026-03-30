@@ -30,49 +30,35 @@ pub fn resolve_zindex(
     let mut map = ZIndexMap::new();
 
     if let Some(root) = tree.document_root {
-        process_node_zindex(tree, geometry, root, &mut map);
-    }
-
-    map
-}
-
-fn process_node_zindex(
-    tree: &DomTree,
-    geometry: &GeometryMap,
-    node_id: NodeId,
-    map: &mut ZIndexMap,
-) {
-    let dom_node = tree.get(node_id);
-    let mut is_occluded = false;
-
-    if matches!(dom_node.data, NodeData::Element { .. }) {
-        if let Some(bounds) = geometry.get(node_id) {
-            let node_z = dom_node.z_index.unwrap_or(0);
-
-            let siblings = node_id.preceding_siblings(&tree.arena).chain(node_id.following_siblings(&tree.arena));
-            
-            for sibling_id in siblings {
-                if sibling_id == node_id { continue; }
-                let sibling_node = tree.get(sibling_id);
-                
-                if matches!(sibling_node.data, NodeData::Element { .. }) {
-                    let sib_z = sibling_node.z_index.unwrap_or(0);
-                    if sib_z > node_z {
-                        if let Some(sib_bounds) = geometry.get(sibling_id) {
-                            if bounds.intersects(sib_bounds) {
-                                is_occluded = true;
-                                break;
-                            }
-                        }
-                    }
+        let mut elements_with_bounds = Vec::new();
+        
+        // Flatten the tree for O(n^2) intersection tests
+        for node_id in root.descendants(&tree.arena) {
+            let dom_node = tree.get(node_id);
+            if matches!(dom_node.data, NodeData::Element { .. }) {
+                if let Some(bounds) = geometry.get(node_id) {
+                    let z = dom_node.z_index.unwrap_or(0);
+                    elements_with_bounds.push((node_id, z, bounds.clone()));
                 }
             }
         }
+        
+        for &(node_id, node_z, ref bounds) in &elements_with_bounds {
+            let mut is_occluded = false;
+            
+            // For Phase 1, any element sharing the viewport with a strictly higher Z-index
+            // is considered to occlude it if bounding boxes intersect.
+            // TODO: fully conform to CSS stacking context algorithms
+            for &(other_id, other_z, ref other_bounds) in &elements_with_bounds {
+                if other_id == node_id { continue; }
+                if other_z > node_z && bounds.intersects(other_bounds) {
+                    is_occluded = true;
+                    break;
+                }
+            }
+            map.inner.insert(node_id, is_occluded);
+        }
     }
 
-    map.inner.insert(node_id, is_occluded);
-
-    for child in node_id.children(&tree.arena) {
-        process_node_zindex(tree, geometry, child, map);
-    }
+    map
 }

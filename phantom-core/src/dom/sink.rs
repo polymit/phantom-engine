@@ -59,6 +59,12 @@ impl TreeSink for DomSink {
     }
 
     fn elem_name<'a>(&'a self, target: &'a Self::Handle) -> Self::ElemName<'a> {
+        // SAFETY: `self.names` is only mutated during `create_element`, which cannot
+        // overlap with `elem_name` because html5ever calls them sequentially on `&self`.
+        // The returned `ExpandedName` borrows from the `QualName` stored in the map,
+        // so we need a reference with lifetime `'a` that the `RefCell::borrow()` guard
+        // cannot provide (guard would be dropped at end of this function). The raw
+        // pointer dereference is safe because no mutable borrow is active.
         let names_ref = unsafe { &*self.names.as_ptr() };
         names_ref.get(target).expect("Node not found").expanded()
     }

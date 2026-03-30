@@ -5,13 +5,13 @@ mod tests {
 
     fn make_large_page(n: usize) -> String {
         let mut html = String::from(
-            "<html><body>"
+            "<html><body style='width: 1280px; height: 720px;'>"
         );
         for i in 0..n {
             html.push_str(&format!(
-                "<div id='node{}' class='item'>\
-                    <span>Item {}</span>\
-                    <button>Action {}</button>\
+                "<div id='node{}' class='item' style='width: 200px; height: 100px;'>\
+                    <span style='width: 100px; height: 20px;'>Item {}</span>\
+                    <button style='width: 80px; height: 30px;'>Action {}</button>\
                 </div>",
                 i, i, i
             ));
@@ -44,19 +44,30 @@ mod tests {
     #[test]
     fn test_css_visibility_applied() {
         let html = r#"
-            <html><body>
-                <div style="display: none;">Should be hidden</div>
-                <div style="visibility: hidden;">Also hidden</div>
-                <div style="opacity: 0;">Opacity hidden</div>
-                <div>Visible</div>
+            <html><body style="width: 1280px; height: 720px;">
+                <div id="hidden-display" style="display: none; width: 100px; height: 50px;">Should be hidden</div>
+                <div id="hidden-vis" style="visibility: hidden; width: 100px; height: 50px;">Also hidden</div>
+                <div id="hidden-opacity" style="opacity: 0; width: 100px; height: 50px;">Opacity hidden</div>
+                <div id="visible" style="width: 100px; height: 50px;">Visible</div>
             </body></html>
         "#;
 
         let page = process_html(html, "https://test.com", 1280.0, 720.0)
             .expect("pipeline should not fail");
 
-        // The document root must exist
         assert!(page.tree.document_root.is_some());
+
+        let hidden_display = page.tree.get_element_by_id("hidden-display").unwrap();
+        assert!(!page.tree.get(hidden_display).is_visible, "display:none must be invisible");
+
+        let hidden_vis = page.tree.get_element_by_id("hidden-vis").unwrap();
+        assert!(!page.tree.get(hidden_vis).is_visible, "visibility:hidden must be invisible");
+
+        let hidden_opacity = page.tree.get_element_by_id("hidden-opacity").unwrap();
+        assert!(!page.tree.get(hidden_opacity).is_visible, "opacity:0 must be invisible");
+
+        let visible = page.tree.get_element_by_id("visible").unwrap();
+        assert!(page.tree.get(visible).is_visible, "normal div must be visible");
     }
 
     #[test]

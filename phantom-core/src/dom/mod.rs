@@ -37,23 +37,19 @@ impl DomTree {
         self.arena.get_mut(id).expect("NodeId not found in arena").get_mut()
     }
 
-    pub fn get_tag_name(&self, id: NodeId) -> String {
-        let node = self.get(id);
-        match &node.data {
-            NodeData::Element { tag_name, .. } => tag_name.clone(),
-            _ => String::new(),
-        }
-    }
-
     pub fn get_text_content(&self, id: NodeId) -> String {
         let mut text = String::new();
         for descendant_id in id.descendants(&self.arena) {
+            if descendant_id == id { continue; }
             let node = self.get(descendant_id);
             if let NodeData::Text { content } = &node.data {
+                if !text.is_empty() {
+                    text.push(' ');
+                }
                 text.push_str(content);
             }
         }
-        text
+        text.trim().to_string()
     }
 
     pub fn get_title(&self) -> String {

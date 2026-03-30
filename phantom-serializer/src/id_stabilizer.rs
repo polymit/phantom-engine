@@ -87,18 +87,20 @@ fn process_node_ids(
             else if let Some(id) = attributes.get("id").filter(|s| !is_framework_auto_id(s)) {
                 (id.clone(), IdConfidence::Medium)
             }
-            // Priority 5
-            else if let Some(text) = get_text_content(tree, node_id).filter(|s| !s.is_empty()) {
-                let mut hasher = DefaultHasher::new();
-                text.hash(&mut hasher);
-                role_code.hash(&mut hasher);
-                (format!("n_{:x}", hasher.finish()), IdConfidence::Medium)
-            }
-            // Priority 6 (Position hash is omitted if layout is unavailable, so we use structural hash as priority 6/7)
             else {
-                let mut hasher = DefaultHasher::new();
-                path.hash(&mut hasher);
-                (format!("n_{:x}", hasher.finish()), IdConfidence::Low)
+                let text = tree.get_text_content(node_id);
+                if !text.is_empty() {
+                    let mut hasher = DefaultHasher::new();
+                    text.hash(&mut hasher);
+                    role_code.hash(&mut hasher);
+                    (format!("n_{:x}", hasher.finish()), IdConfidence::Medium)
+                }
+                // Priority 6: structural path hash
+                else {
+                    let mut hasher = DefaultHasher::new();
+                    path.hash(&mut hasher);
+                    (format!("n_{:x}", hasher.finish()), IdConfidence::Low)
+                }
             }
         }
         NodeData::Text { content } => {
@@ -134,17 +136,4 @@ fn is_framework_auto_id(id: &str) -> bool {
     || id.starts_with(":r") 
     || id.starts_with("__next") 
     || id.contains("ember")
-}
-
-fn get_text_content(tree: &DomTree, node_id: NodeId) -> Option<String> {
-    let mut text = String::new();
-    for descendant in node_id.descendants(&tree.arena) {
-        if descendant == node_id { continue; }
-        if let NodeData::Text { content } = &tree.get(descendant).data {
-            text.push_str(content);
-            text.push(' ');
-        }
-    }
-    let trimmed = text.trim();
-    if trimmed.is_empty() { None } else { Some(trimmed.to_string()) }
 }

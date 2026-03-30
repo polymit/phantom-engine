@@ -6,7 +6,6 @@ pub enum NodeData {
     Element {
         tag_name: String,
         attributes: HashMap<String, String>,
-        layout_id: Option<taffy::NodeId>,
     },
     Text {
         content: String,

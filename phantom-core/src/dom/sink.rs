@@ -114,7 +114,6 @@ impl TreeSink for DomSink {
         let node_data = NodeData::Element {
             tag_name,
             attributes,
-            layout_id: None,
         };
 
         let mut dom_node = DomNode::new(node_data);

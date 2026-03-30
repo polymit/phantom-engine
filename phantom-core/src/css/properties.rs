@@ -28,6 +28,8 @@ pub struct ComputedStyle {
     pub position: Position,
     pub z_index: Option<i32>,
     pub pointer_events: PointerEvents,
+    pub width: Option<f32>,
+    pub height: Option<f32>,
 }
 
 impl Default for ComputedStyle {
@@ -39,6 +41,8 @@ impl Default for ComputedStyle {
             position: Position::Static,
             z_index: None,
             pointer_events: PointerEvents::Auto,
+            width: None,
+            height: None,
         }
     }
 }

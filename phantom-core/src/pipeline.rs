@@ -32,10 +32,17 @@ pub fn process_html(html: &str, url: &str, viewport_width: f32, viewport_height:
     // Pass 2: Layout computation
     let mut layout = LayoutEngine::new();
     
-    if let Some(root) = tree.document_root {
-        build_layout_tree(&mut layout, &tree, root)?;
-        if let Some(taffy_root) = layout.get_taffy_id(root) {
-            layout.compute(taffy_root, viewport_width, viewport_height)?;
+    if let Some(doc_root) = tree.document_root {
+        build_layout_tree(&mut layout, &tree, doc_root)?;
+        
+        // Document is never added to Taffy; locate the <html> element as the real root.
+        let html_node = doc_root
+            .children(&tree.arena)
+            .find(|&child| matches!(tree.get(child).data, NodeData::Element { .. }));
+        if let Some(html_id) = html_node {
+            if let Some(taffy_root) = layout.get_taffy_id(html_id) {
+                layout.compute(taffy_root, viewport_width, viewport_height)?;
+            }
         }
     }
     
@@ -70,6 +77,8 @@ fn apply_css_pass(tree: &mut DomTree, node_id: NodeId, parent_style: Option<Comp
             node.computed_visibility = computed.visibility.clone();
             node.computed_opacity = computed.opacity;
             node.computed_pointer_events = computed.pointer_events.clone();
+            node.computed_width = computed.width;
+            node.computed_height = computed.height;
             node.z_index = computed.z_index;
             
             node.is_visible = node.computed_display != Display::None
@@ -88,7 +97,23 @@ fn build_layout_tree(layout: &mut LayoutEngine, tree: &DomTree, node_id: NodeId)
     let node = tree.get(node_id);
     
     if matches!(node.data, NodeData::Element { .. }) {
-        let style = taffy::Style::default();
+        let mut style = taffy::Style {
+            display: match node.computed_display {
+                crate::dom::node::Display::None => taffy::Display::None,
+                crate::dom::node::Display::Flex => taffy::Display::Flex,
+                crate::dom::node::Display::Grid => taffy::Display::Grid,
+                _ => taffy::Display::Block,
+            },
+            ..Default::default()
+        };
+        
+        if let Some(w) = node.computed_width {
+            style.size.width = taffy::Dimension::length(w);
+        }
+        if let Some(h) = node.computed_height {
+            style.size.height = taffy::Dimension::length(h);
+        }
+        
         let taffy_id = layout.add_node(node_id, style)?;
         
         let mut child_taffy_ids = Vec::new();
@@ -102,6 +127,12 @@ fn build_layout_tree(layout: &mut LayoutEngine, tree: &DomTree, node_id: NodeId)
         layout.set_children(taffy_id, &child_taffy_ids)?;
         Ok(Some(taffy_id))
     } else {
+        // Document / Text / Comment — not a layout node, but recurse so element
+        // descendants still get registered in the Taffy tree.
+        let children: Vec<NodeId> = node_id.children(&tree.arena).collect();
+        for child in children {
+            build_layout_tree(layout, tree, child)?;
+        }
         Ok(None)
     }
 }

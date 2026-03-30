@@ -39,7 +39,7 @@ pub fn compute_visibility(
     let mut map = VisibilityMap::new();
 
     if let Some(root) = tree.document_root {
-        process_node_visibility(tree, layout, viewport, root, &mut map);
+        process_node_visibility(tree, layout, viewport, root, true, &mut map);
     }
 
     map
@@ -48,13 +48,17 @@ pub fn compute_visibility(
 fn process_node_visibility(
     tree: &DomTree,
     layout: &LayoutEngine,
-    _viewport: &ViewportBounds,
+    viewport: &ViewportBounds,
     node_id: NodeId,
+    parent_visible: bool,
     map: &mut VisibilityMap,
 ) {
-    let children: Vec<NodeId> = node_id.children(&tree.arena).collect();
-    for &child in &children {
-        process_node_visibility(tree, layout, _viewport, child, map);
+    if !parent_visible {
+        map.set(node_id, false);
+        for child in node_id.children(&tree.arena) {
+            process_node_visibility(tree, layout, viewport, child, false, map);
+        }
+        return;
     }
 
     let dom_node = tree.get(node_id);
@@ -69,25 +73,16 @@ fn process_node_visibility(
             let c1 = dom_node.computed_display != Display::None;
             let c2 = dom_node.computed_visibility != Visibility::Hidden;
             let c3 = dom_node.computed_opacity > 0.0;
-            let c4 = bounds.width >= 0.0;
-            let c5 = bounds.height >= 0.0;
-            let c6 = true; // In tests viewport intersection might fail if bounds are 0x0 and placed at origin depending on layout mock
+            let c4 = bounds.width > 0.0;
+            let c5 = bounds.height > 0.0;
+            let c6 = bounds.intersects(viewport);
             c1 && c2 && c3 && c4 && c5 && c6
         }
     };
 
     map.set(node_id, visible);
 
-    if !visible {
-        propagate_invisible(tree, node_id, map);
-    }
-}
-
-fn propagate_invisible(tree: &DomTree, node_id: NodeId, map: &mut VisibilityMap) {
     for child in node_id.children(&tree.arena) {
-        if map.is_visible(child) {
-            map.set(child, false);
-            propagate_invisible(tree, child, map);
-        }
+        process_node_visibility(tree, layout, viewport, child, visible, map);
     }
 }

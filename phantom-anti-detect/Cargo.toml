@@ -8,7 +8,7 @@ rand = "=0.8"
 rand_distr = "=0.4"
 wreq-util = "=3.0.0-rc.10"
 thiserror = "1"
-tracing = "*"
+tracing = "=0.1.44"
 
 # BANNED CRATES — never add these under any circumstances:
 # reqwest       → uses rustls, produces detectable TLS

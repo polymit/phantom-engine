@@ -12,16 +12,16 @@ mod phase1_integration {
             <title>Sign In — Example App</title>
         </head>
         <body>
-            <header id="site-header">
-                <nav aria-label="Main navigation">
-                    <a href="/">Home</a>
-                    <a href="/about">About</a>
-                    <a href="/contact">Contact</a>
+            <header id="site-header" style="width: 1280px; height: 50px;">
+                <nav aria-label="Main navigation" style="width: 1280px; height: 50px;">
+                    <a href="/" style="width: 50px; height: 20px;">Home</a>
+                    <a href="/about" style="width: 50px; height: 20px;">About</a>
+                    <a href="/contact" style="width: 50px; height: 20px;">Contact</a>
                 </nav>
             </header>
-            <main id="main-content">
+            <main id="main-content" style="width: 400px; height: 400px;">
                 <h1>Sign In</h1>
-                <form id="login-form" action="/login" method="post">
+                <form id="login-form" action="/login" method="post" style="width: 400px; height: 300px;">
                     <div>
                         <label for="email">Email address</label>
                         <input
@@ -31,6 +31,7 @@ mod phase1_integration {
                             placeholder="you@example.com"
                             required
                             aria-required="true"
+                            style="width: 200px; height: 40px;"
                         />
                     </div>
                     <div>
@@ -42,6 +43,7 @@ mod phase1_integration {
                             placeholder="Your password"
                             required
                             aria-required="true"
+                            style="width: 200px; height: 40px;"
                         />
                     </div>
                     <div style="display:none">
@@ -51,10 +53,11 @@ mod phase1_integration {
                         id="submit-btn"
                         type="submit"
                         data-testid="login-submit"
+                        style="width: 100px; height: 40px;"
                     >
                         Sign in
                     </button>
-                    <a href="/forgot-password">Forgot password?</a>
+                    <a href="/forgot-password" style="width: 150px; height: 20px;">Forgot password?</a>
                 </form>
             </main>
             <footer>
@@ -172,14 +175,14 @@ mod phase1_integration {
     #[test]
     fn phase1_performance_benchmark() {
         fn make_large_page(divs: usize) -> String {
-            let mut s = String::from("<!DOCTYPE html><html><body>");
+            let mut s = String::from("<!DOCTYPE html><html><body style='width: 1280px; height: 720px;'>");
             for i in 0..divs {
                 s.push_str(&format!(
-                    "<div class='card' id='card{}'>\
+                    "<div class='card' id='card{}' style='width: 200px; height: 100px;'>\
                         <h3>Card {}</h3>\
                         <p>Some content text here</p>\
-                        <button data-testid='btn{}'>Action</button>\
-                        <input type='text' placeholder='Field {}'/>
+                        <button data-testid='btn{}' style='width: 50px; height: 20px;'>Action</button>\
+                        <input type='text' placeholder='Field {}' style='width: 100px; height: 30px;'/>
                     </div>",
                     i, i, i, i
                 ));

@@ -10,7 +10,7 @@ v8 = "=147.0.0"
 tokio = { version = "1", features = ["full"] }
 selectors = "0.25"
 thiserror = "1"
-tracing = "*"
+tracing = "=0.1.44"
 
 # BANNED CRATES — never add these under any circumstances:
 # reqwest       → uses rustls, produces detectable TLS

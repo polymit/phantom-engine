@@ -5,11 +5,11 @@ mod tests {
     use std::time::Instant;
 
     fn make_page(n: usize) -> String {
-        let mut html = String::from("<html><body>");
+        let mut html = String::from("<html><body style='width: 1280px; height: 720px;'>");
         for i in 0..n {
             html.push_str(&format!(
-                "<div id='node{}'><button>Btn {}</button>\
-                 <input type='text' placeholder='Field {}'/>\
+                "<div id='node{}' style='width: 100px; height: 100px;'><button style='width: 50px; height: 20px;'>Btn {}</button>\
+                 <input type='text' placeholder='Field {}' style='width: 80px; height: 20px;'/>\
                  </div>", i, i, i
             ));
         }
@@ -20,13 +20,13 @@ mod tests {
     #[test]
     fn test_serialise_basic_page() {
         let page = process_html(
-            r#"<html><body>
-                <nav><a href="/">Home</a></nav>
-                <main>
-                    <form>
-                        <input type="email" placeholder="Email"/>
-                        <input type="password" placeholder="Password"/>
-                        <button type="submit">Sign in</button>
+            r#"<html><body style="width: 1280px; height: 720px;">
+                <nav style="width: 1280px; height: 50px;"><a href="/" style="width: 50px; height: 20px;">Home</a></nav>
+                <main style="width: 1000px; height: 600px;">
+                    <form style="width: 400px; height: 300px;">
+                        <input type="email" placeholder="Email" style="width: 200px; height: 30px;"/>
+                        <input type="password" placeholder="Password" style="width: 200px; height: 30px;"/>
+                        <button type="submit" style="width: 100px; height: 40px;">Sign in</button>
                     </form>
                 </main>
             </body></html>"#,
@@ -70,12 +70,12 @@ mod tests {
     #[test]
     fn test_selective_mode() {
         let page = process_html(
-            r#"<html><body>
-                <main>
-                    <div><p>Lots of text content</p></div>
-                    <form>
-                        <input id="email" type="email" placeholder="Email"/>
-                        <button id="submit">Login</button>
+            r#"<html><body style="width: 1280px; height: 720px;">
+                <main style="width: 800px; height: 600px;">
+                    <div style="width: 400px; height: 100px;"><p style="width: 200px; height: 20px;">Lots of text content</p></div>
+                    <form style="width: 400px; height: 300px;">
+                        <input id="email" type="email" placeholder="Email" style="width: 200px; height: 30px;"/>
+                        <button id="submit" style="width: 100px; height: 40px;">Login</button>
                     </form>
                 </main>
             </body></html>"#,
@@ -97,7 +97,7 @@ mod tests {
     #[test]
     fn test_page_header_format() {
         let page = process_html(
-            "<html><body><p>Hello</p></body></html>",
+            "<html><body style='width: 1280px; height: 720px;'><p style='width: 100px; height: 20px;'>Hello</p></body></html>",
             "https://test.com", 1280.0, 720.0
         ).unwrap();
 

@@ -187,9 +187,7 @@ impl HeadlessSerializer {
         final_string
     }
 
-    pub fn node_count_from_output(cct: &str) -> usize {
-        cct.lines().filter(|l| l.starts_with("n_")).count()
-    }
+
 }
 
 fn is_interactive_tag(tag: &str) -> bool {

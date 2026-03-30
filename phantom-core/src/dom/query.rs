@@ -11,9 +11,9 @@ use selectors::{
 use super::{DomNode, NodeData};
 
 // --------------------------------------------------------------------------
-// CssString — a String wrapper that satisfies cssparser 0.31's ToCss bound.
-// selectors 0.25 depends on cssparser ^0.31; our crate re-exports it as
-// `cssparser_selectors` to keep it distinct from our cssparser 0.37.
+// CssString — a String wrapper that satisfies cssparser_selectors 0.31's ToCss bound.
+// selectors 0.25 depends on cssparser_selectors ^0.31; our crate re-exports it as
+// `cssparser_selectors` to keep it distinct from our cssparser_selectors 0.37.
 // --------------------------------------------------------------------------
 
 #[derive(Clone, Debug, PartialEq, Eq, Default)]

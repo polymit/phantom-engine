@@ -99,6 +99,16 @@ impl CssEngine {
                     _ => PointerEvents::Auto,
                 };
             }
+            "width" if val_clean.ends_with("px") => {
+                if let Ok(v) = val_clean.trim_end_matches("px").parse::<f32>() {
+                    style.width = Some(v);
+                }
+            }
+            "height" if val_clean.ends_with("px") => {
+                if let Ok(v) = val_clean.trim_end_matches("px").parse::<f32>() {
+                    style.height = Some(v);
+                }
+            }
             _ => {}
         }
     }
@@ -114,7 +124,13 @@ impl CssEngine {
         };
 
         if let Some(parent) = parent_style {
-            style.visibility = parent.visibility.clone();
+            // Visibility inherits from parent ONLY when the child
+            // has not explicitly set it (i.e. child is still at default Visible).
+            // If child explicitly set visibility:hidden, keep it hidden.
+            if style.visibility == Visibility::Visible {
+                style.visibility = parent.visibility.clone();
+            }
+            // Opacity always multiplies (child × parent)
             style.opacity *= parent.opacity; // Multiply by parent
         }
 

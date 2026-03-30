@@ -48,7 +48,7 @@ pub fn process_html(html: &str, url: &str, viewport_width: f32, viewport_height:
     
     // Pass 3: Layout-dependent visibility
     if let Some(root) = tree.document_root {
-        apply_layout_visibility_pass(&mut tree, &layout, root, viewport_width, viewport_height);
+        apply_layout_visibility_pass(&mut tree, &layout, root, (0.0, 0.0), viewport_width, viewport_height);
     }
     
     Ok(ParsedPage {
@@ -137,11 +137,14 @@ fn build_layout_tree(layout: &mut LayoutEngine, tree: &DomTree, node_id: NodeId)
     }
 }
 
-fn apply_layout_visibility_pass(tree: &mut DomTree, layout: &LayoutEngine, node_id: NodeId, viewport_width: f32, viewport_height: f32) {
-    {
+fn apply_layout_visibility_pass(tree: &mut DomTree, layout: &LayoutEngine, node_id: NodeId, parent_offset: (f32, f32), viewport_width: f32, viewport_height: f32) {
+    let next_offset = {
         let node = tree.get_mut(node_id);
         if matches!(node.data, NodeData::Element { .. }) {
-            let bounds = layout.get_bounds(node_id);
+            let mut bounds = layout.get_bounds(node_id);
+            bounds.x += parent_offset.0;
+            bounds.y += parent_offset.1;
+            
             let viewport = crate::layout::bounds::ViewportBounds::new(0.0, 0.0, viewport_width, viewport_height);
             
             if node.is_visible {
@@ -149,11 +152,14 @@ fn apply_layout_visibility_pass(tree: &mut DomTree, layout: &LayoutEngine, node_
                     && bounds.height > 0.0 
                     && bounds.intersects(&viewport);
             }
+            (bounds.x, bounds.y)
+        } else {
+            parent_offset
         }
-    }
+    };
     
     let children: Vec<NodeId> = node_id.children(&tree.arena).collect();
     for child in children {
-        apply_layout_visibility_pass(tree, layout, child, viewport_width, viewport_height);
+        apply_layout_visibility_pass(tree, layout, child, next_offset, viewport_width, viewport_height);
     }
 }

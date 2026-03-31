@@ -10,6 +10,6 @@ rayon = "1"
 tracing = "0.1"
 thiserror = "1"
 serde = { version = "1", features = ["derive"] }
-indextree = "4"
+indextree = "=4.8.0"
 once_cell = "1.21.4"
 rustc-hash = "1"

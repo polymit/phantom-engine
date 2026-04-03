@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-rquickjs = { version = "=0.11.0", features = ["futures", "loader", "macro", "classes", "disable-assertions"] }
+rquickjs = { version = "=0.11.0", features = ["futures", "loader", "macro", "classes", "disable-assertions", "parallel"] }
 deno_core = "=0.311.0"
 v8 = "=147.0.0"
 tokio = { version = "1", features = ["full"] }
@@ -15,6 +15,7 @@ phantom-core = { path = "../phantom-core" }
 rand = "=0.8"
 rand_distr = "=0.4"
 once_cell = "1"
+parking_lot = "0.12.5"
 
 # BANNED CRATES — never add these under any circumstances:
 # reqwest       → uses rustls, produces detectable TLS

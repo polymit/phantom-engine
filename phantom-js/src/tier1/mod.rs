@@ -1,5 +1,7 @@
-pub mod session;
+pub mod apis;
+pub mod bindings;
 pub mod pool;
+pub mod session;
 
-pub use session::Tier1Session;
 pub use pool::Tier1Pool;
+pub use session::{PhantomDomHandle, Tier1Session};

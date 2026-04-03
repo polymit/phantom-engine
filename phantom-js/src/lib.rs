@@ -3,6 +3,7 @@
 #![allow(clippy::needless_doctest_main)]
 
 pub mod error;
+pub mod shims;
 pub mod tier1;
 pub mod tier2;
 
@@ -24,6 +25,7 @@ pub use error::PhantomJsError;
 ///     phantom_js::init_v8_platform();  // FIRST
 ///     let rt = tokio::runtime::Builder::new_multi_thread()
 ///         .enable_all().build().unwrap();
+///     async fn run() {}
 ///     rt.block_on(async { run().await });
 /// }
 /// ```

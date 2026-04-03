@@ -1849,6 +1849,11 @@ name = "phantom-js"
 version = "0.1.0"
 dependencies = [
  "deno_core",
+ "once_cell",
+ "parking_lot 0.12.5",
+ "phantom-core",
+ "rand",
+ "rand_distr",
  "rquickjs",
  "selectors",
  "thiserror 1.0.69",

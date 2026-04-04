@@ -2,11 +2,13 @@
 // This file initializes the V8 engines and defines the tier hierarchy.
 #![allow(clippy::needless_doctest_main)]
 
+pub mod behavior;
 pub mod error;
 pub mod shims;
 pub mod tier1;
 pub mod tier2;
 
+pub use behavior::BehaviorEngine;
 pub use error::PhantomJsError;
 
 /// Initialise the V8 platform.

@@ -1,0 +1,1 @@
+*mut Box<(dyn rquickjs::allocator::Allocator + 'static)>

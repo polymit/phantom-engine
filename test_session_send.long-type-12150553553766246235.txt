@@ -1,0 +1,3 @@
+*mut Box<(dyn rquickjs_core::allocator::Allocator + 'static)>
+async_lock::mutex::Mutex<rquickjs_core::runtime::r#async::InnerRuntime>
+Arc<async_lock::mutex::Mutex<rquickjs_core::runtime::r#async::InnerRuntime>>

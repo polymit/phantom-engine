@@ -10,7 +10,7 @@ fn test_v8_platform_initialises_without_panic() {
     // NOTE: This test MUST be run alone using:
     // cargo test --package phantom-js v8_init -- --test-threads=1
     phantom_js::init_v8_platform();
-    let version = v8::V8::get_version();
+    let version = deno_core::v8::V8::get_version();
     assert!(!version.is_empty(), "V8 version string must not be empty");
     println!("V8 version: {}", version);
     // Expected: something like "14.6.202.26"

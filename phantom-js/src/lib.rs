@@ -34,8 +34,8 @@ pub fn init_v8_platform() {
     // when V8 is initialised on a system with Memory Protection Keys.
     // This is the correct choice for server deployments.
     // See: https://github.com/denoland/rusty_v8/issues/1381
-    let platform = v8::new_unprotected_default_platform(0, false).make_shared();
-    v8::V8::initialize_platform(platform);
-    v8::V8::initialize();
-    tracing::info!("V8 platform initialised — version: {}", v8::V8::get_version());
+    let platform = deno_core::v8::new_unprotected_default_platform(0, false).make_shared();
+    deno_core::v8::V8::initialize_platform(platform);
+    deno_core::v8::V8::initialize();
+    tracing::info!("V8 platform initialised — version: {}", deno_core::v8::V8::get_version());
 }

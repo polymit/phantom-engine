@@ -1,0 +1,2 @@
+async_lock::mutex::Mutex<rquickjs_core::runtime::r#async::InnerRuntime>
+Arc<async_lock::mutex::Mutex<rquickjs_core::runtime::r#async::InnerRuntime>>

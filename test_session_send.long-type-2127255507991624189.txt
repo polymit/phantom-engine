@@ -1,0 +1,1 @@
+rquickjs_core::context::owner::ContextOwner<rquickjs_core::runtime::r#async::AsyncRuntime>

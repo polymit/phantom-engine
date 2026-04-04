@@ -1743,6 +1743,7 @@ dependencies = [
 name = "phantom-js"
 version = "0.1.0"
 dependencies = [
+ "crossbeam",
  "deno_core",
  "once_cell",
  "parking_lot 0.12.5",

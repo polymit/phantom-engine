@@ -16,3 +16,8 @@ Thumbs.db
 .vscode/
 .idea/
 Phantom_Engine_Master_Blueprint_v2.md
+
+# Ignore root-level scratch files
+/test_*.rs
+/run_*.rs
+/*.long-type-*.txt

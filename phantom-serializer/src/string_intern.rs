@@ -5,18 +5,20 @@ impl CctNode {
     pub fn serialise_into(&self, buf: &mut String) {
         let t_code = self.element_type.to_cct_code();
         let r_code = self.aria_role.to_cct_code();
-        
+
         let mut s_acc = self.accessible_name.as_str();
-        if s_acc.is_empty() { s_acc = "-"; }
-        else if s_acc.chars().count() > 100 {
+        if s_acc.is_empty() {
+            s_acc = "-";
+        } else if s_acc.chars().count() > 100 {
             if let Some((idx, _)) = s_acc.char_indices().nth(100) {
                 s_acc = &s_acc[..idx];
             }
         }
 
         let mut s_vis = self.visible_text.as_str();
-        if s_vis.is_empty() { s_vis = "-"; }
-        else if s_vis.chars().count() > 100 {
+        if s_vis.is_empty() {
+            s_vis = "-";
+        } else if s_vis.chars().count() > 100 {
             if let Some((idx, _)) = s_vis.char_indices().nth(100) {
                 s_vis = &s_vis[..idx];
             }
@@ -33,7 +35,11 @@ impl CctNode {
             self.node_id,
             t_code,
             r_code,
-            self.x, self.y, self.w, self.h, b_unrel,
+            self.x,
+            self.y,
+            self.w,
+            self.h,
+            b_unrel,
             self.display.to_char(),
             self.visibility.to_char(),
             self.opacity,
@@ -58,7 +64,11 @@ impl fmt::Display for CctDelta {
         match self {
             Self::Add(node_id) => write!(f, "+ {}", node_id),
             Self::Remove(node_id) => write!(f, "- {}", node_id),
-            Self::Update { node_id, display, bounds } => {
+            Self::Update {
+                node_id,
+                display,
+                bounds,
+            } => {
                 write!(f, "~ {}", node_id)?;
                 match display {
                     Some(d) => write!(f, "|{}", d.to_char())?,

@@ -1,9 +1,9 @@
-use std::collections::HashMap;
-use indextree::NodeId;
-use rayon::prelude::*;
-use phantom_core::dom::{DomTree, NodeData, AriaRole};
 use crate::cct_types::{CctEvents, CctState};
 use crate::visibility::VisibilityMap;
+use indextree::NodeId;
+use phantom_core::dom::{AriaRole, DomTree, NodeData};
+use rayon::prelude::*;
+use std::collections::HashMap;
 
 pub struct SemanticInfo {
     pub accessible_name: String,
@@ -18,7 +18,9 @@ pub struct SemanticMap {
 
 impl SemanticMap {
     pub fn new() -> Self {
-        Self { inner: HashMap::new() }
+        Self {
+            inner: HashMap::new(),
+        }
     }
 
     pub fn get(&self, id: NodeId) -> Option<&SemanticInfo> {
@@ -50,7 +52,7 @@ pub fn extract_semantics(
             let name = get_accessible_name(tree, visible_nodes, node_id);
             let text = get_visible_text(tree, visible_nodes, node_id);
             let events = CctEvents::from_event_listeners(&dom_node.event_listeners);
-            
+
             let state = if let NodeData::Element { attributes, .. } = &dom_node.data {
                 CctState::from_attributes(attributes)
             } else {
@@ -89,8 +91,16 @@ fn truncate_to_100(mut s: String) -> String {
 
 fn get_accessible_name(tree: &DomTree, visible_nodes: &VisibilityMap, node_id: NodeId) -> String {
     let dom_node = tree.get(node_id);
-    if let NodeData::Element { tag_name, attributes, .. } = &dom_node.data {
-        if let Some(label) = attributes.get("aria-label").filter(|v| !v.trim().is_empty()) {
+    if let NodeData::Element {
+        tag_name,
+        attributes,
+        ..
+    } = &dom_node.data
+    {
+        if let Some(label) = attributes
+            .get("aria-label")
+            .filter(|v| !v.trim().is_empty())
+        {
             return truncate_to_100(label.trim().to_string());
         }
         if tag_name == "img" {
@@ -102,11 +112,20 @@ fn get_accessible_name(tree: &DomTree, visible_nodes: &VisibilityMap, node_id: N
             return truncate_to_100(title.trim().to_string());
         }
         if tag_name == "input" || tag_name == "textarea" {
-            if let Some(placeholder) = attributes.get("placeholder").filter(|v| !v.trim().is_empty()) {
+            if let Some(placeholder) = attributes
+                .get("placeholder")
+                .filter(|v| !v.trim().is_empty())
+            {
                 return truncate_to_100(placeholder.trim().to_string());
             }
         }
-        if tag_name == "button" || tag_name == "a" || matches!(dom_node.aria_role, Some(AriaRole::Button) | Some(AriaRole::Link)) {
+        if tag_name == "button"
+            || tag_name == "a"
+            || matches!(
+                dom_node.aria_role,
+                Some(AriaRole::Button) | Some(AriaRole::Link)
+            )
+        {
             let text = get_visible_text(tree, visible_nodes, node_id);
             if text != "-" {
                 return text;
@@ -119,7 +138,9 @@ fn get_accessible_name(tree: &DomTree, visible_nodes: &VisibilityMap, node_id: N
 fn get_visible_text(tree: &DomTree, visible_nodes: &VisibilityMap, node_id: NodeId) -> String {
     let mut text = String::new();
     for descendant in node_id.descendants(&tree.arena) {
-        if descendant == node_id { continue; }
+        if descendant == node_id {
+            continue;
+        }
         if !visible_nodes.is_visible(descendant) {
             continue;
         }
@@ -128,7 +149,7 @@ fn get_visible_text(tree: &DomTree, visible_nodes: &VisibilityMap, node_id: Node
             text.push(' ');
         }
     }
-    
+
     let collapsed: String = text.split_whitespace().collect::<Vec<_>>().join(" ");
     truncate_to_100(collapsed)
 }

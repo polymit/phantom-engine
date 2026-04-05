@@ -5,11 +5,12 @@ async fn test_tier1_eval_basic_js() {
         .await
         .expect("session creation must not fail");
 
-    let result = session.eval("1 + 1").await
-        .expect("eval must not fail");
+    let result = session.eval("1 + 1").await.expect("eval must not fail");
     assert_eq!(result, "2", "1 + 1 must equal 2");
 
-    let result = session.eval("typeof window").await
+    let result = session
+        .eval("typeof window")
+        .await
         .expect("eval must not fail");
     // QuickJS has no window by default — we set it up later
     // For now: undefined is expected
@@ -28,7 +29,9 @@ async fn test_tier1_memory_limit_set() {
         .await
         .expect("session must create with memory limit configured");
 
-    let result = session.eval("'memory limit configured'").await
+    let result = session
+        .eval("'memory limit configured'")
+        .await
         .expect("must eval");
     assert_eq!(result, "memory limit configured");
     session.destroy();
@@ -38,16 +41,27 @@ async fn test_tier1_memory_limit_set() {
 async fn test_tier1_session_isolates_globals() {
     // Two sessions must NOT share JS globals
     // This is the "burn it down" model — D-08
-    let s1 = phantom_js::tier1::session::Tier1Session::new().await.unwrap();
-    let s2 = phantom_js::tier1::session::Tier1Session::new().await.unwrap();
+    let s1 = phantom_js::tier1::session::Tier1Session::new()
+        .await
+        .unwrap();
+    let s2 = phantom_js::tier1::session::Tier1Session::new()
+        .await
+        .unwrap();
 
     // Set a global in s1
-    s1.eval("globalThis.__phantom_test_marker = 'session_1'").await.unwrap();
+    s1.eval("globalThis.__phantom_test_marker = 'session_1'")
+        .await
+        .unwrap();
 
     // s2 must NOT see it
-    let result = s2.eval("typeof globalThis.__phantom_test_marker").await.unwrap();
-    assert_eq!(result, "undefined",
-        "Session 2 must not see Session 1's globals — sessions are isolated");
+    let result = s2
+        .eval("typeof globalThis.__phantom_test_marker")
+        .await
+        .unwrap();
+    assert_eq!(
+        result, "undefined",
+        "Session 2 must not see Session 1's globals — sessions are isolated"
+    );
 
     s1.destroy();
     s2.destroy();
@@ -84,23 +98,35 @@ async fn test_shims_browser_shims_js_syntax() {
         globalThis.PluginArray = function() {};
         globalThis.Plugin = function() {};
     "#;
-    session.eval(persona_init).await
+    session
+        .eval(persona_init)
+        .await
         .expect("persona init must not fail");
 
     let shims_source = include_str!("../js/browser_shims.js");
-    let test_source = format!("try {{ eval(`{}`); 'OK' }} catch (e) {{ String(e) + '\\n' + String(e.stack) }}", shims_source.replace("`", "\\`").replace("$", "\\$"));
+    let test_source = format!(
+        "try {{ eval(`{}`); 'OK' }} catch (e) {{ String(e) + '\\n' + String(e.stack) }}",
+        shims_source.replace("`", "\\`").replace("$", "\\$")
+    );
     let result = session.eval(&test_source).await.unwrap();
     if result != "OK" {
-        panic!("browser_shims.js has syntax error or load error:\n{}", result);
+        panic!(
+            "browser_shims.js has syntax error or load error:\n{}",
+            result
+        );
     }
 
     let webdriver = session.eval("navigator.webdriver").await.unwrap();
-    assert_eq!(webdriver, "undefined",
-        "navigator.webdriver must be undefined after shims");
+    assert_eq!(
+        webdriver, "undefined",
+        "navigator.webdriver must be undefined after shims"
+    );
 
     let has_chrome = session.eval("typeof window.chrome").await.unwrap();
-    assert_eq!(has_chrome, "object",
-        "window.chrome must be an object after shims");
+    assert_eq!(
+        has_chrome, "object",
+        "window.chrome must be an object after shims"
+    );
 
     session.destroy();
 }

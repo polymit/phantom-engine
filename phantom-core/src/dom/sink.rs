@@ -125,14 +125,20 @@ impl TreeSink for DomSink {
         let node_data = NodeData::Comment {
             content: text.to_string(),
         };
-        self.tree.borrow_mut().arena.new_node(DomNode::new(node_data))
+        self.tree
+            .borrow_mut()
+            .arena
+            .new_node(DomNode::new(node_data))
     }
 
     fn create_pi(&self, _target: StrTendril, data: StrTendril) -> Self::Handle {
         let node_data = NodeData::Comment {
             content: data.to_string(),
         };
-        self.tree.borrow_mut().arena.new_node(DomNode::new(node_data))
+        self.tree
+            .borrow_mut()
+            .arena
+            .new_node(DomNode::new(node_data))
     }
 
     fn append(&self, parent: &Self::Handle, child: NodeOrText<Self::Handle>) {
@@ -142,24 +148,26 @@ impl TreeSink for DomSink {
                 let node_data = NodeData::Text {
                     content: text.to_string(),
                 };
-                self.tree.borrow_mut().arena.new_node(DomNode::new(node_data))
+                self.tree
+                    .borrow_mut()
+                    .arena
+                    .new_node(DomNode::new(node_data))
             }
         };
         parent.append(child_id, &mut self.tree.borrow_mut().arena);
     }
 
-    fn append_before_sibling(
-        &self,
-        sibling: &Self::Handle,
-        new_node: NodeOrText<Self::Handle>,
-    ) {
+    fn append_before_sibling(&self, sibling: &Self::Handle, new_node: NodeOrText<Self::Handle>) {
         let child_id = match new_node {
             NodeOrText::AppendNode(node_id) => node_id,
             NodeOrText::AppendText(text) => {
                 let node_data = NodeData::Text {
                     content: text.to_string(),
                 };
-                self.tree.borrow_mut().arena.new_node(DomNode::new(node_data))
+                self.tree
+                    .borrow_mut()
+                    .arena
+                    .new_node(DomNode::new(node_data))
             }
         };
         sibling.insert_before(child_id, &mut self.tree.borrow_mut().arena);
@@ -171,7 +179,14 @@ impl TreeSink for DomSink {
         prev_element: &Self::Handle,
         child: NodeOrText<Self::Handle>,
     ) {
-        let has_parent = self.tree.borrow().arena.get(*element).unwrap().parent().is_some();
+        let has_parent = self
+            .tree
+            .borrow()
+            .arena
+            .get(*element)
+            .unwrap()
+            .parent()
+            .is_some();
         if has_parent {
             self.append_before_sibling(element, child);
         } else {
@@ -195,7 +210,9 @@ impl TreeSink for DomSink {
             if let NodeData::Element { attributes, .. } = &mut inner.data {
                 for attr in attrs {
                     let key = attr.name.local.to_string();
-                    attributes.entry(key).or_insert_with(|| attr.value.to_string());
+                    attributes
+                        .entry(key)
+                        .or_insert_with(|| attr.value.to_string());
                 }
             }
         }

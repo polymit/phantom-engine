@@ -4,9 +4,7 @@ mod tests {
     use std::time::Instant;
 
     fn make_large_page(n: usize) -> String {
-        let mut html = String::from(
-            "<html><body style='width: 1280px; height: 720px;'>"
-        );
+        let mut html = String::from("<html><body style='width: 1280px; height: 720px;'>");
         for i in 0..n {
             html.push_str(&format!(
                 "<div id='node{}' class='item' style='width: 200px; height: 100px;'>\
@@ -58,16 +56,28 @@ mod tests {
         assert!(page.tree.document_root.is_some());
 
         let hidden_display = page.tree.get_element_by_id("hidden-display").unwrap();
-        assert!(!page.tree.get(hidden_display).is_visible, "display:none must be invisible");
+        assert!(
+            !page.tree.get(hidden_display).is_visible,
+            "display:none must be invisible"
+        );
 
         let hidden_vis = page.tree.get_element_by_id("hidden-vis").unwrap();
-        assert!(!page.tree.get(hidden_vis).is_visible, "visibility:hidden must be invisible");
+        assert!(
+            !page.tree.get(hidden_vis).is_visible,
+            "visibility:hidden must be invisible"
+        );
 
         let hidden_opacity = page.tree.get_element_by_id("hidden-opacity").unwrap();
-        assert!(!page.tree.get(hidden_opacity).is_visible, "opacity:0 must be invisible");
+        assert!(
+            !page.tree.get(hidden_opacity).is_visible,
+            "opacity:0 must be invisible"
+        );
 
         let visible = page.tree.get_element_by_id("visible").unwrap();
-        assert!(page.tree.get(visible).is_visible, "normal div must be visible");
+        assert!(
+            page.tree.get(visible).is_visible,
+            "normal div must be visible"
+        );
     }
 
     #[test]

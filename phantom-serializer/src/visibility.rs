@@ -1,7 +1,7 @@
-use std::collections::HashMap;
 use indextree::NodeId;
-use phantom_core::dom::{DomTree, NodeData, Display, Visibility};
+use phantom_core::dom::{Display, DomTree, NodeData, Visibility};
 use phantom_core::layout::bounds::{LayoutEngine, ViewportBounds};
+use std::collections::HashMap;
 
 pub struct VisibilityMap {
     inner: HashMap<NodeId, bool>,
@@ -9,7 +9,9 @@ pub struct VisibilityMap {
 
 impl VisibilityMap {
     pub fn new() -> Self {
-        Self { inner: HashMap::new() }
+        Self {
+            inner: HashMap::new(),
+        }
     }
 
     pub fn is_visible(&self, id: NodeId) -> bool {
@@ -66,9 +68,7 @@ fn process_node_visibility(
     let (visible, next_offset) = match &dom_node.data {
         NodeData::Document => (true, parent_offset),
         NodeData::Comment { .. } => (false, parent_offset),
-        NodeData::Text { content } => {
-            (!content.trim().is_empty(), parent_offset)
-        }
+        NodeData::Text { content } => (!content.trim().is_empty(), parent_offset),
         NodeData::Element { .. } => {
             let mut bounds = layout.get_bounds(node_id);
             bounds.x += parent_offset.0;

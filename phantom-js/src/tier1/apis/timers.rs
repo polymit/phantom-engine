@@ -1,9 +1,9 @@
+use rquickjs::{Ctx, Function, Persistent, Result};
 use std::{
     cell::RefCell,
     collections::HashMap,
     sync::atomic::{AtomicU32, Ordering},
 };
-use rquickjs::{Ctx, Function, Persistent, Result};
 
 static TIMER_ID_COUNTER: AtomicU32 = AtomicU32::new(1);
 
@@ -41,49 +41,50 @@ pub fn register_timers<'js>(
 ) -> Result<()> {
     // --- setTimeout ---
     let ctx_clone = async_context.clone();
-    let set_timeout = Function::new(ctx.clone(), move |
-        ctx: Ctx<'js>,
-        callback: Function<'js>,
-        delay_ms: Option<u64>,
-    | -> Result<u32> {
-        let timer_id = TIMER_ID_COUNTER.fetch_add(1, Ordering::Relaxed);
-        let delay = delay_ms.unwrap_or(0);
+    let set_timeout = Function::new(
+        ctx.clone(),
+        move |ctx: Ctx<'js>, callback: Function<'js>, delay_ms: Option<u64>| -> Result<u32> {
+            let timer_id = TIMER_ID_COUNTER.fetch_add(1, Ordering::Relaxed);
+            let delay = delay_ms.unwrap_or(0);
 
-        // Persist the callback on the current thread.
-        let persistent = Persistent::save(&ctx, callback);
-        TIMER_STORE.with(|store| {
-            store.borrow_mut().insert(timer_id, persistent);
-        });
+            // Persist the callback on the current thread.
+            let persistent = Persistent::save(&ctx, callback);
+            TIMER_STORE.with(|store| {
+                store.borrow_mut().insert(timer_id, persistent);
+            });
 
-        // Spawn on the LOCAL executor — same thread as the QuickJS runtime.
-        // Only a u32 and AsyncContext (Send) cross this boundary.
-        let context = ctx_clone.clone();
-        tokio::task::spawn_local(async move {
-            if delay > 0 {
-                tokio::time::sleep(std::time::Duration::from_millis(delay)).await;
-            }
-
-            // Back on the runtime thread: retrieve and fire the callback.
-            rquickjs::async_with!(context => |ctx| {
-                let maybe_cb = TIMER_STORE.with(|store| {
-                    store.borrow_mut().remove(&timer_id)
-                });
-
-                if let Some(persistent) = maybe_cb {
-                    if let Ok(cb) = persistent.restore(&ctx) {
-                        // RISK-18: best-effort fire — ignore JS errors in callbacks
-                        let _ = cb.call::<(), ()>(());
-                        // Drain microtasks queued by the callback
-                        while ctx.execute_pending_job() {}
-                    }
+            // Spawn on the LOCAL executor — same thread as the QuickJS runtime.
+            // Only a u32 and AsyncContext (Send) cross this boundary.
+            let context = ctx_clone.clone();
+            tokio::task::spawn_local(async move {
+                if delay > 0 {
+                    tokio::time::sleep(std::time::Duration::from_millis(delay)).await;
                 }
 
-                Ok::<(), rquickjs::Error>(())
-            }).await.ok();
-        });
+                // Back on the runtime thread: retrieve and fire the callback.
+                rquickjs::async_with!(context => |ctx| {
+                    let maybe_cb = TIMER_STORE.with(|store| {
+                        store.borrow_mut().remove(&timer_id)
+                    });
 
-        Ok(timer_id)
-    })?;
+                    if let Some(persistent) = maybe_cb {
+                        if let Ok(cb) = persistent.restore(&ctx) {
+                            // RISK-18: best-effort fire — ignore JS errors in callbacks
+                            let _ = cb.call::<(), ()>(());
+                            // Drain microtasks queued by the callback
+                            while ctx.execute_pending_job() {}
+                        }
+                    }
+
+                    Ok::<(), rquickjs::Error>(())
+                })
+                .await
+                .ok();
+            });
+
+            Ok(timer_id)
+        },
+    )?;
     globals.set("setTimeout", set_timeout)?;
 
     // --- clearTimeout ---

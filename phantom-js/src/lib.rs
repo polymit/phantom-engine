@@ -39,5 +39,8 @@ pub fn init_v8_platform() {
     let platform = deno_core::v8::new_unprotected_default_platform(0, false).make_shared();
     deno_core::v8::V8::initialize_platform(platform);
     deno_core::v8::V8::initialize();
-    tracing::info!("V8 platform initialised — version: {}", deno_core::v8::V8::get_version());
+    tracing::info!(
+        "V8 platform initialised — version: {}",
+        deno_core::v8::V8::get_version()
+    );
 }

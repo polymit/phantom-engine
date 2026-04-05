@@ -1,9 +1,9 @@
-use std::collections::{HashMap, HashSet};
-use std::hash::{BuildHasher, Hash, Hasher};
-use indextree::NodeId;
-use phantom_core::dom::{DomTree, NodeData};
 use crate::cct_types::{CctAriaRole, IdConfidence};
 use crate::visibility::VisibilityMap;
+use indextree::NodeId;
+use phantom_core::dom::{DomTree, NodeData};
+use std::collections::{HashMap, HashSet};
+use std::hash::{BuildHasher, Hash, Hasher};
 
 pub struct StableIdMap {
     inner: HashMap<NodeId, (String, IdConfidence)>,
@@ -25,7 +25,10 @@ impl StableIdMap {
     }
 
     pub fn get_confidence(&self, node_id: NodeId) -> IdConfidence {
-        self.inner.get(&node_id).map(|(_, conf)| conf.clone()).unwrap_or(IdConfidence::Low)
+        self.inner
+            .get(&node_id)
+            .map(|(_, conf)| conf.clone())
+            .unwrap_or(IdConfidence::Low)
     }
 }
 
@@ -39,10 +42,7 @@ impl Default for StableIdMap {
 /// Priority: `data-agent-id` → `data-testid` → aria-label hash → DOM id
 /// → visible-text hash → structural-path hash. Deduplicates collisions with
 /// a suffix counter. Returns a [`StableIdMap`] covering the full arena.
-pub fn stabilise_ids(
-    tree: &DomTree,
-    _visible_nodes: &VisibilityMap,
-) -> StableIdMap {
+pub fn stabilise_ids(tree: &DomTree, _visible_nodes: &VisibilityMap) -> StableIdMap {
     let mut map = StableIdMap::new();
     if let Some(root) = tree.document_root {
         process_node_ids(tree, root, "", 0, &mut map);
@@ -59,11 +59,15 @@ fn process_node_ids(
 ) {
     let dom_node = tree.get(node_id);
     let mut path = format!("{}/{}", parent_path, child_idx);
-    
+
     let (cct_id, conf) = match &dom_node.data {
-        NodeData::Element { tag_name, attributes, .. } => {
+        NodeData::Element {
+            tag_name,
+            attributes,
+            ..
+        } => {
             path = format!("{}/{}[{}]", parent_path, tag_name, child_idx);
-            
+
             let cct_role = CctAriaRole::from_aria_role(&dom_node.aria_role);
             let role_code = cct_role.to_cct_code();
 
@@ -85,8 +89,7 @@ fn process_node_ids(
             // Priority 4
             else if let Some(id) = attributes.get("id").filter(|s| !is_framework_auto_id(s)) {
                 (id.clone(), IdConfidence::Medium)
-            }
-            else {
+            } else {
                 let text = tree.get_text_content(node_id);
                 if !text.is_empty() {
                     let mut hasher = rustc_hash::FxHasher::default();
@@ -114,7 +117,7 @@ fn process_node_ids(
             (format!("n_{}", map.counter), IdConfidence::Low)
         }
     };
-    
+
     map.counter += 1;
     let mut final_id = cct_id.clone();
     let mut suffix = 1;
@@ -133,8 +136,8 @@ fn process_node_ids(
 }
 
 fn is_framework_auto_id(id: &str) -> bool {
-    id.starts_with("yui_3_") 
-    || id.starts_with(":r") 
-    || id.starts_with("__next") 
-    || id.contains("ember")
+    id.starts_with("yui_3_")
+        || id.starts_with(":r")
+        || id.starts_with("__next")
+        || id.contains("ember")
 }

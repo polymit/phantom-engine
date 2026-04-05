@@ -1,5 +1,5 @@
-use rquickjs::loader::Bundle;
 use rquickjs::embed;
+use rquickjs::loader::Bundle;
 
 /// Pre-compiled QuickJS bytecode bundle.
 /// These JS files are compiled to bytecode at BUILD TIME by the

@@ -1,6 +1,6 @@
-use crate::dom::{DomTree, NodeData, Display, Visibility};
+use crate::css::{ComputedStyle, CssEngine};
+use crate::dom::{Display, DomTree, NodeData, Visibility};
 use crate::layout::bounds::{LayoutEngine, LayoutError};
-use crate::css::{CssEngine, ComputedStyle};
 use indextree::NodeId;
 use thiserror::Error;
 
@@ -21,20 +21,25 @@ pub struct ParsedPage {
 /// Parses `html` into a DOM tree, applies CSS cascade, computes layout, and
 /// returns a [`ParsedPage`] ready for CCT serialisation. Returns an error if
 /// the layout pass fails.
-pub fn process_html(html: &str, url: &str, viewport_width: f32, viewport_height: f32) -> Result<ParsedPage, CoreError> {
+pub fn process_html(
+    html: &str,
+    url: &str,
+    viewport_width: f32,
+    viewport_height: f32,
+) -> Result<ParsedPage, CoreError> {
     let mut tree = crate::parser::parse_html(html);
-    
+
     // Pass 1: CSS parsing and initial visibility
     if let Some(root) = tree.document_root {
         apply_css_pass(&mut tree, root, None);
     }
-    
+
     // Pass 2: Layout computation
     let mut layout = LayoutEngine::new();
-    
+
     if let Some(doc_root) = tree.document_root {
         build_layout_tree(&mut layout, &tree, doc_root)?;
-        
+
         // Document is never added to Taffy; locate the <html> element as the real root.
         let html_node = doc_root
             .children(&tree.arena)
@@ -45,12 +50,12 @@ pub fn process_html(html: &str, url: &str, viewport_width: f32, viewport_height:
             }
         }
     }
-    
+
     // Pass 3: Final CSS-derived visibility state
     if let Some(root) = tree.document_root {
         apply_layout_visibility_pass(&mut tree, root);
     }
-    
+
     Ok(ParsedPage {
         tree,
         layout,
@@ -67,9 +72,9 @@ fn apply_css_pass(tree: &mut DomTree, node_id: NodeId, parent_style: Option<Comp
             None
         }
     };
-    
+
     let computed = CssEngine::compute(inline_style_val.as_deref(), parent_style.as_ref());
-    
+
     {
         let node = tree.get_mut(node_id);
         if matches!(node.data, NodeData::Element { .. }) {
@@ -80,22 +85,26 @@ fn apply_css_pass(tree: &mut DomTree, node_id: NodeId, parent_style: Option<Comp
             node.computed_width = computed.width;
             node.computed_height = computed.height;
             node.z_index = computed.z_index;
-            
+
             node.is_visible = node.computed_display != Display::None
                 && node.computed_visibility != Visibility::Hidden
                 && node.computed_opacity > 0.0;
         }
     }
-        
+
     let children: Vec<NodeId> = node_id.children(&tree.arena).collect();
     for child in children {
         apply_css_pass(tree, child, Some(computed.clone()));
     }
 }
 
-fn build_layout_tree(layout: &mut LayoutEngine, tree: &DomTree, node_id: NodeId) -> Result<Option<taffy::NodeId>, CoreError> {
+fn build_layout_tree(
+    layout: &mut LayoutEngine,
+    tree: &DomTree,
+    node_id: NodeId,
+) -> Result<Option<taffy::NodeId>, CoreError> {
     let node = tree.get(node_id);
-    
+
     if matches!(node.data, NodeData::Element { .. }) {
         let mut style = taffy::Style {
             display: match node.computed_display {
@@ -106,16 +115,16 @@ fn build_layout_tree(layout: &mut LayoutEngine, tree: &DomTree, node_id: NodeId)
             },
             ..Default::default()
         };
-        
+
         if let Some(w) = node.computed_width {
             style.size.width = taffy::Dimension::length(w);
         }
         if let Some(h) = node.computed_height {
             style.size.height = taffy::Dimension::length(h);
         }
-        
+
         let taffy_id = layout.add_node(node_id, style)?;
-        
+
         let mut child_taffy_ids = Vec::new();
         let children: Vec<NodeId> = node_id.children(&tree.arena).collect();
         for child in children {
@@ -123,7 +132,7 @@ fn build_layout_tree(layout: &mut LayoutEngine, tree: &DomTree, node_id: NodeId)
                 child_taffy_ids.push(child_taffy_id);
             }
         }
-        
+
         layout.set_children(taffy_id, &child_taffy_ids)?;
         Ok(Some(taffy_id))
     } else {

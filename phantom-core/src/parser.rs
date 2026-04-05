@@ -1,5 +1,5 @@
-use html5ever::tendril::TendrilSink;
 use html5ever::parse_document;
+use html5ever::tendril::TendrilSink;
 
 use crate::dom::sink::DomSink;
 use crate::dom::DomTree;
@@ -12,4 +12,3 @@ pub fn parse_html(html: &str) -> DomTree {
     let parser = parse_document(sink, Default::default());
     parser.from_utf8().one(html.as_bytes())
 }
-

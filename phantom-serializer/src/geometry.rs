@@ -1,7 +1,7 @@
-use std::collections::HashMap;
 use indextree::NodeId;
 use phantom_core::dom::{DomTree, NodeData};
 use phantom_core::layout::bounds::{LayoutEngine, ViewportBounds};
+use std::collections::HashMap;
 
 pub struct GeometryMap {
     inner: HashMap<NodeId, ViewportBounds>,
@@ -9,7 +9,9 @@ pub struct GeometryMap {
 
 impl GeometryMap {
     pub fn new() -> Self {
-        Self { inner: HashMap::new() }
+        Self {
+            inner: HashMap::new(),
+        }
     }
 
     pub fn get(&self, id: NodeId) -> Option<&ViewportBounds> {
@@ -17,7 +19,10 @@ impl GeometryMap {
     }
 
     pub fn get_or_zero(&self, id: NodeId) -> ViewportBounds {
-        self.inner.get(&id).cloned().unwrap_or_else(ViewportBounds::zero)
+        self.inner
+            .get(&id)
+            .cloned()
+            .unwrap_or_else(ViewportBounds::zero)
     }
 }
 
@@ -76,7 +81,15 @@ fn process_node_geometry(
         // Document, Comment, Text have no layout bounds themselves
         map.inner.insert(node_id, ViewportBounds::zero());
         for child in node_id.children(&tree.arena) {
-            process_node_geometry(tree, layout, viewport, child, parent_offset_x, parent_offset_y, map);
+            process_node_geometry(
+                tree,
+                layout,
+                viewport,
+                child,
+                parent_offset_x,
+                parent_offset_y,
+                map,
+            );
         }
     }
 }

@@ -11,14 +11,16 @@ use rquickjs::{Ctx, Result};
 pub fn register_fetch<'js>(ctx: &Ctx<'js>, globals: &rquickjs::Object<'js>) -> Result<()> {
     use rquickjs::Function;
 
-    let fetch_fn = Function::new(ctx.clone(), move |
-        ctx: Ctx<'js>,
-        _url: String,
-        _opts: rquickjs::prelude::Opt<rquickjs::Value<'js>>,
-    | -> Result<rquickjs::Value<'js>> {
-        // Use a simpler string-based resolve for v0.1
-        ctx.eval("Promise.resolve('fetch_stub_response')")
-    })?;
+    let fetch_fn = Function::new(
+        ctx.clone(),
+        move |ctx: Ctx<'js>,
+              _url: String,
+              _opts: rquickjs::prelude::Opt<rquickjs::Value<'js>>|
+              -> Result<rquickjs::Value<'js>> {
+            // Use a simpler string-based resolve for v0.1
+            ctx.eval("Promise.resolve('fetch_stub_response')")
+        },
+    )?;
 
     globals.set("fetch", fetch_fn)?;
     Ok(())

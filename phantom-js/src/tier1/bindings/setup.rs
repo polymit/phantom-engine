@@ -1,7 +1,7 @@
-use crate::tier1::session::PhantomDomHandle;
-use super::element::JsHTMLElement;
 use super::document::JsDocument;
+use super::element::JsHTMLElement;
 use super::navigator::JsNavigator;
+use crate::tier1::session::PhantomDomHandle;
 
 pub async fn setup_dom_environment(
     context: &rquickjs::AsyncContext,

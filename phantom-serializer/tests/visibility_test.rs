@@ -1,8 +1,8 @@
 #[cfg(test)]
 mod tests {
+    use phantom_core::layout::bounds::ViewportBounds;
     use phantom_core::process_html;
     use phantom_serializer::compute_visibility;
-    use phantom_core::layout::bounds::ViewportBounds;
 
     #[test]
     fn test_display_none_invisible() {
@@ -24,7 +24,7 @@ mod tests {
 
         let vis_div = page.tree.get_element_by_id("vis").unwrap();
         assert!(vis_map.is_visible(vis_div));
-        
+
         // Assert that at least some nodes are invisible (e.g., the display:none node and its children)
         let mut invisible_count = 0;
         if let Some(r) = page.tree.document_root {
@@ -48,8 +48,11 @@ mod tests {
 
         let viewport = ViewportBounds::new(0.0, 0.0, 1280.0, 720.0);
         let vis_map = compute_visibility(&page.tree, &page.layout, &viewport);
-        
+
         let hidden_btn = page.tree.get_element_by_id("hidden-btn").unwrap();
-        assert!(!vis_map.is_visible(hidden_btn), "opacity: 0 element must be invisible");
+        assert!(
+            !vis_map.is_visible(hidden_btn),
+            "opacity: 0 element must be invisible"
+        );
     }
 }

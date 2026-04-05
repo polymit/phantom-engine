@@ -1,5 +1,5 @@
-pub mod session;
 pub mod pool;
+pub mod session;
 
-pub use session::Tier2Session;
 pub use pool::Tier2Pool;
+pub use session::Tier2Session;

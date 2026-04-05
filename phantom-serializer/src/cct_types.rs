@@ -263,16 +263,22 @@ impl CctState {
 
     pub fn from_attributes(attrs: &HashMap<String, String>) -> Self {
         let mut state = Self::empty();
-        
-        let d = attrs.get("disabled").is_some() || attrs.get("aria-disabled").is_some_and(|v| v == "true");
-        let ro = attrs.get("readonly").is_some() || attrs.get("aria-readonly").is_some_and(|v| v == "true");
-        let ch = attrs.get("checked").is_some() || attrs.get("aria-checked").is_some_and(|v| v == "true");
+
+        let d = attrs.get("disabled").is_some()
+            || attrs.get("aria-disabled").is_some_and(|v| v == "true");
+        let ro = attrs.get("readonly").is_some()
+            || attrs.get("aria-readonly").is_some_and(|v| v == "true");
+        let ch = attrs.get("checked").is_some()
+            || attrs.get("aria-checked").is_some_and(|v| v == "true");
         let sel = attrs.get("aria-selected").is_some_and(|v| v == "true");
         let exp = attrs.get("aria-expanded").is_some_and(|v| v == "true");
-        let req = attrs.get("required").is_some() || attrs.get("aria-required").is_some_and(|v| v == "true");
+        let req = attrs.get("required").is_some()
+            || attrs.get("aria-required").is_some_and(|v| v == "true");
         let bsy = attrs.get("aria-busy").is_some_and(|v| v == "true");
-        let inv = attrs.get("aria-invalid").is_some_and(|v| v == "true" || v == "spelling" || v == "grammar");
-        
+        let inv = attrs
+            .get("aria-invalid")
+            .is_some_and(|v| v == "true" || v == "spelling" || v == "grammar");
+
         state.disabled = d;
         state.checked = ch;
         state.selected = sel;
@@ -281,11 +287,9 @@ impl CctState {
         state.readonly = ro;
         state.busy = bsy;
         state.invalid = inv;
-        
+
         state
     }
-
-
 }
 
 impl fmt::Display for CctState {
@@ -293,10 +297,17 @@ impl fmt::Display for CctState {
         write!(
             f,
             "s:{},{},{},{},{},{},{},{},{},{},{}",
-            self.disabled as u8, self.checked as u8, self.selected as u8,
-            self.expanded as u8, self.required as u8, self.loading as u8,
-            self.readonly as u8, self.error as u8, self.focused as u8,
-            self.busy as u8, self.invalid as u8,
+            self.disabled as u8,
+            self.checked as u8,
+            self.selected as u8,
+            self.expanded as u8,
+            self.required as u8,
+            self.loading as u8,
+            self.readonly as u8,
+            self.error as u8,
+            self.focused as u8,
+            self.busy as u8,
+            self.invalid as u8,
         )
     }
 }
@@ -354,19 +365,29 @@ impl CctEvents {
         }
         evts
     }
-
-
 }
 
 impl fmt::Display for CctEvents {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut buf = String::with_capacity(12);
-        if self.click   { buf.push_str("c,"); }
-        if self.focus   { buf.push_str("f,"); }
-        if self.blur    { buf.push_str("b,"); }
-        if self.input   { buf.push_str("i,"); }
-        if self.submit  { buf.push_str("s,"); }
-        if self.keypress{ buf.push_str("k,"); }
+        if self.click {
+            buf.push_str("c,");
+        }
+        if self.focus {
+            buf.push_str("f,");
+        }
+        if self.blur {
+            buf.push_str("b,");
+        }
+        if self.input {
+            buf.push_str("i,");
+        }
+        if self.submit {
+            buf.push_str("s,");
+        }
+        if self.keypress {
+            buf.push_str("k,");
+        }
         if buf.is_empty() {
             f.write_str("-")
         } else {
@@ -434,10 +455,14 @@ impl fmt::Display for CctPageHeader {
             f,
             "##PAGE url={} scroll={},{} viewport={}x{} total={},{} nodes={} mode={}",
             self.url,
-            self.scroll_x, self.scroll_y,
-            self.viewport_width, self.viewport_height,
-            self.total_width, self.total_height,
-            self.node_count, m
+            self.scroll_x,
+            self.scroll_y,
+            self.viewport_width,
+            self.viewport_height,
+            self.total_width,
+            self.total_height,
+            self.node_count,
+            m
         )
     }
 }

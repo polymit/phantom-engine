@@ -33,7 +33,8 @@ impl MutationBridge {
             while ctx.execute_pending_job() {}
 
             Ok::<(), rquickjs::Error>(())
-        }).await;
+        })
+        .await;
 
         if let Err(e) = result {
             tracing::warn!("MutationBridge::notify_mutation failed: {:?}", e);

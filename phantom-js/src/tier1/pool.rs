@@ -74,7 +74,9 @@ impl Tier1Pool {
 
         // Pool miss — spin up a fresh session if capacity allows
         if self.live_count.load(Ordering::Relaxed) >= self.max_count {
-            return Err(PhantomJsError::PoolExhausted { max: self.max_count });
+            return Err(PhantomJsError::PoolExhausted {
+                max: self.max_count,
+            });
         }
 
         let session = Tier1Session::new().await?;

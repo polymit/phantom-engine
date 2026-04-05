@@ -1,11 +1,13 @@
 pub mod node;
-pub mod sink;
 pub mod query;
+pub mod sink;
 
+pub use self::node::{
+    AriaRole, Display, DomNode, EventListenerType, NodeData, PointerEvents, Visibility,
+};
+pub use self::sink::DomSink;
 use indextree::{Arena, NodeId};
 use std::num::NonZeroUsize;
-pub use self::node::{AriaRole, Display, DomNode, EventListenerType, NodeData, PointerEvents, Visibility};
-pub use self::sink::DomSink;
 
 /// The live DOM tree produced by the HTML parser.
 /// Nodes are stored in an arena indexed by [`NodeId`]; the tree is navigable
@@ -35,13 +37,18 @@ impl DomTree {
     }
 
     pub fn get_mut(&mut self, id: NodeId) -> &mut DomNode {
-        self.arena.get_mut(id).expect("NodeId not found in arena").get_mut()
+        self.arena
+            .get_mut(id)
+            .expect("NodeId not found in arena")
+            .get_mut()
     }
 
     pub fn get_text_content(&self, id: NodeId) -> String {
         let mut text = String::new();
         for descendant_id in id.descendants(&self.arena) {
-            if descendant_id == id { continue; }
+            if descendant_id == id {
+                continue;
+            }
             let node = self.get(descendant_id);
             if let NodeData::Text { content } = &node.data {
                 if !text.is_empty() {
@@ -84,7 +91,8 @@ impl DomTree {
     }
 
     pub fn query_selector_from(&self, selector: &str, context_node: NodeId) -> Option<NodeId> {
-        let results = crate::dom::query::query_node_with_selectors(context_node, &self.arena, selector, true);
+        let results =
+            crate::dom::query::query_node_with_selectors(context_node, &self.arena, selector, true);
         results.into_iter().next()
     }
 

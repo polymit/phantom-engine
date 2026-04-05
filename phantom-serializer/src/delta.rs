@@ -1,15 +1,32 @@
-use std::collections::{VecDeque, HashMap, HashSet};
-use std::time::Instant;
-use indextree::NodeId;
 use crate::cct_types::CctDelta;
+use indextree::NodeId;
+use std::collections::{HashMap, HashSet, VecDeque};
+use std::time::Instant;
 
 #[derive(Debug, Clone)]
 pub enum RawMutation {
-    NodeInserted { node_id: NodeId, parent_id: NodeId },
-    NodeRemoved  { node_id: NodeId, parent_id: NodeId },
-    AttrChanged  { node_id: NodeId, attr: String, old_val: Option<String>, new_val: Option<String> },
-    TextChanged  { node_id: NodeId, new_text: String },
-    ScrollChanged { x: f32, y: f32 },
+    NodeInserted {
+        node_id: NodeId,
+        parent_id: NodeId,
+    },
+    NodeRemoved {
+        node_id: NodeId,
+        parent_id: NodeId,
+    },
+    AttrChanged {
+        node_id: NodeId,
+        attr: String,
+        old_val: Option<String>,
+        new_val: Option<String>,
+    },
+    TextChanged {
+        node_id: NodeId,
+        new_text: String,
+    },
+    ScrollChanged {
+        x: f32,
+        y: f32,
+    },
 }
 
 /// Batches raw DOM mutations and coalesces them into minimal CCT deltas.
@@ -83,27 +100,47 @@ fn apply_coalescing(mutations: Vec<RawMutation>) -> Vec<CctDelta> {
                 } else {
                     removed.insert(node_id);
                 }
-                
+
                 // Parent removing implicitly cleans up target nodes attributes
                 attr_map.retain(|&(id, _), _| id != node_id);
                 text_map.remove(&node_id);
             }
-            RawMutation::AttrChanged { node_id, attr, old_val, new_val } => {
-                if removed.contains(&node_id) { continue; }
+            RawMutation::AttrChanged {
+                node_id,
+                attr,
+                old_val,
+                new_val,
+            } => {
+                if removed.contains(&node_id) {
+                    continue;
+                }
                 let key = (node_id, attr.clone());
-                
+
                 // Rule 1: A -> B -> A
-                if let Some(RawMutation::AttrChanged { old_val: orig_old, .. }) = attr_map.get(&key) {
+                if let Some(RawMutation::AttrChanged {
+                    old_val: orig_old, ..
+                }) = attr_map.get(&key)
+                {
                     if *orig_old == new_val {
                         attr_map.remove(&key);
                         continue;
                     }
                 }
-                // Rule 2: Keep last value 
-                attr_map.insert(key, RawMutation::AttrChanged { node_id, attr, old_val, new_val });
+                // Rule 2: Keep last value
+                attr_map.insert(
+                    key,
+                    RawMutation::AttrChanged {
+                        node_id,
+                        attr,
+                        old_val,
+                        new_val,
+                    },
+                );
             }
             RawMutation::TextChanged { node_id, new_text } => {
-                if removed.contains(&node_id) { continue; }
+                if removed.contains(&node_id) {
+                    continue;
+                }
                 text_map.insert(node_id, new_text);
             }
             RawMutation::ScrollChanged { x, y } => {
@@ -134,7 +171,7 @@ fn apply_coalescing(mutations: Vec<RawMutation>) -> Vec<CctDelta> {
     for &node_id in text_map.keys() {
         updated_nodes.insert(node_id);
     }
-    
+
     let mut updated_ids: Vec<_> = updated_nodes.into_iter().collect();
     updated_ids.sort_by_key(|id| id.to_string());
     for id in updated_ids {

@@ -1,8 +1,7 @@
-use std::sync::Arc;
 use parking_lot::RwLock;
 use phantom_core::dom::{DomTree, NodeData};
-use rquickjs::{AsyncRuntime, AsyncContext, async_with, prelude::*};
-
+use rquickjs::{async_with, prelude::*, AsyncContext, AsyncRuntime};
+use std::sync::Arc;
 
 use crate::error::PhantomJsError;
 
@@ -22,7 +21,9 @@ unsafe impl<'js> rquickjs::JsLifetime<'js> for PhantomDomHandle {
 
 impl PhantomDomHandle {
     pub fn new(tree: DomTree) -> Self {
-        Self { inner: Arc::new(RwLock::new(tree)) }
+        Self {
+            inner: Arc::new(RwLock::new(tree)),
+        }
     }
 
     pub fn get_tag_name(&self, arena_id: u64) -> String {
@@ -47,12 +48,16 @@ impl PhantomDomHandle {
 
     pub fn query_selector(&self, selector: &str) -> Option<u64> {
         let tree = self.inner.read();
-        tree.query_selector(selector).map(|id| usize::from(id) as u64)
+        tree.query_selector(selector)
+            .map(|id| usize::from(id) as u64)
     }
 
     pub fn query_selector_all(&self, selector: &str) -> Vec<u64> {
         let tree = self.inner.read();
-        tree.query_selector_all(selector).into_iter().map(|id| usize::from(id) as u64).collect()
+        tree.query_selector_all(selector)
+            .into_iter()
+            .map(|id| usize::from(id) as u64)
+            .collect()
     }
 
     pub fn get_attribute(&self, arena_id: u64, name: &str) -> Option<String> {
@@ -68,7 +73,8 @@ impl PhantomDomHandle {
     pub fn query_selector_from(&self, selector: &str, arena_id: u64) -> Option<u64> {
         let tree = self.inner.read();
         let node_id = tree.node_id_from_raw(arena_id)?;
-        tree.query_selector_from(selector, node_id).map(|id| usize::from(id) as u64)
+        tree.query_selector_from(selector, node_id)
+            .map(|id| usize::from(id) as u64)
     }
 
     pub fn create_element(&self, tag: &str) -> u64 {
@@ -109,8 +115,8 @@ impl Tier1Session {
     /// Uses AsyncRuntime + AsyncContext — NOT sync Runtime/Context.
     /// All JS execution goes through async_with! macro.
     pub async fn new() -> Result<Self, PhantomJsError> {
-        let runtime = AsyncRuntime::new()
-            .map_err(|e| PhantomJsError::QuickJsRuntime(e.to_string()))?;
+        let runtime =
+            AsyncRuntime::new().map_err(|e| PhantomJsError::QuickJsRuntime(e.to_string()))?;
 
         // 50 MB memory limit
         // This is a NOOP if rust-alloc feature is enabled.
@@ -124,13 +130,15 @@ impl Tier1Session {
         // Returns true from the handler = terminate JS execution
         // This is a hard kill — the JS isolate becomes unusable after this
         let start = std::time::Instant::now();
-        runtime.set_interrupt_handler(Some(Box::new(move || {
-            if start.elapsed().as_millis() > 10_000 {
-                tracing::warn!("Tier1Session: CPU budget exceeded — terminating JS");
-                return true; // kill
-            }
-            false
-        }))).await;
+        runtime
+            .set_interrupt_handler(Some(Box::new(move || {
+                if start.elapsed().as_millis() > 10_000 {
+                    tracing::warn!("Tier1Session: CPU budget exceeded — terminating JS");
+                    return true; // kill
+                }
+                false
+            })))
+            .await;
 
         // full() loads all standard JS intrinsics (Math, JSON, etc.)
         let context = AsyncContext::full(&runtime)

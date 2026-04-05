@@ -71,7 +71,9 @@ impl Tier2Pool {
         }
 
         if self.live_count.load(Ordering::Relaxed) >= self.max_count {
-            return Err(PhantomJsError::PoolExhausted { max: self.max_count });
+            return Err(PhantomJsError::PoolExhausted {
+                max: self.max_count,
+            });
         }
 
         let session = Tier2Session::new()?;

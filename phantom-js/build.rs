@@ -51,33 +51,36 @@ fn create_base_snapshot() {
     // This means every session loaded from this snapshot already has
     // all anti-detection shims applied — <0.1ms instead of ~1ms
     let shims = include_str!("js/browser_shims.js");
-    runtime.execute_script("<phantom_shims>", shims)
+    runtime
+        .execute_script("<phantom_shims>", shims)
         .expect("browser_shims.js must execute without error in snapshot");
 
     let event_target = include_str!("js/event_target.js");
-    runtime.execute_script("<phantom_event_target>", event_target)
+    runtime
+        .execute_script("<phantom_event_target>", event_target)
         .expect("event_target.js must execute without error");
 
     let mutation_observer = include_str!("js/mutation_observer.js");
-    runtime.execute_script("<phantom_mutation_observer>", mutation_observer)
+    runtime
+        .execute_script("<phantom_mutation_observer>", mutation_observer)
         .expect("mutation_observer.js must execute without error");
 
     let location = include_str!("js/location.js");
-    runtime.execute_script("<phantom_location>", location)
+    runtime
+        .execute_script("<phantom_location>", location)
         .expect("location.js must execute without error");
 
     // Create the snapshot blob
     let snapshot = runtime.snapshot();
 
     // Write to OUT_DIR where include_bytes! can find it
-    let out_dir = std::env::var("OUT_DIR")
-        .expect("OUT_DIR must be set by cargo");
-    let snapshot_path = std::path::Path::new(&out_dir)
-        .join("PHANTOM_BASE_SNAPSHOT.bin");
+    let out_dir = std::env::var("OUT_DIR").expect("OUT_DIR must be set by cargo");
+    let snapshot_path = std::path::Path::new(&out_dir).join("PHANTOM_BASE_SNAPSHOT.bin");
 
-    std::fs::write(&snapshot_path, &snapshot)
-        .expect("snapshot write must succeed");
+    std::fs::write(&snapshot_path, &snapshot).expect("snapshot write must succeed");
 
-    println!("cargo:warning=PHANTOM_BASE_SNAPSHOT.bin created: {} bytes",
-             snapshot.len());
+    println!(
+        "cargo:warning=PHANTOM_BASE_SNAPSHOT.bin created: {} bytes",
+        snapshot.len()
+    );
 }

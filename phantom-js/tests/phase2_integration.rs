@@ -191,9 +191,7 @@ fn phase2_tier2_snapshot_in_pipeline() {
         .expect("Tier2Session must load from snapshot");
 
     // Shims must be pre-applied from snapshot
-    let webdriver = session
-        .eval("String(navigator.webdriver)")
-        .unwrap();
+    let webdriver = session.eval("String(navigator.webdriver)").unwrap();
     assert_eq!(
         webdriver, "undefined",
         "Tier2: navigator.webdriver shim must be pre-applied in snapshot"

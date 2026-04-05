@@ -40,7 +40,10 @@ mod tests {
 
         let cct = HeadlessSerializer::serialise(&page, &config);
 
-        assert!(cct.starts_with("##PAGE"), "CCT must start with ##PAGE header");
+        assert!(
+            cct.starts_with("##PAGE"),
+            "CCT must start with ##PAGE header"
+        );
         assert!(cct.contains("n_"), "CCT must contain node lines");
 
         println!("CCT output:\n{}", &cct[..cct.len().min(500)]);
@@ -103,7 +106,8 @@ mod tests {
 
         let config = SerialiserConfig {
             url: "https://test.com".to_string(),
-            scroll_x: 0.0, scroll_y: 0.0,
+            scroll_x: 0.0,
+            scroll_y: 0.0,
             total_height: 720.0,
             ..Default::default()
         };
@@ -115,7 +119,7 @@ mod tests {
         assert!(first_line.contains("mode=full"));
         println!("Page header: {}", first_line);
     }
-    
+
     #[test]
     fn test_serialise_performance_detailed() {
         use std::time::Instant;

@@ -13,9 +13,7 @@ fn click_hesitation_has_correct_lognormal_distribution() {
     // Sample 1000 values and verify statistical properties.
     // LogNormal(μ=4.2, σ=0.9) has median = e^4.2 ≈ 66.7ms.
     // Mean = e^(μ + σ²/2) = e^(4.2 + 0.405) ≈ 94ms (before clamp).
-    let samples: Vec<u64> = (0..1000)
-        .map(|_| engine.click_hesitation_ms())
-        .collect();
+    let samples: Vec<u64> = (0..1000).map(|_| engine.click_hesitation_ms()).collect();
 
     let sum: u64 = samples.iter().sum();
     let mean = sum as f64 / samples.len() as f64;

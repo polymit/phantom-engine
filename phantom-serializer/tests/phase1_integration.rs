@@ -70,15 +70,13 @@ mod phase1_integration {
     #[test]
     fn phase1_full_pipeline() {
         let start_total = Instant::now();
-        let page = process_html(
-            login_page(),
-            "https://app.example.com/login",
-            1280.0,
-            720.0,
-        )
-        .expect("HTML parsing must not fail");
+        let page = process_html(login_page(), "https://app.example.com/login", 1280.0, 720.0)
+            .expect("HTML parsing must not fail");
 
-        assert!(page.tree.document_root.is_some(), "Document root must exist");
+        assert!(
+            page.tree.document_root.is_some(),
+            "Document root must exist"
+        );
 
         let submit = page.tree.get_element_by_id("submit-btn");
         assert!(submit.is_some(), "Submit button must be findable by ID");
@@ -100,21 +98,36 @@ mod phase1_integration {
         let cct = HeadlessSerializer::serialise(&page, &config);
         let total_time = start_total.elapsed();
 
-        assert!(cct.starts_with("##PAGE"), "CCT must start with ##PAGE header");
+        assert!(
+            cct.starts_with("##PAGE"),
+            "CCT must start with ##PAGE header"
+        );
         assert!(
             cct.contains("url=https://app.example.com/login"),
             "CCT page header must contain URL"
         );
-        assert!(cct.contains("viewport=1280x720"), "CCT page header must contain viewport");
-        assert!(cct.contains("mode=full"), "CCT page header must contain mode");
+        assert!(
+            cct.contains("viewport=1280x720"),
+            "CCT page header must contain viewport"
+        );
+        assert!(
+            cct.contains("mode=full"),
+            "CCT page header must contain mode"
+        );
 
         let node_lines: Vec<&str> = cct.lines().filter(|l| l.starts_with("n_")).collect();
-        assert!(!node_lines.is_empty(), "CCT must contain at least one node line");
+        assert!(
+            !node_lines.is_empty(),
+            "CCT must contain at least one node line"
+        );
 
         println!("Full CCT output:\n{}", cct);
 
         println!("\n=== PHASE 1 PERFORMANCE ===");
-        println!("Total time (parse + CSS + layout + serialise): {:?}", total_time);
+        println!(
+            "Total time (parse + CSS + layout + serialise): {:?}",
+            total_time
+        );
         println!("Node count in CCT: {}", node_lines.len());
         println!("CCT size: {} bytes", cct.len());
         println!("First 3 node lines:");
@@ -140,13 +153,8 @@ mod phase1_integration {
 
     #[test]
     fn phase1_selective_mode_login() {
-        let page = process_html(
-            login_page(),
-            "https://app.example.com/login",
-            1280.0,
-            720.0,
-        )
-        .unwrap();
+        let page =
+            process_html(login_page(), "https://app.example.com/login", 1280.0, 720.0).unwrap();
 
         let config = SerialiserConfig {
             url: "https://app.example.com/login".to_string(),
@@ -162,7 +170,10 @@ mod phase1_integration {
         };
         let full_cct = HeadlessSerializer::serialise(&page, &full_config);
 
-        let selective_nodes: usize = selective_cct.lines().filter(|l| l.starts_with("n_")).count();
+        let selective_nodes: usize = selective_cct
+            .lines()
+            .filter(|l| l.starts_with("n_"))
+            .count();
         let full_nodes: usize = full_cct.lines().filter(|l| l.starts_with("n_")).count();
 
         println!("Full mode nodes:      {}", full_nodes);
@@ -175,7 +186,8 @@ mod phase1_integration {
     #[test]
     fn phase1_performance_benchmark() {
         fn make_large_page(divs: usize) -> String {
-            let mut s = String::from("<!DOCTYPE html><html><body style='width: 1280px; height: 720px;'>");
+            let mut s =
+                String::from("<!DOCTYPE html><html><body style='width: 1280px; height: 720px;'>");
             for i in 0..divs {
                 s.push_str(&format!(
                     "<div class='card' id='card{}' style='width: 200px; height: 100px;'>\

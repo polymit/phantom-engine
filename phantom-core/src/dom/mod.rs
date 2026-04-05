@@ -3,6 +3,7 @@ pub mod sink;
 pub mod query;
 
 use indextree::{Arena, NodeId};
+use std::num::NonZeroUsize;
 pub use self::node::{AriaRole, Display, DomNode, EventListenerType, NodeData, PointerEvents, Visibility};
 pub use self::sink::DomSink;
 
@@ -116,5 +117,16 @@ impl DomTree {
             }
         }
         results
+    }
+
+    /// Convert a raw arena index (as stored in JS as a u64) back to a
+    /// live [`NodeId`].
+    ///
+    /// Uses [`Arena::get_node_id_at`] which validates the stamp — so
+    /// a stale or garbage index safely returns `None` rather than
+    /// indexing into a removed slot.
+    pub fn node_id_from_raw(&self, arena_id: u64) -> Option<NodeId> {
+        let nz = NonZeroUsize::new(arena_id as usize)?;
+        self.arena.get_node_id_at(nz)
     }
 }

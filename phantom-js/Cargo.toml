@@ -11,6 +11,7 @@ tokio = { version = "1", features = ["full"] }
 selectors = "0.25"
 thiserror = "1"
 tracing = "=0.1.44"
+indextree = "=4.8.0"
 phantom-core = { path = "../phantom-core" }
 rand = "=0.8"
 rand_distr = "=0.4"
@@ -24,6 +25,10 @@ crossbeam = "0.8"
 # rusty_v8      → old unmaintained crate name, use v8
 # openssl-sys   → symbol conflicts with boring-sys
 # native-tls    → system TLS, detectable fingerprint
+
+[dev-dependencies]
+phantom-serializer = { path = "../phantom-serializer" }
+deno_core = "=0.311.0"
 
 [build-dependencies]
 deno_core = "=0.311.0"

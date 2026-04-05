@@ -1,7 +1,6 @@
 use std::sync::Arc;
 use parking_lot::RwLock;
 use phantom_core::dom::{DomTree, NodeData};
-use std::num::NonZeroUsize;
 use rquickjs::{AsyncRuntime, AsyncContext, async_with, prelude::*};
 
 
@@ -28,29 +27,22 @@ impl PhantomDomHandle {
 
     pub fn get_tag_name(&self, arena_id: u64) -> String {
         let tree = self.inner.read();
-        let nz = match NonZeroUsize::new(arena_id as usize) {
-            Some(n) => n,
+        let node_id = match tree.node_id_from_raw(arena_id) {
+            Some(id) => id,
             None => return String::new(),
         };
-        if let Some(node_id) = tree.arena.get_node_id_at(nz) {
-            let node = tree.get(node_id);
-            if let NodeData::Element { tag_name, .. } = &node.data {
-                return tag_name.clone();
-            }
+        if let NodeData::Element { tag_name, .. } = &tree.get(node_id).data {
+            return tag_name.clone();
         }
         String::new()
     }
 
     pub fn get_text_content(&self, arena_id: u64) -> String {
         let tree = self.inner.read();
-        let nz = match NonZeroUsize::new(arena_id as usize) {
-            Some(n) => n,
-            None => return String::new(),
-        };
-        if let Some(node_id) = tree.arena.get_node_id_at(nz) {
-            return tree.get_text_content(node_id);
+        match tree.node_id_from_raw(arena_id) {
+            Some(id) => tree.get_text_content(id),
+            None => String::new(),
         }
-        String::new()
     }
 
     pub fn query_selector(&self, selector: &str) -> Option<u64> {
@@ -65,10 +57,8 @@ impl PhantomDomHandle {
 
     pub fn get_attribute(&self, arena_id: u64, name: &str) -> Option<String> {
         let tree = self.inner.read();
-        let nz = NonZeroUsize::new(arena_id as usize)?;
-        let node_id = tree.arena.get_node_id_at(nz)?;
-        let node = tree.get(node_id);
-        if let NodeData::Element { attributes, .. } = &node.data {
+        let node_id = tree.node_id_from_raw(arena_id)?;
+        if let NodeData::Element { attributes, .. } = &tree.get(node_id).data {
             attributes.get(name).cloned()
         } else {
             None
@@ -77,8 +67,7 @@ impl PhantomDomHandle {
 
     pub fn query_selector_from(&self, selector: &str, arena_id: u64) -> Option<u64> {
         let tree = self.inner.read();
-        let nz = NonZeroUsize::new(arena_id as usize)?;
-        let node_id = tree.arena.get_node_id_at(nz)?;
+        let node_id = tree.node_id_from_raw(arena_id)?;
         tree.query_selector_from(selector, node_id).map(|id| usize::from(id) as u64)
     }
 
@@ -155,20 +144,59 @@ impl Tier1Session {
         })
     }
 
-    /// Attach a DOM tree to this session.
-    /// Must be called before any JS that touches document.* runs.
+    /// Attach a DOM tree to this session and wire up the full browser environment.
+    ///
+    /// This does three things in order:
+    /// 1. Registers `document`, `navigator`, `setTimeout` etc. in the JS global
+    ///    via `setup_dom_environment` (which also stores the DOM handle as userdata).
+    /// 2. Sets `globalThis.__phantom_persona` with a default Chrome 133 profile so
+    ///    the shims have the values they need.
+    /// 3. Evals `browser_shims.js` directly — this wipes `navigator.webdriver`,
+    ///    injects `window.chrome`, patches Intl, etc.
+    ///
+    /// Module-based loading (`load_shims`) is not available here because
+    /// `AsyncRuntime::new()` does not configure a module loader. Direct eval
+    /// is correct and matches the existing shim syntax test approach.
     pub async fn attach_dom(&mut self, tree: phantom_core::dom::DomTree) {
         let handle = PhantomDomHandle::new(tree);
         self.dom_handle = Some(handle.clone());
 
-        // Inject the handle into the JS context via store_userdata
-        // JS class methods access it via ctx.userdata::<PhantomDomHandle>()
-        let h = handle;
+        crate::tier1::bindings::setup::setup_dom_environment(&self.context, handle)
+            .await
+            .expect("attach_dom: DOM environment setup must not fail");
+
+        // The shims reference `window`, `Plugin`, `PluginArray`, and
+        // `__phantom_persona`. These must exist before the shim source runs.
+        static PERSONA_INIT: &str = r#"
+            globalThis.window = globalThis;
+            globalThis.PluginArray = function PluginArray() {};
+            globalThis.Plugin = function Plugin() {};
+            globalThis.__phantom_persona = {
+                screen_width: 1920, screen_height: 1080,
+                hardware_concurrency: 8, device_memory: 8,
+                language: 'en-US', languages: ['en-US', 'en'],
+                timezone: 'America/New_York',
+                canvas_noise_seed: 0n,
+                webgl_vendor: 'Google Inc. (NVIDIA)',
+                webgl_renderer: 'ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Ti)',
+                chrome_major: '133', ua_platform: 'Windows',
+                platform_version: '15.0.0', ua_full_version: '133.0.6943.98',
+                ua_architecture: 'x86', ua_bitness: '64', ua_wow64: false,
+                platform: 'Win32',
+            };
+        "#;
+
+        static SHIMS_SOURCE: &str = include_str!("../../js/browser_shims.js");
+
         async_with!(self.context => |ctx| {
-            ctx.store_userdata(h)
-                .expect("store_userdata must not fail");
+            ctx.eval::<(), _>(PERSONA_INIT)
+                .map_err(|_| rquickjs::Error::Unknown)?;
+            ctx.eval::<(), _>(SHIMS_SOURCE)
+                .map_err(|_| rquickjs::Error::Unknown)?;
             Ok::<(), rquickjs::Error>(())
-        }).await.expect("attach_dom: async_with must not fail");
+        })
+        .await
+        .expect("attach_dom: shim eval must not fail");
     }
 
     /// Execute a JavaScript string and return the result as a String.

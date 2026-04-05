@@ -1745,9 +1745,11 @@ version = "0.1.0"
 dependencies = [
  "crossbeam",
  "deno_core",
+ "indextree",
  "once_cell",
  "parking_lot 0.12.5",
  "phantom-core",
+ "phantom-serializer",
  "rand",
  "rand_distr",
  "rquickjs",

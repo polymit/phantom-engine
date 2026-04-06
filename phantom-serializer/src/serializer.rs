@@ -9,6 +9,7 @@ use crate::selective::{compute_relevance, should_include_in_selective};
 use crate::semantic::extract_semantics;
 use crate::visibility::compute_visibility;
 use crate::zindex::resolve_zindex;
+use indextree::NodeId;
 use phantom_core::dom::NodeData;
 use phantom_core::layout::bounds::ViewportBounds;
 use phantom_core::ParsedPage;
@@ -41,6 +42,14 @@ impl Default for SerialiserConfig {
 }
 
 pub struct HeadlessSerializer;
+
+struct EmittedNode {
+    node_id: NodeId,
+    cct_role: CctAriaRole,
+    is_interactive: bool,
+    is_landmark: bool,
+    relevance_score: f32,
+}
 
 impl HeadlessSerializer {
     /// Runs the full 8-stage CCT pipeline over `page` and returns the complete
@@ -81,8 +90,7 @@ impl HeadlessSerializer {
         let id_map = stabilise_ids(&page.tree, &vis_map);
 
         let hint = config.task_hint.as_deref().unwrap_or("");
-        let mut emitted_ids = Vec::new();
-        let mut emitted_set = std::collections::HashSet::new();
+        let mut emitted = Vec::new();
 
         if let Some(root) = page.tree.document_root {
             for node_id in root.descendants(&page.tree.arena) {
@@ -96,31 +104,46 @@ impl HeadlessSerializer {
                 }
 
                 let semantic = sem_map.get(node_id).unwrap();
+                let cct_role = CctAriaRole::from_aria_role(&dom_node.aria_role);
                 let is_interactive = semantic.events.click
                     || semantic.events.input
                     || semantic.events.focus
                     || matches!(dom_node.data, NodeData::Element{ ref tag_name, .. } if is_interactive_tag(tag_name));
-
-                let cct_role = CctAriaRole::from_aria_role(&dom_node.aria_role);
                 let mut is_landmark = false;
                 if let NodeData::Element { tag_name, .. } = &dom_node.data {
                     if LandmarkType::from_tag(tag_name.as_str()).is_some()
-                        || LandmarkType::from_aria_role(cct_role.to_cct_code()).is_some()
+                        || LandmarkType::from_cct_role(&cct_role).is_some()
                     {
                         is_landmark = true;
                     }
                 }
+                let relevance_score = if actual_mode == SerialiserMode::Selective {
+                    compute_relevance(dom_node, semantic, hint)
+                } else {
+                    1.0
+                };
 
                 if actual_mode == SerialiserMode::Selective {
-                    let score = compute_relevance(dom_node, semantic, hint);
-                    if !should_include_in_selective(dom_node, score, is_interactive, is_landmark) {
+                    if !should_include_in_selective(
+                        dom_node,
+                        relevance_score,
+                        is_interactive,
+                        is_landmark,
+                    ) {
                         continue;
                     }
                 }
-                emitted_ids.push(node_id);
-                emitted_set.insert(node_id);
+                emitted.push(EmittedNode {
+                    node_id,
+                    cct_role,
+                    is_interactive,
+                    is_landmark,
+                    relevance_score,
+                });
             }
         }
+        let emitted_set: std::collections::HashSet<NodeId> =
+            emitted.iter().map(|n| n.node_id).collect();
 
         let header = CctPageHeader {
             url: config.url.clone(),
@@ -130,38 +153,21 @@ impl HeadlessSerializer {
             viewport_height: config.viewport_height,
             total_width: config.viewport_width,
             total_height: config.total_height,
-            node_count: visible_ids.len(),
+            node_count: emitted.len(),
             mode: actual_mode.clone(),
         };
 
         buffer.push_str(&header.to_string());
         buffer.push('\n');
 
-        for node_id in emitted_ids {
+        for emitted_node in emitted {
+            let node_id = emitted_node.node_id;
             let dom_node = page.tree.get(node_id);
             let semantic = sem_map.get(node_id).unwrap();
-            let is_interactive = semantic.events.click
-                || semantic.events.input
-                || semantic.events.focus
-                || matches!(dom_node.data, NodeData::Element{ ref tag_name, .. } if is_interactive_tag(tag_name));
-            let cct_role = CctAriaRole::from_aria_role(&dom_node.aria_role);
-            let mut is_landmark = false;
-            if let NodeData::Element { tag_name, .. } = &dom_node.data {
-                if LandmarkType::from_tag(tag_name.as_str()).is_some()
-                    || LandmarkType::from_aria_role(cct_role.to_cct_code()).is_some()
-                {
-                    is_landmark = true;
-                }
-            }
-            let relevance_score = if actual_mode == SerialiserMode::Selective {
-                compute_relevance(dom_node, semantic, hint)
-            } else {
-                1.0
-            };
-            if is_landmark {
+            if emitted_node.is_landmark {
                 let landmark_type = if let NodeData::Element { tag_name, .. } = &dom_node.data {
                     LandmarkType::from_tag(tag_name.as_str())
-                        .or_else(|| LandmarkType::from_aria_role(cct_role.to_cct_code()))
+                        .or_else(|| LandmarkType::from_cct_role(&emitted_node.cct_role))
                         .unwrap_or(LandmarkType::Main)
                 } else {
                     LandmarkType::Main
@@ -190,14 +196,14 @@ impl HeadlessSerializer {
                 .to_string();
 
             let mut flags: u8 = 0;
-            if is_interactive {
+            if emitted_node.is_interactive {
                 flags |= 1;
             }
 
             let cct_node = CctNode {
                 node_id: id_map.get_id(node_id).unwrap_or("").to_string(),
                 element_type: el_type,
-                aria_role: cct_role,
+                aria_role: emitted_node.cct_role.clone(),
                 x: bounds.x,
                 y: bounds.y,
                 w: bounds.width,
@@ -221,7 +227,7 @@ impl HeadlessSerializer {
                 state: semantic.state.clone(),
                 id_confidence: id_map.get_confidence(node_id),
                 relevance: if actual_mode == SerialiserMode::Selective {
-                    Some(relevance_score)
+                    Some(emitted_node.relevance_score)
                 } else {
                     None
                 },

@@ -1,5 +1,6 @@
 use parking_lot::RwLock;
 use phantom_core::dom::{DomTree, NodeData};
+use rand::RngCore;
 use rquickjs::{async_with, prelude::*, AsyncContext, AsyncRuntime};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
@@ -186,6 +187,8 @@ impl Tier1Session {
     /// `AsyncRuntime::new()` does not configure a module loader. Direct eval
     /// is correct and matches the existing shim syntax test approach.
     pub async fn attach_dom(&mut self, tree: phantom_core::dom::DomTree) {
+        let mut rng = rand::rngs::OsRng;
+        let canvas_noise_seed = rng.next_u64();
         let handle = PhantomDomHandle::new(tree);
         self.dom_handle = Some(handle.clone());
 
@@ -195,12 +198,12 @@ impl Tier1Session {
             self.session_id,
             Arc::clone(&self.timer_cancelled),
         )
-            .await
-            .expect("attach_dom: DOM environment setup must not fail");
+        .await
+        .expect("attach_dom: DOM environment setup must not fail");
 
         // The shims reference `window`, `Plugin`, `PluginArray`, and
         // `__phantom_persona`. These must exist before the shim source runs.
-        static PERSONA_INIT: &str = r#"
+        static PERSONA_INIT_TEMPLATE: &str = r#"
             globalThis.window = globalThis;
             globalThis.PluginArray = function PluginArray() {};
             globalThis.Plugin = function Plugin() {};
@@ -209,7 +212,7 @@ impl Tier1Session {
                 hardware_concurrency: 8, device_memory: 8,
                 language: 'en-US', languages: ['en-US', 'en'],
                 timezone: 'America/New_York',
-                canvas_noise_seed: 0n,
+                canvas_noise_seed: __CANVAS_NOISE_SEED__,
                 webgl_vendor: 'Google Inc. (NVIDIA)',
                 webgl_renderer: 'ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Ti)',
                 chrome_major: '133', ua_platform: 'Windows',
@@ -218,11 +221,12 @@ impl Tier1Session {
                 platform: 'Win32',
             };
         "#;
-
+        let persona_init = PERSONA_INIT_TEMPLATE
+            .replace("__CANVAS_NOISE_SEED__", &format!("{canvas_noise_seed}n"));
         static SHIMS_SOURCE: &str = include_str!("../../js/browser_shims.js");
 
         async_with!(self.context => |ctx| {
-            ctx.eval::<(), _>(PERSONA_INIT)
+            ctx.eval::<(), _>(persona_init)
                 .map_err(|_| rquickjs::Error::Unknown)?;
             ctx.eval::<(), _>(SHIMS_SOURCE)
                 .map_err(|_| rquickjs::Error::Unknown)?;

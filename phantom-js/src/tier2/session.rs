@@ -17,11 +17,23 @@ impl Tier2Session {
     /// init_v8_platform() must be called in main() before Tokio starts.
     pub fn new() -> Result<Self, crate::error::PhantomJsError> {
         use deno_core::{JsRuntime, RuntimeOptions};
+        use rand::RngCore;
 
-        let runtime = JsRuntime::new(RuntimeOptions {
+        let mut runtime = JsRuntime::new(RuntimeOptions {
             startup_snapshot: Some(PHANTOM_BASE_SNAPSHOT),
             ..Default::default()
         });
+        let mut rng = rand::rngs::OsRng;
+        let seed = rng.next_u64();
+        runtime
+            .execute_script(
+                "<phantom_canvas_seed>",
+                format!(
+                    "globalThis.__phantom_persona = Object.assign(globalThis.__phantom_persona || {{}}, {{ canvas_noise_seed: {}n }});",
+                    seed
+                ),
+            )
+            .map_err(|e| crate::error::PhantomJsError::Internal(e.to_string()))?;
 
         Ok(Self { runtime })
     }

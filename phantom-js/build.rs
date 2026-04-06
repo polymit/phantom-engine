@@ -27,7 +27,7 @@ fn create_base_snapshot() {
             language: 'en-US',
             languages: ['en-US', 'en'],
             timezone: 'America/New_York',
-            canvas_noise_seed: 0n,
+            canvas_noise_seed: 1n,
             webgl_vendor: 'Google Inc. (NVIDIA)',
             webgl_renderer: 'ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Ti Direct3D11 vs_5_0 ps_5_0, D3D11)',
             chrome_major: '133',

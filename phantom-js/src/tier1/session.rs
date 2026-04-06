@@ -7,6 +7,7 @@ use std::sync::Arc;
 use crate::error::PhantomJsError;
 
 const CPU_TIMEOUT_MS: u64 = 10_000;
+static SESSION_ID_COUNTER: AtomicU64 = AtomicU64::new(1);
 
 #[derive(Clone)]
 #[rquickjs::class]
@@ -105,6 +106,7 @@ pub struct Tier1Session {
     pub runtime: AsyncRuntime,
     pub context: AsyncContext,
     pub dom_handle: Option<PhantomDomHandle>,
+    session_id: u64,
     eval_deadline_ms: Arc<AtomicU64>,
     timer_cancelled: Arc<AtomicBool>,
     interrupt_epoch: std::time::Instant,
@@ -137,6 +139,7 @@ impl Tier1Session {
         // The interrupt handler is installed once on the runtime, but the deadline
         // is updated on every eval() invocation. This prevents session age from
         // triggering false-positive timeouts.
+        let session_id = SESSION_ID_COUNTER.fetch_add(1, Ordering::Relaxed);
         let interrupt_epoch = std::time::Instant::now();
         let eval_deadline_ms = Arc::new(AtomicU64::new(0));
         let timer_cancelled = Arc::new(AtomicBool::new(false));
@@ -162,6 +165,7 @@ impl Tier1Session {
             runtime,
             context,
             dom_handle: None,
+            session_id,
             eval_deadline_ms,
             timer_cancelled,
             interrupt_epoch,
@@ -188,6 +192,7 @@ impl Tier1Session {
         crate::tier1::bindings::setup::setup_dom_environment(
             &self.context,
             handle,
+            self.session_id,
             Arc::clone(&self.timer_cancelled),
         )
             .await

@@ -10,6 +10,7 @@ use std::sync::{
 pub async fn setup_dom_environment(
     context: &rquickjs::AsyncContext,
     dom_handle: PhantomDomHandle,
+    session_id: u64,
     timer_cancelled: Arc<AtomicBool>,
 ) -> Result<(), crate::error::PhantomJsError> {
     use rquickjs::async_with;
@@ -42,6 +43,7 @@ pub async fn setup_dom_environment(
             &ctx,
             &globals,
             context.clone(),
+            session_id,
             Arc::clone(&timer_cancelled),
         )?;
         crate::tier1::apis::fetch::register_fetch(&ctx, &globals)?;

@@ -5,10 +5,59 @@ fn main() {
     println!("cargo:rerun-if-changed=js/mutation_observer.js");
     println!("cargo:rerun-if-changed=js/location.js");
 
-    create_base_snapshot();
+    create_snapshots();
 }
 
-fn create_base_snapshot() {
+#[derive(Clone, Copy)]
+enum SnapshotFlavor {
+    Base,
+    React,
+    Vue,
+}
+
+impl SnapshotFlavor {
+    fn file_name(self) -> &'static str {
+        match self {
+            Self::Base => "PHANTOM_BASE_SNAPSHOT.bin",
+            Self::React => "PHANTOM_REACT_SNAPSHOT.bin",
+            Self::Vue => "PHANTOM_VUE_SNAPSHOT.bin",
+        }
+    }
+
+    fn bootstrap_script(self) -> &'static str {
+        match self {
+            Self::Base => "globalThis.__phantom_snapshot = 'base';",
+            Self::React => {
+                r#"
+                globalThis.__phantom_snapshot = 'react';
+                globalThis.React = globalThis.React || {
+                    version: '18.2.0',
+                    createElement: function () {},
+                };
+                "#
+            }
+            Self::Vue => {
+                r#"
+                globalThis.__phantom_snapshot = 'vue';
+                globalThis.Vue = globalThis.Vue || {
+                    version: '3.4.0',
+                    createApp: function () {
+                        return { mount: function () {} };
+                    },
+                };
+                "#
+            }
+        }
+    }
+}
+
+fn create_snapshots() {
+    create_snapshot(SnapshotFlavor::Base);
+    create_snapshot(SnapshotFlavor::React);
+    create_snapshot(SnapshotFlavor::Vue);
+}
+
+fn create_snapshot(flavor: SnapshotFlavor) {
     use deno_core::{JsRuntimeForSnapshot, RuntimeOptions};
 
     let mut runtime = JsRuntimeForSnapshot::new(RuntimeOptions {
@@ -70,17 +119,22 @@ fn create_base_snapshot() {
         .execute_script("<phantom_location>", location)
         .expect("location.js must execute without error");
 
+    runtime
+        .execute_script("<phantom_snapshot_flavor>", flavor.bootstrap_script())
+        .expect("snapshot bootstrap must execute without error");
+
     // Create the snapshot blob
     let snapshot = runtime.snapshot();
 
     // Write to OUT_DIR where include_bytes! can find it
     let out_dir = std::env::var("OUT_DIR").expect("OUT_DIR must be set by cargo");
-    let snapshot_path = std::path::Path::new(&out_dir).join("PHANTOM_BASE_SNAPSHOT.bin");
+    let file_name = flavor.file_name();
+    let snapshot_path = std::path::Path::new(&out_dir).join(file_name);
 
     std::fs::write(&snapshot_path, &snapshot).expect("snapshot write must succeed");
 
     println!(
-        "cargo:warning=PHANTOM_BASE_SNAPSHOT.bin created: {} bytes",
+        "cargo:warning={file_name} created: {} bytes",
         snapshot.len()
     );
 }

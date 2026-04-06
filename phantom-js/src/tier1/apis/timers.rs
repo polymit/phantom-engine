@@ -47,8 +47,10 @@ fn insert_timer(session_id: u64, id: u32, entry: TimerEntry) {
 fn remove_timer(session_id: u64, id: u32) -> Option<TimerEntry> {
     TIMER_STORE.with(|store| {
         let mut all = store.borrow_mut();
-        let removed = all.get_mut(&session_id).and_then(|timers| timers.remove(&id));
-        let empty = all.get(&session_id).map_or(false, |timers| timers.is_empty());
+        let removed = all
+            .get_mut(&session_id)
+            .and_then(|timers| timers.remove(&id));
+        let empty = all.get(&session_id).is_some_and(|timers| timers.is_empty());
         if empty {
             all.remove(&session_id);
         }

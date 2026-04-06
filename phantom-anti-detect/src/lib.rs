@@ -79,6 +79,10 @@ impl PersonaPool {
         self.personas.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.personas.is_empty()
+    }
+
     pub fn next_persona(&mut self) -> Persona {
         let p = self.personas[self.idx].clone();
         self.idx = (self.idx + 1) % self.personas.len();

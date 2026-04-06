@@ -123,15 +123,15 @@ impl HeadlessSerializer {
                     1.0
                 };
 
-                if actual_mode == SerialiserMode::Selective {
-                    if !should_include_in_selective(
+                if actual_mode == SerialiserMode::Selective
+                    && !should_include_in_selective(
                         dom_node,
                         relevance_score,
                         is_interactive,
                         is_landmark,
-                    ) {
-                        continue;
-                    }
+                    )
+                {
+                    continue;
                 }
                 emitted.push(EmittedNode {
                     node_id,

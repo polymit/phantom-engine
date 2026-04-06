@@ -1,5 +1,6 @@
 use crossbeam::queue::SegQueue;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 use std::time::Instant;
 
 use crate::error::PhantomJsError;
@@ -26,12 +27,12 @@ const STALE_SECS: u64 = 300; // 5 minutes — matches blueprint spec
 impl Tier1Pool {
     /// Create a pool and pre-warm `pre_warm_count` sessions immediately.
     /// Blueprint specifies 10 pre-warmed sessions at startup.
-    pub async fn new(max_count: usize, pre_warm_count: usize) -> Self {
-        let pool = Self {
+    pub async fn new(max_count: usize, pre_warm_count: usize) -> Arc<Self> {
+        let pool = Arc::new(Self {
             free: SegQueue::new(),
             live_count: AtomicUsize::new(0),
             max_count,
-        };
+        });
         pool.pre_warm(pre_warm_count).await;
         pool
     }
@@ -90,17 +91,12 @@ impl Tier1Pool {
     /// would leak DOM handles and event listeners across session boundaries,
     /// creating a detectable anomaly and a correctness bug. We destroy it
     /// immediately and spawn a background task to refill the pool slot.
-    pub fn release_after_use(&self, session: Tier1Session) {
+    pub fn release_after_use(self: &Arc<Self>, session: Tier1Session) {
         session.destroy();
         self.live_count.fetch_sub(1, Ordering::Relaxed);
 
-        // Cast to usize before spawning — usize is Send, raw pointer is not.
-        // SAFETY: pool is held in Arc<Tier1Pool> by the caller and outlives
-        // all tasks it spawns. The address is stable because Arc does not move
-        // its inner allocation. We never take &mut through this path.
-        let addr = self as *const Self as usize;
+        let pool = Arc::clone(self);
         tokio::spawn(async move {
-            let pool = unsafe { &*(addr as *const Tier1Pool) };
             pool.pre_warm(1).await;
         });
     }

@@ -128,5 +128,41 @@ async fn test_shims_browser_shims_js_syntax() {
         "window.chrome must be an object after shims"
     );
 
+    let plugins_len = session
+        .eval("String(navigator.plugins.length)")
+        .await
+        .unwrap();
+    assert_eq!(
+        plugins_len, "5",
+        "navigator.plugins must expose 5 PDF plugins"
+    );
+
+    let has_plugin_mimes = session
+        .eval("String(Boolean(navigator.plugins[0] && navigator.plugins[0].mimeTypes && navigator.plugins[0].mimeTypes.length > 0))")
+        .await
+        .unwrap();
+    assert_eq!(
+        has_plugin_mimes, "true",
+        "plugins[0].mimeTypes must exist and be non-empty"
+    );
+
+    let has_global_pdf_mime = session
+        .eval("String(Boolean(navigator.mimeTypes && navigator.mimeTypes['application/pdf']))")
+        .await
+        .unwrap();
+    assert_eq!(
+        has_global_pdf_mime, "true",
+        "navigator.mimeTypes must expose application/pdf"
+    );
+
+    let has_native_client = session
+        .eval("String(Array.from({ length: navigator.plugins.length }, (_, i) => navigator.plugins[i].name).includes('Native Client'))")
+        .await
+        .unwrap();
+    assert_eq!(
+        has_native_client, "false",
+        "Native Client plugin must not be present"
+    );
+
     session.destroy();
 }

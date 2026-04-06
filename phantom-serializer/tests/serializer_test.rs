@@ -120,6 +120,106 @@ mod tests {
     }
 
     #[test]
+    fn test_header_node_count_matches_emitted_nodes() {
+        let page = process_html(
+            r#"<html><body style="width: 1280px; height: 720px;">
+                <div style="width: 200px; height: 60px;">Hello <span style="width: 80px; height: 20px;">world</span></div>
+                <button style="width: 120px; height: 40px;">Submit</button>
+            </body></html>"#,
+            "https://count.test",
+            1280.0,
+            720.0,
+        )
+        .unwrap();
+
+        let cct = HeadlessSerializer::serialise(
+            &page,
+            &SerialiserConfig {
+                url: "https://count.test".to_string(),
+                ..Default::default()
+            },
+        );
+
+        let header = cct.lines().next().unwrap();
+        let header_count = header
+            .split_whitespace()
+            .find_map(|part| part.strip_prefix("nodes="))
+            .unwrap()
+            .parse::<usize>()
+            .unwrap();
+
+        let emitted_count = cct.lines().filter(|line| !line.starts_with("##")).count();
+        assert_eq!(
+            header_count, emitted_count,
+            "header nodes= must match emitted CCT node lines"
+        );
+    }
+
+    #[test]
+    fn test_landmark_marker_from_aria_role() {
+        let page = process_html(
+            r#"<html><body style="width: 1280px; height: 720px;">
+                <div role="navigation" style="width: 500px; height: 100px;">menu</div>
+            </body></html>"#,
+            "https://landmark.test",
+            1280.0,
+            720.0,
+        )
+        .unwrap();
+
+        let cct = HeadlessSerializer::serialise(
+            &page,
+            &SerialiserConfig {
+                url: "https://landmark.test".to_string(),
+                ..Default::default()
+            },
+        );
+        assert!(
+            cct.lines().any(|line| line.starts_with("##NAV ")),
+            "role=\"navigation\" should emit ##NAV landmark marker"
+        );
+    }
+
+    #[test]
+    fn test_text_fields_are_escaped_for_cct_delimiters() {
+        let page = process_html(
+            r#"<html><body style="width: 1280px; height: 720px;">
+                <button aria-label="Pay|Now,100%" style="width: 200px; height: 40px;">A|B,C%</button>
+            </body></html>"#,
+            "https://escape.test",
+            1280.0,
+            720.0,
+        )
+        .unwrap();
+
+        let cct = HeadlessSerializer::serialise(
+            &page,
+            &SerialiserConfig {
+                url: "https://escape.test".to_string(),
+                ..Default::default()
+            },
+        );
+
+        let btn_line = cct
+            .lines()
+            .find(|line| line.contains("|btn|"))
+            .expect("button node line must exist");
+        let fields: Vec<&str> = btn_line.split('|').collect();
+        assert!(
+            fields.len() >= 12,
+            "button line must remain parseable after escaping: {btn_line}"
+        );
+        assert!(
+            fields[5].contains("%7C") && fields[5].contains("%2C") && fields[5].contains("%25"),
+            "accessible_name field should encode reserved delimiters"
+        );
+        assert!(
+            fields[6].contains("%7C") && fields[6].contains("%2C") && fields[6].contains("%25"),
+            "visible_text field should encode reserved delimiters"
+        );
+    }
+
+    #[test]
     fn test_selective_mode() {
         let page = process_html(
             r#"<html><body style="width: 1280px; height: 720px;">

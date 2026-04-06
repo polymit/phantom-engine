@@ -13,6 +13,7 @@ pub enum Position {
 pub struct ComputedStyle {
     pub display: Display,
     pub visibility: Visibility,
+    pub visibility_set: bool,
     pub opacity: f32,
     pub position: Position,
     pub z_index: Option<i32>,
@@ -26,6 +27,7 @@ impl Default for ComputedStyle {
         Self {
             display: Display::Block,
             visibility: Visibility::Visible,
+            visibility_set: false,
             opacity: 1.0,
             position: Position::Static,
             z_index: None,

@@ -527,6 +527,22 @@ impl LandmarkType {
         }
     }
 
+    pub fn from_cct_role(role: &CctAriaRole) -> Option<Self> {
+        match role {
+            CctAriaRole::Nav => Some(Self::Nav),
+            CctAriaRole::Main => Some(Self::Main),
+            CctAriaRole::Frm => Some(Self::Form),
+            CctAriaRole::Dlg => Some(Self::Dialog),
+            CctAriaRole::Src => Some(Self::Search),
+            CctAriaRole::Lst => Some(Self::List),
+            CctAriaRole::Tbl => Some(Self::Table),
+            CctAriaRole::Hdr => Some(Self::Header),
+            CctAriaRole::Ftr => Some(Self::Footer),
+            CctAriaRole::Asd => Some(Self::Aside),
+            _ => None,
+        }
+    }
+
     pub fn to_marker(&self, node_id: &str) -> String {
         let m = match self {
             Self::Nav => "NAV",

@@ -68,6 +68,7 @@ impl CssEngine {
                 };
             }
             "visibility" => {
+                style.visibility_set = true;
                 style.visibility = match val_clean {
                     "hidden" => Visibility::Hidden,
                     _ => Visibility::Visible,
@@ -127,10 +128,8 @@ impl CssEngine {
         };
 
         if let Some(parent) = parent_style {
-            // Visibility inherits from parent ONLY when the child
-            // has not explicitly set it (i.e. child is still at default Visible).
-            // If child explicitly set visibility:hidden, keep it hidden.
-            if style.visibility == Visibility::Visible {
+            // Visibility inherits only when child did not set visibility itself.
+            if !style.visibility_set {
                 style.visibility = parent.visibility.clone();
             }
             // Opacity always multiplies (child × parent)

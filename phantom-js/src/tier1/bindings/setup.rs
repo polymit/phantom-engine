@@ -2,10 +2,7 @@ use super::document::JsDocument;
 use super::element::JsHTMLElement;
 use super::navigator::JsNavigator;
 use crate::tier1::session::PhantomDomHandle;
-use std::sync::{
-    atomic::AtomicBool,
-    Arc,
-};
+use std::sync::{atomic::AtomicBool, Arc};
 
 pub async fn setup_dom_environment(
     context: &rquickjs::AsyncContext,

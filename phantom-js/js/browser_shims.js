@@ -75,31 +75,119 @@ window.chrome = {
     app: {}
 };
 
-// 3. navigator.plugins — 5 PDF viewer entries matching real Chrome 133
-const createPlugin = (name, description, filename) => {
-    const plugin = Object.create(Plugin.prototype);
+// 3. navigator.plugins + navigator.mimeTypes
+const pluginProto = globalThis.Plugin?.prototype || Object.prototype;
+const pluginArrayProto = globalThis.PluginArray?.prototype || Object.prototype;
+const mimeTypeProto = globalThis.MimeType?.prototype || Object.prototype;
+const mimeTypeArrayProto = globalThis.MimeTypeArray?.prototype || Object.prototype;
+const buildMimeTypeArray = (items) => {
+    const arr = Object.create(mimeTypeArrayProto);
+    items.forEach((mt, idx) => {
+        arr[idx] = mt;
+        arr[mt.type] = mt;
+    });
+    Object.defineProperties(arr, {
+        length: { value: items.length, enumerable: true },
+        item: {
+            value: function(idx) {
+                return this[idx] || null;
+            }
+        },
+        namedItem: {
+            value: function(name) {
+                return this[name] || null;
+            }
+        }
+    });
+    return arr;
+};
+const createPlugin = (name, description, filename, mimeSpecs) => {
+    const plugin = Object.create(pluginProto);
+    const mimeTypes = mimeSpecs.map(spec => {
+        const mt = Object.create(mimeTypeProto);
+        Object.defineProperties(mt, {
+            type: { value: spec.type, enumerable: true },
+            suffixes: { value: spec.suffixes, enumerable: true },
+            description: { value: spec.description, enumerable: true },
+            enabledPlugin: { get: () => plugin, enumerable: true }
+        });
+        return mt;
+    });
+    const mimeTypeArray = buildMimeTypeArray(mimeTypes);
+    mimeTypes.forEach((mt, idx) => {
+        plugin[idx] = mt;
+        plugin[mt.type] = mt;
+    });
     Object.defineProperties(plugin, {
         name: { value: name, enumerable: true },
         description: { value: description, enumerable: true },
         filename: { value: filename, enumerable: true },
-        length: { value: 1, enumerable: true }
+        length: { value: mimeTypes.length, enumerable: true },
+        item: {
+            value: function(idx) {
+                return this[idx] || null;
+            }
+        },
+        namedItem: {
+            value: function(name) {
+                return this[name] || null;
+            }
+        },
+        mimeTypes: { value: mimeTypeArray, enumerable: true }
     });
-    return plugin;
+    return { plugin, mimeTypes };
 };
-const pluginsList = [
-    createPlugin("Chrome PDF Plugin", "Portable Document Format", "internal-pdf-viewer"),
-    createPlugin("Chrome PDF Viewer", "Portable Document Format", "mhjfbmdgcfjbbpaeojofohoefgiehjai"),
-    createPlugin("Native Client", "", "internal-nacl-plugin"),
-    createPlugin("PDF Viewer", "Portable Document Format", "mhjfbmdgcfjbbpaeojofohoefgiehjai"),
-    createPlugin("Microsoft Edge PDF Viewer", "Portable Document Format", "internal-pdf-viewer")
+const pdfMimeSpecs = [
+    { type: "application/pdf", suffixes: "pdf", description: "Portable Document Format" },
+    { type: "text/pdf", suffixes: "pdf", description: "Portable Document Format" }
 ];
+const pluginEntries = [
+    createPlugin("PDF Viewer", "Portable Document Format", "internal-pdf-viewer", pdfMimeSpecs),
+    createPlugin("Chrome PDF Viewer", "Portable Document Format", "internal-pdf-viewer", pdfMimeSpecs),
+    createPlugin("Chromium PDF Viewer", "Portable Document Format", "internal-pdf-viewer", pdfMimeSpecs),
+    createPlugin("Microsoft Edge PDF Viewer", "Portable Document Format", "internal-pdf-viewer", pdfMimeSpecs),
+    createPlugin("WebKit built-in PDF", "Portable Document Format", "internal-pdf-viewer", pdfMimeSpecs)
+];
+const pluginsList = pluginEntries.map(entry => entry.plugin);
+const mimeTypeByName = new Map();
+pluginEntries.forEach(entry => {
+    entry.mimeTypes.forEach(mt => {
+        if (!mimeTypeByName.has(mt.type)) {
+            mimeTypeByName.set(mt.type, mt);
+        }
+    });
+});
+const mimeTypesList = Array.from(mimeTypeByName.values());
+const buildPluginArray = () => {
+    const arr = Object.create(pluginArrayProto);
+    pluginsList.forEach((plugin, idx) => {
+        arr[idx] = plugin;
+        arr[plugin.name] = plugin;
+    });
+    Object.defineProperties(arr, {
+        length: { value: pluginsList.length, enumerable: true },
+        item: {
+            value: function(idx) {
+                return this[idx] || null;
+            }
+        },
+        namedItem: {
+            value: function(name) {
+                return this[name] || null;
+            }
+        }
+    });
+    return arr;
+};
 Object.defineProperty(navigator, 'plugins', {
-    get: () => {
-        const plugins = Object.create(PluginArray.prototype);
-        pluginsList.forEach((p, i) => plugins[i] = p);
-        Object.defineProperty(plugins, 'length', { value: pluginsList.length });
-        return plugins;
-    }
+    get: () => buildPluginArray(),
+    configurable: false,
+    enumerable: true
+});
+Object.defineProperty(navigator, 'mimeTypes', {
+    get: () => buildMimeTypeArray(mimeTypesList),
+    configurable: false,
+    enumerable: true
 });
 
 // 4. Permissions API consistency fix

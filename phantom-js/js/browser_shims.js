@@ -159,7 +159,7 @@ Object.defineProperty(navigator, 'languages', {
 const uaMajor = String(__phantom_persona.chrome_major || '133');
 const uaData = {
     brands: [
-        { brand: "Not A(Brand", version: "24" },
+        { brand: "Not_A Brand", version: "24" },
         { brand: "Chromium", version: uaMajor },
         { brand: "Google Chrome", version: uaMajor }
     ],

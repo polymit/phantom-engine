@@ -111,4 +111,61 @@ mod tests {
         let result = process_html("", "https://empty.com", 1280.0, 720.0);
         assert!(result.is_ok());
     }
+
+    #[test]
+    fn test_visibility_visible_overrides_hidden_parent() {
+        let html = r#"
+            <html><body style="width: 1280px; height: 720px;">
+                <div id="parent" style="visibility: hidden; width: 200px; height: 100px;">
+                    <button id="child" style="visibility: visible; width: 120px; height: 40px;">Go</button>
+                </div>
+            </body></html>
+        "#;
+
+        let page = process_html(html, "https://visibility.test", 1280.0, 720.0).unwrap();
+        let parent_id = page.tree.get_element_by_id("parent").unwrap();
+        let child_id = page.tree.get_element_by_id("child").unwrap();
+
+        assert!(
+            !page.tree.get(parent_id).is_visible,
+            "parent visibility:hidden must stay hidden"
+        );
+        assert!(
+            page.tree.get(child_id).is_visible,
+            "child visibility:visible should override inherited hidden visibility"
+        );
+    }
+
+    #[test]
+    fn test_visibility_zero_sized_element_is_hidden() {
+        let html = r#"
+            <html><body style="width: 1280px; height: 720px;">
+                <div id="zero" style="width: 0px; height: 0px;">Tiny</div>
+            </body></html>
+        "#;
+
+        let page = process_html(html, "https://zero-size.test", 1280.0, 720.0).unwrap();
+        let zero_id = page.tree.get_element_by_id("zero").unwrap();
+        assert!(
+            !page.tree.get(zero_id).is_visible,
+            "zero-sized element must be hidden"
+        );
+    }
+
+    #[test]
+    fn test_visibility_outside_viewport_is_hidden() {
+        let html = r#"
+            <html><body style="width: 1280px; height: 720px;">
+                <div style="width: 1280px; height: 2000px;"></div>
+                <div id="below-fold" style="width: 100px; height: 100px;">Off screen</div>
+            </body></html>
+        "#;
+
+        let page = process_html(html, "https://offscreen.test", 1280.0, 720.0).unwrap();
+        let below_fold_id = page.tree.get_element_by_id("below-fold").unwrap();
+        assert!(
+            !page.tree.get(below_fold_id).is_visible,
+            "element outside viewport must be hidden"
+        );
+    }
 }

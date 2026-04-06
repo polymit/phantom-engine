@@ -1,6 +1,6 @@
 use crate::css::{ComputedStyle, CssEngine};
 use crate::dom::{Display, DomTree, NodeData, Visibility};
-use crate::layout::bounds::{LayoutEngine, LayoutError};
+use crate::layout::bounds::{LayoutEngine, LayoutError, ViewportBounds};
 use indextree::NodeId;
 use thiserror::Error;
 
@@ -51,9 +51,10 @@ pub fn process_html(
         }
     }
 
-    // Pass 3: Final CSS-derived visibility state
+    // Pass 3: Final visibility state using CSS + layout bounds.
     if let Some(root) = tree.document_root {
-        apply_layout_visibility_pass(&mut tree, root);
+        let viewport = ViewportBounds::new(0.0, 0.0, viewport_width, viewport_height);
+        apply_layout_visibility_pass(&mut tree, &layout, &viewport, root, (0.0, 0.0));
     }
 
     Ok(ParsedPage {
@@ -146,18 +147,39 @@ fn build_layout_tree(
     }
 }
 
-fn apply_layout_visibility_pass(tree: &mut DomTree, node_id: NodeId) {
-    {
-        let node = tree.get_mut(node_id);
-        if matches!(node.data, NodeData::Element { .. }) {
-            node.is_visible = node.computed_display != Display::None
-                && node.computed_visibility != Visibility::Hidden
-                && node.computed_opacity > 0.0;
-        }
-    }
+fn apply_layout_visibility_pass(
+    tree: &mut DomTree,
+    layout: &LayoutEngine,
+    viewport: &ViewportBounds,
+    node_id: NodeId,
+    parent_offset: (f32, f32),
+) {
+    let mut next_offset = parent_offset;
+    let element_visibility = {
+        let node = tree.get(node_id);
+        match &node.data {
+            NodeData::Element { .. } => {
+                let mut bounds = layout.get_bounds(node_id);
+                bounds.x += parent_offset.0;
+                bounds.y += parent_offset.1;
+                next_offset = (bounds.x, bounds.y);
 
+                let c1 = node.computed_display != Display::None;
+                let c2 = node.computed_visibility != Visibility::Hidden;
+                let c3 = node.computed_opacity > 0.0;
+                let c4 = bounds.width > 0.0;
+                let c5 = bounds.height > 0.0;
+                let c6 = bounds.intersects(viewport);
+                Some(c1 && c2 && c3 && c4 && c5 && c6)
+            }
+            _ => None,
+        }
+    };
+    if let Some(visible) = element_visibility {
+        tree.get_mut(node_id).is_visible = visible;
+    }
     let children: Vec<NodeId> = node_id.children(&tree.arena).collect();
     for child in children {
-        apply_layout_visibility_pass(tree, child);
+        apply_layout_visibility_pass(tree, layout, viewport, child, next_offset);
     }
 }

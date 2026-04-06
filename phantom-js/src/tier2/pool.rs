@@ -38,7 +38,7 @@ impl Tier2Pool {
 
     fn pre_warm(&self, count: usize) {
         for _ in 0..count {
-            if self.live_count.load(Ordering::Relaxed) >= self.max_count {
+            if !self.try_reserve_slot() {
                 break;
             }
             match Tier2Session::new() {
@@ -47,9 +47,9 @@ impl Tier2Pool {
                         session,
                         created_at: Instant::now(),
                     });
-                    self.live_count.fetch_add(1, Ordering::Relaxed);
                 }
                 Err(e) => {
+                    self.live_count.fetch_sub(1, Ordering::AcqRel);
                     tracing::warn!("Tier2Pool pre-warm skipped: {:?}", e);
                 }
             }
@@ -70,14 +70,19 @@ impl Tier2Pool {
             self.live_count.fetch_sub(1, Ordering::Relaxed);
         }
 
-        if self.live_count.load(Ordering::Relaxed) >= self.max_count {
+        if !self.try_reserve_slot() {
             return Err(PhantomJsError::PoolExhausted {
                 max: self.max_count,
             });
         }
 
-        let session = Tier2Session::new()?;
-        self.live_count.fetch_add(1, Ordering::Relaxed);
+        let session = match Tier2Session::new() {
+            Ok(session) => session,
+            Err(err) => {
+                self.live_count.fetch_sub(1, Ordering::AcqRel);
+                return Err(err);
+            }
+        };
         Ok(session)
     }
 
@@ -96,5 +101,23 @@ impl Tier2Pool {
         // We avoid spawning a Tokio task to keep the pool usable from
         // non-async call sites (e.g., sync MCP tool handlers).
         self.pre_warm(1);
+    }
+
+    fn try_reserve_slot(&self) -> bool {
+        let mut cur = self.live_count.load(Ordering::Acquire);
+        loop {
+            if cur >= self.max_count {
+                return false;
+            }
+            match self.live_count.compare_exchange_weak(
+                cur,
+                cur + 1,
+                Ordering::AcqRel,
+                Ordering::Acquire,
+            ) {
+                Ok(_) => return true,
+                Err(next) => cur = next,
+            }
+        }
     }
 }

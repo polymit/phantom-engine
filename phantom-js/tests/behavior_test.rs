@@ -160,3 +160,35 @@ async fn tier1_pool_acquire_and_release() {
 
     pool.release_after_use(session2);
 }
+
+#[tokio::test]
+async fn tier1_pool_hard_cap_under_concurrent_acquire() {
+    use phantom_js::error::PhantomJsError;
+    use phantom_js::tier1::pool::Tier1Pool;
+
+    let pool = Tier1Pool::new(2, 0).await;
+    let (r1, r2, r3, r4) = tokio::join!(
+        pool.acquire(),
+        pool.acquire(),
+        pool.acquire(),
+        pool.acquire()
+    );
+    let mut sessions = Vec::new();
+    for res in [r1, r2, r3, r4] {
+        match res {
+            Ok(session) => sessions.push(session),
+            Err(PhantomJsError::PoolExhausted { .. }) => {}
+            Err(err) => panic!("unexpected acquire error: {err:?}"),
+        }
+    }
+
+    assert!(
+        sessions.len() <= 2,
+        "pool handed out {} sessions with max_count=2",
+        sessions.len()
+    );
+
+    for session in sessions {
+        pool.release_after_use(session);
+    }
+}

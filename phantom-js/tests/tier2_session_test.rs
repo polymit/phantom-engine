@@ -76,3 +76,23 @@ fn test_tier2_startup_time() {
     );
     s.destroy();
 }
+
+#[test]
+fn test_tier2_pool_hard_cap_under_contention() {
+    use phantom_js::error::PhantomJsError;
+    use phantom_js::tier2::pool::Tier2Pool;
+
+    let pool = Tier2Pool::new(2, 0);
+    let s1 = pool.acquire().expect("first acquire must succeed");
+    let s2 = pool.acquire().expect("second acquire must succeed");
+    let third = pool.acquire();
+
+    match third {
+        Err(PhantomJsError::PoolExhausted { max }) => assert_eq!(max, 2),
+        Ok(_) => panic!("third acquire unexpectedly succeeded with max_count=2"),
+        Err(err) => panic!("unexpected acquire error: {err:?}"),
+    }
+
+    s2.destroy();
+    s1.destroy();
+}

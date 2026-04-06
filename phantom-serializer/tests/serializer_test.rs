@@ -2,6 +2,7 @@
 mod tests {
     use phantom_core::process_html;
     use phantom_serializer::{HeadlessSerializer, SerialiserConfig, SerialiserMode};
+    use std::collections::HashSet;
     use std::time::Instant;
 
     fn make_page(n: usize) -> String {
@@ -68,6 +69,54 @@ mod tests {
         println!("First 200 chars:\n{}", &cct[..cct.len().min(200)]);
 
         assert!(cct.starts_with("##PAGE"));
+    }
+
+    #[test]
+    fn test_parent_ids_reference_emitted_nodes_or_root() {
+        let page = process_html(
+            r#"<html><body style="width: 1280px; height: 720px;">
+                <main style="width: 1000px; height: 600px;">
+                    <div style="width: 500px; height: 200px;">
+                        <button style="width: 100px; height: 40px;">Go</button>
+                    </div>
+                </main>
+            </body></html>"#,
+            "https://example.com",
+            1280.0,
+            720.0,
+        )
+        .unwrap();
+
+        let cct = HeadlessSerializer::serialise(
+            &page,
+            &SerialiserConfig {
+                url: "https://example.com".to_string(),
+                ..Default::default()
+            },
+        );
+
+        let mut ids = HashSet::new();
+        let mut parent_ids = Vec::new();
+
+        for line in cct.lines() {
+            if line.starts_with("##") {
+                continue;
+            }
+            let parts: Vec<&str> = line.split('|').collect();
+            assert!(
+                parts.len() >= 9,
+                "node line must have at least 9 fields, got: {line}"
+            );
+            ids.insert(parts[0].to_string());
+            parent_ids.push(parts[8].to_string());
+        }
+
+        for parent_id in parent_ids {
+            assert!(
+                parent_id == "root" || ids.contains(&parent_id),
+                "parent_id {parent_id} does not reference an emitted node"
+            );
+        }
     }
 
     #[test]

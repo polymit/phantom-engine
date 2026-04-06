@@ -1,12 +1,21 @@
 use rquickjs::{Ctx, Function, Persistent, Result};
 use std::{
     cell::RefCell,
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     panic::{catch_unwind, AssertUnwindSafe},
     sync::atomic::{AtomicU32, Ordering},
 };
 
 static TIMER_ID_COUNTER: AtomicU32 = AtomicU32::new(1);
+#[derive(Copy, Clone)]
+enum TimerKind {
+    Once,
+    Interval,
+}
+struct TimerEntry {
+    callback: Persistent<Function<'static>>,
+    kind: TimerKind,
+}
 
 // Thread-local store for pending timer callbacks.
 //
@@ -17,8 +26,60 @@ static TIMER_ID_COUNTER: AtomicU32 = AtomicU32::new(1);
 // spawn_local also runs on that same thread, so the store is always
 // accessed by exactly one thread.
 thread_local! {
-    static TIMER_STORE: RefCell<HashMap<u32, Persistent<Function<'static>>>> =
-        RefCell::new(HashMap::new());
+    static TIMER_STORE: RefCell<HashMap<u32, TimerEntry>> = RefCell::new(HashMap::new());
+    static TIMER_CANCELLED: RefCell<HashSet<u32>> = RefCell::new(HashSet::new());
+}
+
+fn cancel_timer(id: u32) {
+    let removed = TIMER_STORE.with(|store| store.borrow_mut().remove(&id).is_some());
+    if !removed {
+        TIMER_CANCELLED.with(|cancelled| {
+            cancelled.borrow_mut().insert(id);
+        });
+    }
+}
+fn schedule_timer(id: u32, delay: u64, ctx: rquickjs::AsyncContext) -> Result<()> {
+    let spawned = catch_unwind(AssertUnwindSafe(|| {
+        tokio::task::spawn_local(async move {
+            loop {
+                if delay > 0 {
+                    tokio::time::sleep(std::time::Duration::from_millis(delay)).await;
+                }
+                let keep_running = rquickjs::async_with!(ctx => |ctx| {
+                    let Some(entry) = TIMER_STORE.with(|store| store.borrow_mut().remove(&id)) else {
+                        return Ok::<bool, rquickjs::Error>(false);
+                    };
+                    let cancelled = TIMER_CANCELLED.with(|cancelled| cancelled.borrow_mut().remove(&id));
+                    if let Ok(cb) = entry.callback.restore(&ctx) {
+                        // RISK-18: best-effort fire — ignore JS errors in callbacks
+                        let _ = cb.call::<(), ()>(());
+                        while ctx.execute_pending_job() {}
+                        if matches!(entry.kind, TimerKind::Interval) && !cancelled {
+                            let next = TimerEntry {
+                                callback: Persistent::save(&ctx, cb),
+                                kind: TimerKind::Interval,
+                            };
+                            TIMER_STORE.with(|store| {
+                                store.borrow_mut().insert(id, next);
+                            });
+                            return Ok::<bool, rquickjs::Error>(true);
+                        }
+                    }
+                    Ok::<bool, rquickjs::Error>(false)
+                })
+                .await
+                .unwrap_or(false);
+                if !keep_running {
+                    break;
+                }
+            }
+        });
+    }));
+    if spawned.is_err() {
+        cancel_timer(id);
+        return Err(rquickjs::Error::Exception);
+    }
+    Ok(())
 }
 
 /// Register setTimeout and clearTimeout on the JS global object.
@@ -45,53 +106,20 @@ pub fn register_timers<'js>(
     let set_timeout = Function::new(
         ctx.clone(),
         move |ctx: Ctx<'js>, callback: Function<'js>, delay_ms: Option<u64>| -> Result<u32> {
-            let timer_id = TIMER_ID_COUNTER.fetch_add(1, Ordering::Relaxed);
+            let id = TIMER_ID_COUNTER.fetch_add(1, Ordering::Relaxed);
             let delay = delay_ms.unwrap_or(0);
-
-            // Persist the callback on the current thread.
-            let persistent = Persistent::save(&ctx, callback);
-            TIMER_STORE.with(|store| {
-                store.borrow_mut().insert(timer_id, persistent);
+            TIMER_CANCELLED.with(|cancelled| {
+                cancelled.borrow_mut().remove(&id);
             });
-
-            // Spawn on the LOCAL executor — same thread as the QuickJS runtime.
-            // When no LocalSet is active, spawn_local would panic; catch that
-            // and surface a JS exception instead of crashing the process.
-            let context = ctx_clone.clone();
-            let spawn_result = catch_unwind(AssertUnwindSafe(|| {
-                tokio::task::spawn_local(async move {
-                    if delay > 0 {
-                        tokio::time::sleep(std::time::Duration::from_millis(delay)).await;
-                    }
-
-                    // Back on the runtime thread: retrieve and fire the callback.
-                    rquickjs::async_with!(context => |ctx| {
-                        let maybe_cb = TIMER_STORE.with(|store| store.borrow_mut().remove(&timer_id));
-
-                        if let Some(persistent) = maybe_cb {
-                            if let Ok(cb) = persistent.restore(&ctx) {
-                                // RISK-18: best-effort fire — ignore JS errors in callbacks
-                                let _ = cb.call::<(), ()>(());
-                                // Drain microtasks queued by the callback
-                                while ctx.execute_pending_job() {}
-                            }
-                        }
-
-                        Ok::<(), rquickjs::Error>(())
-                    })
-                    .await
-                    .ok();
-                });
-            }));
-
-            if spawn_result.is_err() {
-                TIMER_STORE.with(|store| {
-                    store.borrow_mut().remove(&timer_id);
-                });
-                return Err(rquickjs::Error::Exception);
-            }
-
-            Ok(timer_id)
+            let entry = TimerEntry {
+                callback: Persistent::save(&ctx, callback),
+                kind: TimerKind::Once,
+            };
+            TIMER_STORE.with(|store| {
+                store.borrow_mut().insert(id, entry);
+            });
+            schedule_timer(id, delay, ctx_clone.clone())?;
+            Ok(id)
         },
     )?;
     globals.set("setTimeout", set_timeout)?;
@@ -99,18 +127,34 @@ pub fn register_timers<'js>(
     // --- clearTimeout ---
     let clear_timeout = Function::new(ctx.clone(), |id: Option<u32>| -> Result<()> {
         if let Some(id) = id {
-            // Drop the Persistent here — still on the JS thread.
-            TIMER_STORE.with(|store| {
-                store.borrow_mut().remove(&id);
-            });
+            cancel_timer(id);
         }
         Ok(())
     })?;
     globals.set("clearTimeout", clear_timeout)?;
 
-    // setInterval — v0.1: fires once then stops (simplified)
-    // Full repeating interval implementation deferred to v0.2
-    globals.set("setInterval", globals.get::<_, Function>("setTimeout")?)?;
+    // --- setInterval ---
+    let interval_ctx = async_context.clone();
+    let set_interval = Function::new(
+        ctx.clone(),
+        move |ctx: Ctx<'js>, callback: Function<'js>, delay_ms: Option<u64>| -> Result<u32> {
+            let id = TIMER_ID_COUNTER.fetch_add(1, Ordering::Relaxed);
+            let delay = delay_ms.unwrap_or(0);
+            TIMER_CANCELLED.with(|cancelled| {
+                cancelled.borrow_mut().remove(&id);
+            });
+            let entry = TimerEntry {
+                callback: Persistent::save(&ctx, callback),
+                kind: TimerKind::Interval,
+            };
+            TIMER_STORE.with(|store| {
+                store.borrow_mut().insert(id, entry);
+            });
+            schedule_timer(id, delay, interval_ctx.clone())?;
+            Ok(id)
+        },
+    )?;
+    globals.set("setInterval", set_interval)?;
     globals.set("clearInterval", globals.get::<_, Function>("clearTimeout")?)?;
 
     Ok(())

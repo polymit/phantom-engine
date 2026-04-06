@@ -40,7 +40,7 @@ impl Tier1Pool {
     /// Fills the pool up to `count` additional sessions.
     async fn pre_warm(&self, count: usize) {
         for _ in 0..count {
-            if self.live_count.load(Ordering::Relaxed) >= self.max_count {
+            if !self.try_reserve_slot() {
                 break;
             }
             match Tier1Session::new().await {
@@ -49,9 +49,9 @@ impl Tier1Pool {
                         session,
                         created_at: Instant::now(),
                     });
-                    self.live_count.fetch_add(1, Ordering::Relaxed);
                 }
                 Err(e) => {
+                    self.live_count.fetch_sub(1, Ordering::AcqRel);
                     tracing::warn!("Tier1Pool pre-warm skipped: {:?}", e);
                 }
             }
@@ -74,14 +74,19 @@ impl Tier1Pool {
         }
 
         // Pool miss — spin up a fresh session if capacity allows
-        if self.live_count.load(Ordering::Relaxed) >= self.max_count {
+        if !self.try_reserve_slot() {
             return Err(PhantomJsError::PoolExhausted {
                 max: self.max_count,
             });
         }
 
-        let session = Tier1Session::new().await?;
-        self.live_count.fetch_add(1, Ordering::Relaxed);
+        let session = match Tier1Session::new().await {
+            Ok(session) => session,
+            Err(err) => {
+                self.live_count.fetch_sub(1, Ordering::AcqRel);
+                return Err(err);
+            }
+        };
         Ok(session)
     }
 
@@ -99,5 +104,23 @@ impl Tier1Pool {
         tokio::spawn(async move {
             pool.pre_warm(1).await;
         });
+    }
+
+    fn try_reserve_slot(&self) -> bool {
+        let mut cur = self.live_count.load(Ordering::Acquire);
+        loop {
+            if cur >= self.max_count {
+                return false;
+            }
+            match self.live_count.compare_exchange_weak(
+                cur,
+                cur + 1,
+                Ordering::AcqRel,
+                Ordering::Acquire,
+            ) {
+                Ok(_) => return true,
+                Err(next) => cur = next,
+            }
+        }
     }
 }

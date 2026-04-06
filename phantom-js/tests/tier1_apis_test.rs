@@ -83,6 +83,74 @@ async fn test_set_timeout_without_localset_is_error_not_panic() {
 }
 
 #[tokio::test]
+async fn test_set_interval_repeats_and_stops() {
+    use phantom_js::tier1::session::Tier1Session;
+
+    let local = tokio::task::LocalSet::new();
+    local
+        .run_until(async move {
+            let session = Tier1Session::new().await.unwrap();
+
+            let ctx = session.context.clone();
+            let ctx_for_timer = session.context.clone();
+            rquickjs::async_with!(ctx => |qjs_ctx| {
+                let globals = qjs_ctx.globals();
+                phantom_js::tier1::apis::timers::register_timers(
+                    &qjs_ctx,
+                    &globals,
+                    ctx_for_timer,
+                ).unwrap();
+                Ok::<(), ()>(())
+            })
+            .await
+            .unwrap();
+
+            session
+                .eval("globalThis.__ticks = 0;")
+                .await
+                .unwrap();
+            session
+                .eval(
+                    "globalThis.__interval_id = setInterval(function() { globalThis.__ticks += 1; }, 20);",
+                )
+                .await
+                .unwrap();
+
+            tokio::time::sleep(std::time::Duration::from_millis(130)).await;
+            let before = session
+                .eval("globalThis.__ticks")
+                .await
+                .unwrap()
+                .parse::<u32>()
+                .unwrap();
+            assert!(
+                before >= 2,
+                "setInterval must fire repeatedly, observed {before} ticks"
+            );
+
+            session
+                .eval("clearInterval(globalThis.__interval_id);")
+                .await
+                .unwrap();
+            tokio::time::sleep(std::time::Duration::from_millis(80)).await;
+
+            let after = session
+                .eval("globalThis.__ticks")
+                .await
+                .unwrap()
+                .parse::<u32>()
+                .unwrap();
+            assert_eq!(
+                after, before,
+                "clearInterval must stop further interval callbacks"
+            );
+
+            session.destroy();
+        })
+        .await;
+}
+
+#[tokio::test]
 async fn test_mutation_bridge_dispatches() {
     use phantom_js::tier1::apis::mutation_observer::MutationBridge;
     use phantom_js::tier1::session::Tier1Session;

@@ -71,4 +71,32 @@ mod tests {
         let inputs = tree.get_elements_by_tag_name("input");
         assert_eq!(inputs.len(), 3);
     }
+
+    #[test]
+    fn test_attr_prefix_utf8_does_not_panic() {
+        let tree = parse_html(
+            r#"
+            <html><body>
+                <div data-name="éclair"></div>
+            </body></html>
+        "#,
+        );
+
+        let node = tree.query_selector(r#"[data-name^="é"]"#);
+        assert!(node.is_some(), "UTF-8 prefix selector must match safely");
+    }
+
+    #[test]
+    fn test_attr_suffix_utf8_does_not_panic() {
+        let tree = parse_html(
+            r#"
+            <html><body>
+                <div data-name="café"></div>
+            </body></html>
+        "#,
+        );
+
+        let node = tree.query_selector(r#"[data-name$="é"]"#);
+        assert!(node.is_some(), "UTF-8 suffix selector must match safely");
+    }
 }

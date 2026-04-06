@@ -81,29 +81,43 @@ fn apply_coalescing(mutations: Vec<RawMutation>) -> Vec<CctDelta> {
 
     let mut inserted = HashSet::new();
     let mut removed = HashSet::new();
+    let mut parent_of: HashMap<NodeId, NodeId> = HashMap::new();
     let mut attr_map: HashMap<(NodeId, String), RawMutation> = HashMap::new();
     let mut text_map: HashMap<NodeId, String> = HashMap::new();
     let mut last_scroll = None;
 
     for m in mutations {
         match m {
-            RawMutation::NodeInserted { node_id, .. } => {
+            RawMutation::NodeInserted { node_id, parent_id } => {
+                parent_of.insert(node_id, parent_id);
+                if has_removed_ancestor(node_id, &removed, &parent_of) {
+                    continue;
+                }
                 if removed.contains(&node_id) {
                     removed.remove(&node_id);
                 } else {
                     inserted.insert(node_id);
                 }
             }
-            RawMutation::NodeRemoved { node_id, .. } => {
+            RawMutation::NodeRemoved { node_id, parent_id } => {
+                parent_of.insert(node_id, parent_id);
+
                 if inserted.contains(&node_id) {
                     inserted.remove(&node_id);
                 } else {
+                    // Parent-removal dominance: skip child remove if an ancestor
+                    // is already marked removed in this coalescing window.
+                    if has_removed_ancestor(node_id, &removed, &parent_of) {
+                        continue;
+                    }
+                    removed.retain(|id| !is_descendant(*id, node_id, &parent_of));
                     removed.insert(node_id);
                 }
 
-                // Parent removing implicitly cleans up target nodes attributes
-                attr_map.retain(|&(id, _), _| id != node_id);
-                text_map.remove(&node_id);
+                // A remove dominates all descendant mutability and inserts.
+                attr_map.retain(|(id, _), _| !is_descendant_or_self(*id, node_id, &parent_of));
+                text_map.retain(|id, _| !is_descendant_or_self(*id, node_id, &parent_of));
+                inserted.retain(|id| !is_descendant_or_self(*id, node_id, &parent_of));
             }
             RawMutation::AttrChanged {
                 node_id,
@@ -111,7 +125,8 @@ fn apply_coalescing(mutations: Vec<RawMutation>) -> Vec<CctDelta> {
                 old_val,
                 new_val,
             } => {
-                if removed.contains(&node_id) {
+                if removed.contains(&node_id) || has_removed_ancestor(node_id, &removed, &parent_of)
+                {
                     continue;
                 }
                 let key = (node_id, attr.clone());
@@ -138,7 +153,8 @@ fn apply_coalescing(mutations: Vec<RawMutation>) -> Vec<CctDelta> {
                 );
             }
             RawMutation::TextChanged { node_id, new_text } => {
-                if removed.contains(&node_id) {
+                if removed.contains(&node_id) || has_removed_ancestor(node_id, &removed, &parent_of)
+                {
                     continue;
                 }
                 text_map.insert(node_id, new_text);
@@ -187,4 +203,58 @@ fn apply_coalescing(mutations: Vec<RawMutation>) -> Vec<CctDelta> {
     }
 
     final_muts
+}
+
+fn has_removed_ancestor(
+    node_id: NodeId,
+    removed: &HashSet<NodeId>,
+    parent_of: &HashMap<NodeId, NodeId>,
+) -> bool {
+    let mut cur = node_id;
+    let mut depth = 0usize;
+    while let Some(parent) = parent_of.get(&cur).copied() {
+        if removed.contains(&parent) {
+            return true;
+        }
+        if parent == cur {
+            break;
+        }
+        cur = parent;
+        depth += 1;
+        if depth > 2048 {
+            break;
+        }
+    }
+    false
+}
+
+fn is_descendant(
+    node_id: NodeId,
+    ancestor_id: NodeId,
+    parent_of: &HashMap<NodeId, NodeId>,
+) -> bool {
+    let mut cur = node_id;
+    let mut depth = 0usize;
+    while let Some(parent) = parent_of.get(&cur).copied() {
+        if parent == ancestor_id {
+            return true;
+        }
+        if parent == cur {
+            break;
+        }
+        cur = parent;
+        depth += 1;
+        if depth > 2048 {
+            break;
+        }
+    }
+    false
+}
+
+fn is_descendant_or_self(
+    node_id: NodeId,
+    ancestor_id: NodeId,
+    parent_of: &HashMap<NodeId, NodeId>,
+) -> bool {
+    node_id == ancestor_id || is_descendant(node_id, ancestor_id, parent_of)
 }

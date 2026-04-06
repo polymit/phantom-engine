@@ -377,17 +377,39 @@ fn case_cmp(val: &str, expected: &str, cs: CaseSensitivity) -> bool {
 }
 
 fn prefix_cmp(val: &str, prefix: &str, cs: CaseSensitivity) -> bool {
-    if val.len() < prefix.len() {
-        return false;
+    match cs {
+        CaseSensitivity::CaseSensitive => val.starts_with(prefix),
+        CaseSensitivity::AsciiCaseInsensitive => {
+            let mut val_chars = val.chars();
+            for ch in prefix.chars() {
+                let Some(cur) = val_chars.next() else {
+                    return false;
+                };
+                if !cur.eq_ignore_ascii_case(&ch) {
+                    return false;
+                }
+            }
+            true
+        }
     }
-    case_cmp(&val[..prefix.len()], prefix, cs)
 }
 
 fn suffix_cmp(val: &str, suffix: &str, cs: CaseSensitivity) -> bool {
-    if val.len() < suffix.len() {
-        return false;
+    match cs {
+        CaseSensitivity::CaseSensitive => val.ends_with(suffix),
+        CaseSensitivity::AsciiCaseInsensitive => {
+            let mut val_chars = val.chars().rev();
+            for ch in suffix.chars().rev() {
+                let Some(cur) = val_chars.next() else {
+                    return false;
+                };
+                if !cur.eq_ignore_ascii_case(&ch) {
+                    return false;
+                }
+            }
+            true
+        }
     }
-    case_cmp(&val[val.len() - suffix.len()..], suffix, cs)
 }
 
 fn substring_cmp(val: &str, needle: &str, cs: CaseSensitivity) -> bool {

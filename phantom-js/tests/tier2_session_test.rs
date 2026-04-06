@@ -96,3 +96,39 @@ fn test_tier2_pool_hard_cap_under_contention() {
     s2.destroy();
     s1.destroy();
 }
+
+#[test]
+fn test_tier2_set_persona_rejects_invalid_json() {
+    use phantom_js::error::PhantomJsError;
+
+    let mut session = phantom_js::tier2::session::Tier2Session::new().unwrap();
+    let err = session
+        .set_persona("{not_json")
+        .expect_err("invalid persona JSON must fail");
+
+    assert!(
+        matches!(err, PhantomJsError::Internal(msg) if msg.contains("invalid persona JSON")),
+        "set_persona must surface invalid JSON as internal validation error"
+    );
+
+    session.destroy();
+}
+
+#[test]
+fn test_tier2_set_persona_does_not_execute_payload() {
+    let mut session = phantom_js::tier2::session::Tier2Session::new().unwrap();
+
+    session.eval("globalThis.__persona_pwned = false").unwrap();
+    let payload = r#"{"language":"en-US\"; globalThis.__persona_pwned = true; //"}"#;
+    session
+        .set_persona(payload)
+        .expect("valid JSON payload must apply safely");
+
+    let pwned = session.eval("String(globalThis.__persona_pwned)").unwrap();
+    assert_eq!(
+        pwned, "false",
+        "set_persona must treat payload as data, not executable JS"
+    );
+
+    session.destroy();
+}

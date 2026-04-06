@@ -52,10 +52,19 @@ impl Tier2Session {
     /// Call this after creating a session to override the default persona
     /// that was baked into the snapshot.
     pub fn set_persona(&mut self, persona_json: &str) -> Result<(), crate::error::PhantomJsError> {
+        let patch: serde_json::Value = serde_json::from_str(persona_json).map_err(|e| {
+            crate::error::PhantomJsError::Internal(format!("invalid persona JSON: {e}"))
+        })?;
+        let patch_json = serde_json::to_string(&patch).map_err(|e| {
+            crate::error::PhantomJsError::Internal(format!("persona serialisation failed: {e}"))
+        })?;
+        let patch_literal = serde_json::to_string(&patch_json).map_err(|e| {
+            crate::error::PhantomJsError::Internal(format!("persona quoting failed: {e}"))
+        })?;
         let script = format!(
-            "globalThis.__phantom_persona = Object.assign(\
-                globalThis.__phantom_persona || {{}}, {});",
-            persona_json
+            "const __patch = JSON.parse({}); \
+             globalThis.__phantom_persona = Object.assign(globalThis.__phantom_persona || {{}}, __patch);",
+            patch_literal
         );
         self.eval(&script).map(|_| ())
     }

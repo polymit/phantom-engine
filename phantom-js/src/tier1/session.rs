@@ -1,9 +1,12 @@
 use parking_lot::RwLock;
 use phantom_core::dom::{DomTree, NodeData};
 use rquickjs::{async_with, prelude::*, AsyncContext, AsyncRuntime};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
 use crate::error::PhantomJsError;
+
+const CPU_TIMEOUT_MS: u64 = 10_000;
 
 #[derive(Clone)]
 #[rquickjs::class]
@@ -102,6 +105,8 @@ pub struct Tier1Session {
     pub runtime: AsyncRuntime,
     pub context: AsyncContext,
     pub dom_handle: Option<PhantomDomHandle>,
+    eval_deadline_ms: Arc<AtomicU64>,
+    interrupt_epoch: std::time::Instant,
 }
 
 impl Tier1Session {
@@ -126,15 +131,21 @@ impl Tier1Session {
         // 1 MB stack limit
         runtime.set_max_stack_size(1024 * 1024).await;
 
-        // Hard 10-second CPU timeout
-        // Returns true from the handler = terminate JS execution
-        // This is a hard kill — the JS isolate becomes unusable after this
-        let start = std::time::Instant::now();
+        // Hard 10-second CPU timeout per eval call.
+        //
+        // The interrupt handler is installed once on the runtime, but the deadline
+        // is updated on every eval() invocation. This prevents session age from
+        // triggering false-positive timeouts.
+        let interrupt_epoch = std::time::Instant::now();
+        let eval_deadline_ms = Arc::new(AtomicU64::new(0));
+        let handler_deadline = Arc::clone(&eval_deadline_ms);
         runtime
             .set_interrupt_handler(Some(Box::new(move || {
-                if start.elapsed().as_millis() > 10_000 {
+                let deadline_ms = handler_deadline.load(Ordering::Relaxed);
+                if deadline_ms != 0 && (interrupt_epoch.elapsed().as_millis() as u64) >= deadline_ms
+                {
                     tracing::warn!("Tier1Session: CPU budget exceeded — terminating JS");
-                    return true; // kill
+                    return true;
                 }
                 false
             })))
@@ -149,6 +160,8 @@ impl Tier1Session {
             runtime,
             context,
             dom_handle: None,
+            eval_deadline_ms,
+            interrupt_epoch,
         })
     }
 
@@ -212,8 +225,11 @@ impl Tier1Session {
     /// Uses async_with! — NEVER use ctx.with() in this codebase.
     /// Drains microtasks after execution (required for Promises).
     pub async fn eval(&self, script: &str) -> Result<String, PhantomJsError> {
+        let deadline_ms = (self.interrupt_epoch.elapsed().as_millis() as u64) + CPU_TIMEOUT_MS;
+        self.eval_deadline_ms.store(deadline_ms, Ordering::Relaxed);
+
         let script = script.to_string();
-        async_with!(self.context => |ctx| {
+        let result = async_with!(self.context => |ctx| {
             let result = ctx
                 .eval::<rquickjs::Value, _>(script)
                 .catch(&ctx)
@@ -236,8 +252,12 @@ impl Tier1Session {
 
             Ok::<String, rquickjs::Error>(as_str)
         })
-        .await
-        .map_err(|e| PhantomJsError::JsEvaluation(e.to_string()))
+        .await;
+
+        // Disable interruption between eval calls.
+        self.eval_deadline_ms.store(0, Ordering::Relaxed);
+
+        result.map_err(|e| PhantomJsError::JsEvaluation(e.to_string()))
     }
 
     /// Drop this session and free all resources.

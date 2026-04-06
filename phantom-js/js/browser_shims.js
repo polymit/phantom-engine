@@ -117,10 +117,12 @@ if (navigator.permissions) {
 }
 
 // 5. window.outerWidth / window.outerHeight
-if (window.outerWidth === undefined) {
-    Object.defineProperty(window, 'outerWidth', { get: () => window.innerWidth });
-    Object.defineProperty(window, 'outerHeight', { get: () => window.innerHeight });
-}
+Object.defineProperty(window, 'outerWidth', {
+    get: () => __phantom_persona.screen_width || 1920
+});
+Object.defineProperty(window, 'outerHeight', {
+    get: () => (__phantom_persona.screen_height || 1080) - 40
+});
 
 // 6. navigator.connection.rtt
 if (!navigator.connection) {

@@ -125,9 +125,17 @@ Object.defineProperty(window, 'outerHeight', {
 });
 
 // 6. navigator.connection.rtt
-if (!navigator.connection) {
-    navigator.connection = { rtt: 50, downlink: 10, effectiveType: '4g', saveData: false };
-}
+Object.defineProperty(navigator, 'connection', {
+    get: () => ({
+        rtt: 100 + Math.floor(Math.random() * 50),
+        effectiveType: '4g',
+        downlink: 10.0,
+        saveData: false,
+        type: 'wifi'
+    }),
+    configurable: false,
+    enumerable: true
+});
 
 // 7. navigator.hardwareConcurrency (from __phantom_persona)
 Object.defineProperty(navigator, 'hardwareConcurrency', {

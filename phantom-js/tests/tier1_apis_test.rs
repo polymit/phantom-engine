@@ -1,7 +1,35 @@
+use std::sync::{
+    atomic::{AtomicBool, AtomicU64, Ordering},
+    Arc,
+};
+
+use phantom_js::tier1::session::Tier1Session;
+
+fn next_session_id() -> u64 {
+    static NEXT_SESSION_ID: AtomicU64 = AtomicU64::new(1);
+    NEXT_SESSION_ID.fetch_add(1, Ordering::Relaxed)
+}
+async fn install_timers(session: &Tier1Session, session_id: u64, cancelled: Arc<AtomicBool>) {
+    let ctx = session.context.clone();
+    let ctx_for_timer = session.context.clone();
+    rquickjs::async_with!(ctx => |qjs_ctx| {
+        let globals = qjs_ctx.globals();
+        phantom_js::tier1::apis::timers::register_timers(
+            &qjs_ctx,
+            &globals,
+            ctx_for_timer,
+            session_id,
+            Arc::clone(&cancelled),
+        )
+        .unwrap();
+        Ok::<(), ()>(())
+    })
+    .await
+    .unwrap();
+}
+
 #[tokio::test]
 async fn test_set_timeout_fires() {
-    use phantom_js::tier1::session::Tier1Session;
-
     // spawn_local requires a LocalSet — timers use tokio::task::spawn_local
     let local = tokio::task::LocalSet::new();
     local
@@ -14,21 +42,9 @@ async fn test_set_timeout_fires() {
                 .await
                 .unwrap();
 
-            // Register setTimeout — normally done by setup_dom_environment.
-            // Here we inject it manually so the test is self-contained.
-            let ctx = session.context.clone();
-            let ctx_for_timer = session.context.clone();
-            rquickjs::async_with!(ctx => |qjs_ctx| {
-                let globals = qjs_ctx.globals();
-                phantom_js::tier1::apis::timers::register_timers(
-                    &qjs_ctx,
-                    &globals,
-                    ctx_for_timer,
-                ).unwrap();
-                Ok::<(), ()>(())
-            })
-            .await
-            .unwrap();
+            let session_id = next_session_id();
+            let cancelled = Arc::new(AtomicBool::new(false));
+            install_timers(&session, session_id, Arc::clone(&cancelled)).await;
 
             session
                 .eval("setTimeout(function() { globalThis.__timer_fired = true; }, 50);")
@@ -47,6 +63,7 @@ async fn test_set_timeout_fires() {
                 "setTimeout callback must have fired after 50ms delay"
             );
 
+            cancelled.store(true, Ordering::SeqCst);
             session.destroy();
         })
         .await;
@@ -54,23 +71,11 @@ async fn test_set_timeout_fires() {
 
 #[tokio::test]
 async fn test_set_timeout_without_localset_is_error_not_panic() {
-    use phantom_js::tier1::session::Tier1Session;
-
     let session = Tier1Session::new().await.unwrap();
 
-    let ctx = session.context.clone();
-    let ctx_for_timer = session.context.clone();
-    rquickjs::async_with!(ctx => |qjs_ctx| {
-        let globals = qjs_ctx.globals();
-        phantom_js::tier1::apis::timers::register_timers(
-            &qjs_ctx,
-            &globals,
-            ctx_for_timer,
-        ).unwrap();
-        Ok::<(), ()>(())
-    })
-    .await
-    .unwrap();
+    let session_id = next_session_id();
+    let cancelled = Arc::new(AtomicBool::new(false));
+    install_timers(&session, session_id, Arc::clone(&cancelled)).await;
 
     // No LocalSet here: setTimeout must return a JS error, not panic the process.
     let result = session.eval("setTimeout(function() {}, 1);").await;
@@ -79,31 +84,20 @@ async fn test_set_timeout_without_localset_is_error_not_panic() {
         "setTimeout outside LocalSet must fail gracefully"
     );
 
+    cancelled.store(true, Ordering::SeqCst);
     session.destroy();
 }
 
 #[tokio::test]
 async fn test_set_interval_repeats_and_stops() {
-    use phantom_js::tier1::session::Tier1Session;
-
     let local = tokio::task::LocalSet::new();
     local
         .run_until(async move {
             let session = Tier1Session::new().await.unwrap();
 
-            let ctx = session.context.clone();
-            let ctx_for_timer = session.context.clone();
-            rquickjs::async_with!(ctx => |qjs_ctx| {
-                let globals = qjs_ctx.globals();
-                phantom_js::tier1::apis::timers::register_timers(
-                    &qjs_ctx,
-                    &globals,
-                    ctx_for_timer,
-                ).unwrap();
-                Ok::<(), ()>(())
-            })
-            .await
-            .unwrap();
+            let session_id = next_session_id();
+            let cancelled = Arc::new(AtomicBool::new(false));
+            install_timers(&session, session_id, Arc::clone(&cancelled)).await;
 
             session
                 .eval("globalThis.__ticks = 0;")
@@ -145,6 +139,7 @@ async fn test_set_interval_repeats_and_stops() {
                 "clearInterval must stop further interval callbacks"
             );
 
+            cancelled.store(true, Ordering::SeqCst);
             session.destroy();
         })
         .await;
@@ -153,7 +148,6 @@ async fn test_set_interval_repeats_and_stops() {
 #[tokio::test]
 async fn test_mutation_bridge_dispatches() {
     use phantom_js::tier1::apis::mutation_observer::MutationBridge;
-    use phantom_js::tier1::session::Tier1Session;
 
     let session = Tier1Session::new().await.unwrap();
 
@@ -191,7 +185,6 @@ async fn test_mutation_bridge_dispatches() {
 
 #[tokio::test]
 async fn test_fetch_stub_exists() {
-    use phantom_js::tier1::session::Tier1Session;
     let session = Tier1Session::new().await.unwrap();
 
     let ctx = session.context.clone();

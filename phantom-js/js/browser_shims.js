@@ -7,8 +7,69 @@ Object.defineProperty(navigator, 'webdriver', {
 });
 
 // 2. window.chrome — full object with runtime, loadTimes, csi, app
+const createRuntimeEvent = () => {
+    const listeners = new Set();
+    return {
+        addListener: function(listener) {
+            if (typeof listener === 'function') listeners.add(listener);
+        },
+        removeListener: function(listener) {
+            listeners.delete(listener);
+        },
+        hasListener: function(listener) {
+            return listeners.has(listener);
+        },
+        hasListeners: function() {
+            return listeners.size > 0;
+        }
+    };
+};
+const createRuntimePort = () => ({
+    name: '',
+    sender: undefined,
+    disconnect: function() {},
+    postMessage: function() {},
+    onDisconnect: createRuntimeEvent(),
+    onMessage: createRuntimeEvent()
+});
+const runtimeId = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 window.chrome = {
-    runtime: {},
+    runtime: {
+        id: undefined,
+        connect: function() {
+            return createRuntimePort();
+        },
+        sendMessage: function() {
+            const cb = arguments[arguments.length - 1];
+            if (typeof cb === 'function') cb();
+            return Promise.resolve();
+        },
+        onMessage: createRuntimeEvent(),
+        onConnect: createRuntimeEvent(),
+        getManifest: function() {
+            return {};
+        },
+        getURL: function(path) {
+            let suffix = String(path || '');
+            while (suffix.startsWith('/')) suffix = suffix.slice(1);
+            return `chrome-extension://${runtimeId}/${suffix}`;
+        },
+        PlatformOs: {
+            MAC: 'mac',
+            WIN: 'win',
+            ANDROID: 'android',
+            CROS: 'cros',
+            LINUX: 'linux',
+            OPENBSD: 'openbsd'
+        },
+        PlatformArch: {
+            ARM: 'arm',
+            X86_32: 'x86-32',
+            X86_64: 'x86-64',
+            MIPS: 'mips',
+            MIPS64: 'mips64'
+        }
+    },
     loadTimes: function() { return {}; },
     csi: function() { return {}; },
     app: {}

@@ -146,27 +146,34 @@ Object.defineProperty(navigator, 'languages', {
 });
 
 // 10. navigator.userAgentData with full getHighEntropyValues()
-navigator.userAgentData = {
+const uaMajor = String(__phantom_persona.chrome_major || '133');
+const uaData = {
     brands: [
         { brand: "Not A(Brand", version: "24" },
-        { brand: "Chromium", version: "133" },
-        { brand: "Google Chrome", version: "133" }
+        { brand: "Chromium", version: uaMajor },
+        { brand: "Google Chrome", version: uaMajor }
     ],
     mobile: false,
-    platform: "Windows",
+    platform: __phantom_persona.ua_platform || "Windows",
     getHighEntropyValues: function(hints) {
         return Promise.resolve({
-            architecture: "x86",
-            bitness: "64",
+            architecture: __phantom_persona.ua_architecture || "x86",
+            bitness: __phantom_persona.ua_bitness || "64",
             brands: this.brands,
             mobile: this.mobile,
             model: "",
             platform: this.platform,
-            platformVersion: "10.0.0",
-            uaFullVersion: "133.0.0.0"
+            platformVersion: __phantom_persona.platform_version || "15.0.0",
+            uaFullVersion: __phantom_persona.ua_full_version || "133.0.6943.98"
         });
     }
 };
+Object.defineProperty(navigator, 'userAgentData', {
+    value: uaData,
+    writable: false,
+    configurable: false,
+    enumerable: true
+});
 
 // 11. Canvas getImageData noise (seeded, 1.5% pixels, ±1 value)
 const originalGetImageData = globalThis.CanvasRenderingContext2D?.prototype.getImageData;

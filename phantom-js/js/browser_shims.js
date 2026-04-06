@@ -1,6 +1,7 @@
 // 1. navigator.webdriver override
 Object.defineProperty(navigator, 'webdriver', {
-    get: () => undefined,
+    value: undefined,
+    writable: false,
     configurable: false,
     enumerable: false,
 });

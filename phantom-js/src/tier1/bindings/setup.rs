@@ -2,10 +2,15 @@ use super::document::JsDocument;
 use super::element::JsHTMLElement;
 use super::navigator::JsNavigator;
 use crate::tier1::session::PhantomDomHandle;
+use std::sync::{
+    atomic::AtomicBool,
+    Arc,
+};
 
 pub async fn setup_dom_environment(
     context: &rquickjs::AsyncContext,
     dom_handle: PhantomDomHandle,
+    timer_cancelled: Arc<AtomicBool>,
 ) -> Result<(), crate::error::PhantomJsError> {
     use rquickjs::async_with;
     use rquickjs::Class;
@@ -33,7 +38,12 @@ pub async fn setup_dom_environment(
         globals.set("navigator", nav_instance)?;
 
         // Register Web APIs
-        crate::tier1::apis::timers::register_timers(&ctx, &globals, context.clone())?;
+        crate::tier1::apis::timers::register_timers(
+            &ctx,
+            &globals,
+            context.clone(),
+            Arc::clone(&timer_cancelled),
+        )?;
         crate::tier1::apis::fetch::register_fetch(&ctx, &globals)?;
 
         Ok::<(), rquickjs::Error>(())

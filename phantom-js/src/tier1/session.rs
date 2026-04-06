@@ -1,7 +1,7 @@
 use parking_lot::RwLock;
 use phantom_core::dom::{DomTree, NodeData};
 use rquickjs::{async_with, prelude::*, AsyncContext, AsyncRuntime};
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 
 use crate::error::PhantomJsError;
@@ -106,6 +106,7 @@ pub struct Tier1Session {
     pub context: AsyncContext,
     pub dom_handle: Option<PhantomDomHandle>,
     eval_deadline_ms: Arc<AtomicU64>,
+    timer_cancelled: Arc<AtomicBool>,
     interrupt_epoch: std::time::Instant,
 }
 
@@ -138,6 +139,7 @@ impl Tier1Session {
         // triggering false-positive timeouts.
         let interrupt_epoch = std::time::Instant::now();
         let eval_deadline_ms = Arc::new(AtomicU64::new(0));
+        let timer_cancelled = Arc::new(AtomicBool::new(false));
         let handler_deadline = Arc::clone(&eval_deadline_ms);
         runtime
             .set_interrupt_handler(Some(Box::new(move || {
@@ -161,6 +163,7 @@ impl Tier1Session {
             context,
             dom_handle: None,
             eval_deadline_ms,
+            timer_cancelled,
             interrupt_epoch,
         })
     }
@@ -182,7 +185,11 @@ impl Tier1Session {
         let handle = PhantomDomHandle::new(tree);
         self.dom_handle = Some(handle.clone());
 
-        crate::tier1::bindings::setup::setup_dom_environment(&self.context, handle)
+        crate::tier1::bindings::setup::setup_dom_environment(
+            &self.context,
+            handle,
+            Arc::clone(&self.timer_cancelled),
+        )
             .await
             .expect("attach_dom: DOM environment setup must not fail");
 
@@ -264,6 +271,7 @@ impl Tier1Session {
     /// After calling this, the session cannot be used.
     /// Per D-08: burn it down — never reuse a session.
     pub fn destroy(self) {
+        self.timer_cancelled.store(true, Ordering::SeqCst);
         // Drop order matters: context first, then runtime
         drop(self.context);
         drop(self.runtime);

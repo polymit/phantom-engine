@@ -3,7 +3,10 @@ use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
     panic::{catch_unwind, AssertUnwindSafe},
-    sync::atomic::{AtomicU32, Ordering},
+    sync::{
+        atomic::{AtomicBool, AtomicU32, Ordering},
+        Arc,
+    },
 };
 
 static TIMER_ID_COUNTER: AtomicU32 = AtomicU32::new(1);
@@ -38,14 +41,32 @@ fn cancel_timer(id: u32) {
         });
     }
 }
-fn schedule_timer(id: u32, delay: u64, ctx: rquickjs::AsyncContext) -> Result<()> {
+fn schedule_timer(
+    id: u32,
+    delay: u64,
+    ctx: rquickjs::AsyncContext,
+    session_cancelled: Arc<AtomicBool>,
+) -> Result<()> {
     let spawned = catch_unwind(AssertUnwindSafe(|| {
         tokio::task::spawn_local(async move {
             loop {
+                if session_cancelled.load(Ordering::SeqCst) {
+                    cancel_timer(id);
+                    break;
+                }
                 if delay > 0 {
                     tokio::time::sleep(std::time::Duration::from_millis(delay)).await;
                 }
+                if session_cancelled.load(Ordering::SeqCst) {
+                    cancel_timer(id);
+                    break;
+                }
+                let task_cancelled = Arc::clone(&session_cancelled);
                 let keep_running = rquickjs::async_with!(ctx => |ctx| {
+                    if task_cancelled.load(Ordering::SeqCst) {
+                        cancel_timer(id);
+                        return Ok::<bool, rquickjs::Error>(false);
+                    }
                     let Some(entry) = TIMER_STORE.with(|store| store.borrow_mut().remove(&id)) else {
                         return Ok::<bool, rquickjs::Error>(false);
                     };
@@ -100,9 +121,11 @@ pub fn register_timers<'js>(
     ctx: &Ctx<'js>,
     globals: &rquickjs::Object<'js>,
     async_context: rquickjs::AsyncContext,
+    session_cancelled: Arc<AtomicBool>,
 ) -> Result<()> {
     // --- setTimeout ---
     let ctx_clone = async_context.clone();
+    let timeout_cancel = Arc::clone(&session_cancelled);
     let set_timeout = Function::new(
         ctx.clone(),
         move |ctx: Ctx<'js>, callback: Function<'js>, delay_ms: Option<u64>| -> Result<u32> {
@@ -118,7 +141,7 @@ pub fn register_timers<'js>(
             TIMER_STORE.with(|store| {
                 store.borrow_mut().insert(id, entry);
             });
-            schedule_timer(id, delay, ctx_clone.clone())?;
+            schedule_timer(id, delay, ctx_clone.clone(), Arc::clone(&timeout_cancel))?;
             Ok(id)
         },
     )?;
@@ -135,6 +158,7 @@ pub fn register_timers<'js>(
 
     // --- setInterval ---
     let interval_ctx = async_context.clone();
+    let interval_cancel = Arc::clone(&session_cancelled);
     let set_interval = Function::new(
         ctx.clone(),
         move |ctx: Ctx<'js>, callback: Function<'js>, delay_ms: Option<u64>| -> Result<u32> {
@@ -150,7 +174,7 @@ pub fn register_timers<'js>(
             TIMER_STORE.with(|store| {
                 store.borrow_mut().insert(id, entry);
             });
-            schedule_timer(id, delay, interval_ctx.clone())?;
+            schedule_timer(id, delay, interval_ctx.clone(), Arc::clone(&interval_cancel))?;
             Ok(id)
         },
     )?;

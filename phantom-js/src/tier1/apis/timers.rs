@@ -2,6 +2,7 @@ use rquickjs::{Ctx, Function, Persistent, Result};
 use std::{
     cell::RefCell,
     collections::HashMap,
+    panic::{catch_unwind, AssertUnwindSafe},
     sync::atomic::{AtomicU32, Ordering},
 };
 
@@ -54,33 +55,41 @@ pub fn register_timers<'js>(
             });
 
             // Spawn on the LOCAL executor — same thread as the QuickJS runtime.
-            // Only a u32 and AsyncContext (Send) cross this boundary.
+            // When no LocalSet is active, spawn_local would panic; catch that
+            // and surface a JS exception instead of crashing the process.
             let context = ctx_clone.clone();
-            tokio::task::spawn_local(async move {
-                if delay > 0 {
-                    tokio::time::sleep(std::time::Duration::from_millis(delay)).await;
-                }
-
-                // Back on the runtime thread: retrieve and fire the callback.
-                rquickjs::async_with!(context => |ctx| {
-                    let maybe_cb = TIMER_STORE.with(|store| {
-                        store.borrow_mut().remove(&timer_id)
-                    });
-
-                    if let Some(persistent) = maybe_cb {
-                        if let Ok(cb) = persistent.restore(&ctx) {
-                            // RISK-18: best-effort fire — ignore JS errors in callbacks
-                            let _ = cb.call::<(), ()>(());
-                            // Drain microtasks queued by the callback
-                            while ctx.execute_pending_job() {}
-                        }
+            let spawn_result = catch_unwind(AssertUnwindSafe(|| {
+                tokio::task::spawn_local(async move {
+                    if delay > 0 {
+                        tokio::time::sleep(std::time::Duration::from_millis(delay)).await;
                     }
 
-                    Ok::<(), rquickjs::Error>(())
-                })
-                .await
-                .ok();
-            });
+                    // Back on the runtime thread: retrieve and fire the callback.
+                    rquickjs::async_with!(context => |ctx| {
+                        let maybe_cb = TIMER_STORE.with(|store| store.borrow_mut().remove(&timer_id));
+
+                        if let Some(persistent) = maybe_cb {
+                            if let Ok(cb) = persistent.restore(&ctx) {
+                                // RISK-18: best-effort fire — ignore JS errors in callbacks
+                                let _ = cb.call::<(), ()>(());
+                                // Drain microtasks queued by the callback
+                                while ctx.execute_pending_job() {}
+                            }
+                        }
+
+                        Ok::<(), rquickjs::Error>(())
+                    })
+                    .await
+                    .ok();
+                });
+            }));
+
+            if spawn_result.is_err() {
+                TIMER_STORE.with(|store| {
+                    store.borrow_mut().remove(&timer_id);
+                });
+                return Err(rquickjs::Error::Exception);
+            }
 
             Ok(timer_id)
         },

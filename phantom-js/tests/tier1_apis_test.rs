@@ -53,6 +53,36 @@ async fn test_set_timeout_fires() {
 }
 
 #[tokio::test]
+async fn test_set_timeout_without_localset_is_error_not_panic() {
+    use phantom_js::tier1::session::Tier1Session;
+
+    let session = Tier1Session::new().await.unwrap();
+
+    let ctx = session.context.clone();
+    let ctx_for_timer = session.context.clone();
+    rquickjs::async_with!(ctx => |qjs_ctx| {
+        let globals = qjs_ctx.globals();
+        phantom_js::tier1::apis::timers::register_timers(
+            &qjs_ctx,
+            &globals,
+            ctx_for_timer,
+        ).unwrap();
+        Ok::<(), ()>(())
+    })
+    .await
+    .unwrap();
+
+    // No LocalSet here: setTimeout must return a JS error, not panic the process.
+    let result = session.eval("setTimeout(function() {}, 1);").await;
+    assert!(
+        result.is_err(),
+        "setTimeout outside LocalSet must fail gracefully"
+    );
+
+    session.destroy();
+}
+
+#[tokio::test]
 async fn test_mutation_bridge_dispatches() {
     use phantom_js::tier1::apis::mutation_observer::MutationBridge;
     use phantom_js::tier1::session::Tier1Session;

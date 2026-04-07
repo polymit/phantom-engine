@@ -1,0 +1,83 @@
+use axum::http::StatusCode;
+use serde::{Deserialize, Serialize};
+use serde_json::{json, Value};
+
+use crate::engine::EngineAdapter;
+use phantom_net::navigate::{navigate, NavigationConfig, NavigationError};
+
+#[derive(Debug, Deserialize)]
+pub struct NavigateParams {
+    pub url:             String,
+    pub viewport_width:  Option<f32>,
+    pub viewport_height: Option<f32>,
+    pub task_hint:       Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct NavigateResult {
+    pub url:        String,
+    pub status:     u16,
+    pub cct:        String,
+    pub node_count: usize,
+}
+
+/// Handle the `browser_navigate` JSON-RPC tool call.
+///
+/// Called by the JSON-RPC dispatcher when `method == "browser_navigate"`.
+/// Returns a serialised [`NavigateResult`] on success, or a structured
+/// error value on failure. The caller is responsible for wrapping this
+/// in a [`JsonRpcResponse`].
+pub async fn handle_navigate(
+    adapter: &EngineAdapter,
+    params:  Value,
+) -> Result<Value, (StatusCode, Value)> {
+    let params: NavigateParams = serde_json::from_value(params).map_err(|e| {
+        (
+            StatusCode::BAD_REQUEST,
+            json!({ "error": { "code": "invalid_params", "message": e.to_string() } }),
+        )
+    })?;
+
+    let config = NavigationConfig {
+        viewport_width:  params.viewport_width.unwrap_or(1280.0),
+        viewport_height: params.viewport_height.unwrap_or(720.0),
+        task_hint:       params.task_hint,
+        ..Default::default()
+    };
+
+    let result = navigate(&adapter.network, &params.url, &config)
+        .await
+        .map_err(|e| {
+            let (code, http_status) = match &e {
+                NavigationError::HttpError { status, .. } => {
+                    (format!("http_error_{}", status), StatusCode::BAD_GATEWAY)
+                }
+                NavigationError::Network { .. } => {
+                    ("network_error".to_string(), StatusCode::BAD_GATEWAY)
+                }
+                NavigationError::Encoding { .. } => {
+                    ("encoding_error".to_string(), StatusCode::UNPROCESSABLE_ENTITY)
+                }
+                NavigationError::Pipeline { .. } => {
+                    ("pipeline_error".to_string(), StatusCode::INTERNAL_SERVER_ERROR)
+                }
+                NavigationError::RedirectLoop { .. } => {
+                    ("redirect_loop".to_string(), StatusCode::BAD_GATEWAY)
+                }
+                NavigationError::AllAttemptsFailed { .. } => {
+                    ("all_attempts_failed".to_string(), StatusCode::BAD_GATEWAY)
+                }
+            };
+            (
+                http_status,
+                json!({ "error": { "code": code, "message": e.to_string() } }),
+            )
+        })?;
+
+    Ok(json!({
+        "url":        result.url,
+        "status":     result.status,
+        "cct":        result.cct,
+        "node_count": result.node_count,
+    }))
+}

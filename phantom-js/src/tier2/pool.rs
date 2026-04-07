@@ -121,3 +121,21 @@ impl Tier2Pool {
         }
     }
 }
+
+impl Drop for Tier2Pool {
+    fn drop(&mut self) {
+        let mut sessions = Vec::new();
+        while let Some(pooled) = self.free.pop() {
+            sessions.push(pooled);
+        }
+        // SegQueue is FIFO. sessions[0] is the oldest isolate.
+        // V8 requires reverse-order drop (LIFO).
+        sessions.reverse();
+        // Vec drop will now destroy sessions in newer-to-older order.
+    }
+}
+
+// SAFETY: Tier2Pool manages thread-bound Tier2Sessions (V8). The pool's internal
+// state (SegQueue and atomics) is thread-safe.
+unsafe impl Send for Tier2Pool {}
+unsafe impl Sync for Tier2Pool {}

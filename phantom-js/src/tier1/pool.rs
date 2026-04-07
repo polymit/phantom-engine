@@ -124,3 +124,8 @@ impl Tier1Pool {
         }
     }
 }
+
+// SAFETY: Tier1Pool manages thread-bound Tier1Sessions (QuickJS). The pool's
+// internal state (SegQueue and atomics) is thread-safe.
+unsafe impl Send for Tier1Pool {}
+unsafe impl Sync for Tier1Pool {}

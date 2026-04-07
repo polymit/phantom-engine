@@ -1,3 +1,8 @@
+pub mod engine;
+pub mod tools;
+
+pub use engine::EngineAdapter;
+
 use axum::extract::State;
 use axum::http::{HeaderMap, StatusCode};
 use axum::routing::post;
@@ -48,10 +53,16 @@ impl McpServer {
         Self { api_key }
     }
 
-    pub fn router(self) -> Router {
+    /// Build an axum `Router` that serves the JSON-RPC endpoint.
+    ///
+    /// The router uses the shared `McpServer` as axum state. For phase 3 the
+    /// full `EngineAdapter` is passed per-request via an axum `Extension` or
+    /// stored in McpServer — the current design uses `McpServer` as lightweight
+    /// auth state and passes `EngineAdapter` separately through the handler.
+    pub fn router(self, adapter: EngineAdapter) -> Router {
         Router::new()
             .route("/rpc", post(rpc_endpoint))
-            .with_state(self)
+            .with_state((self, adapter))
     }
 
     pub fn parse_request(body: &str) -> Result<JsonRpcRequest, McpError> {
@@ -70,8 +81,9 @@ impl McpServer {
         Ok(req)
     }
 
-    pub fn handle_request(
+    pub async fn handle_request(
         &self,
+        adapter: &EngineAdapter,
         req: JsonRpcRequest,
         provided_key: Option<&str>,
     ) -> Result<JsonRpcResponse, McpError> {
@@ -82,16 +94,53 @@ impl McpServer {
             }
         }
 
+        let req_id = req.id.clone();
+
         let resp = match req.method.as_str() {
             "ping" => JsonRpcResponse {
                 jsonrpc: "2.0".to_string(),
-                id: req.id,
+                id: req_id,
                 result: Some(json!({ "ok": true, "pong": true })),
                 error: None,
             },
+
+            "browser_navigate" => {
+                match tools::navigate::handle_navigate(adapter, req.params).await {
+                    Ok(result) => JsonRpcResponse {
+                        jsonrpc: "2.0".to_string(),
+                        id: req_id,
+                        result: Some(result),
+                        error: None,
+                    },
+                    Err((_status, err_body)) => {
+                        let message = err_body
+                            .get("error")
+                            .and_then(|e| e.get("message"))
+                            .and_then(|m| m.as_str())
+                            .unwrap_or("navigation failed")
+                            .to_string();
+                        let code_str = err_body
+                            .get("error")
+                            .and_then(|e| e.get("code"))
+                            .and_then(|c| c.as_str())
+                            .unwrap_or("navigation_error")
+                            .to_string();
+                        JsonRpcResponse {
+                            jsonrpc: "2.0".to_string(),
+                            id: req_id,
+                            result: None,
+                            error: Some(JsonRpcError {
+                                code: -32000,
+                                message: format!("{}: {}", code_str, message),
+                            }),
+                        }
+                    }
+                }
+            }
+
             _ => JsonRpcResponse {
                 jsonrpc: "2.0".to_string(),
-                id: req.id,
+                id: req_id,
                 result: None,
                 error: Some(JsonRpcError {
                     code: -32601,
@@ -99,12 +148,13 @@ impl McpServer {
                 }),
             },
         };
+
         Ok(resp)
     }
 }
 
 async fn rpc_endpoint(
-    State(server): State<McpServer>,
+    State((server, adapter)): State<(McpServer, EngineAdapter)>,
     headers: HeaderMap,
     body: String,
 ) -> (StatusCode, Json<Value>) {
@@ -121,7 +171,7 @@ async fn rpc_endpoint(
         }
     };
 
-    match server.handle_request(req, maybe_key) {
+    match server.handle_request(&adapter, req, maybe_key).await {
         Ok(resp) => (
             StatusCode::OK,
             Json(serde_json::to_value(resp).unwrap_or_else(|_| {
@@ -153,8 +203,6 @@ async fn rpc_endpoint(
 
 #[cfg(test)]
 mod tests {
-    use serde_json::json;
-
     use super::{McpError, McpServer};
 
     #[test]
@@ -164,24 +212,30 @@ mod tests {
         assert!(matches!(err, McpError::InvalidRequest(_)));
     }
 
-    #[test]
-    fn handle_ping_returns_success() {
+    #[tokio::test]
+    async fn handle_ping_returns_success() {
+        use serde_json::json;
+        let adapter = crate::engine::get_test_adapter().await;
         let server = McpServer::new(None);
         let req =
             McpServer::parse_request(r#"{"jsonrpc":"2.0","id":"a","method":"ping","params":{}}"#)
                 .unwrap();
-        let resp = server.handle_request(req, None).unwrap();
+        let resp = server.handle_request(&adapter, req, None).await.unwrap();
         assert_eq!(resp.result, Some(json!({ "ok": true, "pong": true })));
         assert!(resp.error.is_none());
     }
 
-    #[test]
-    fn api_key_is_enforced() {
+    #[tokio::test]
+    async fn api_key_is_enforced() {
+        let adapter = crate::engine::get_test_adapter().await;
         let server = McpServer::new(Some("secret".to_string()));
         let req =
             McpServer::parse_request(r#"{"jsonrpc":"2.0","id":"a","method":"ping","params":{}}"#)
                 .unwrap();
-        let err = server.handle_request(req, Some("wrong")).unwrap_err();
+        let err = server
+            .handle_request(&adapter, req, Some("wrong"))
+            .await
+            .unwrap_err();
         assert!(matches!(err, McpError::Unauthorized));
     }
 }

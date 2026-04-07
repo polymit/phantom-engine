@@ -223,10 +223,13 @@ impl Tier1Session {
         "#;
         let persona_init = PERSONA_INIT_TEMPLATE
             .replace("__CANVAS_NOISE_SEED__", &format!("{canvas_noise_seed}n"));
+        static EVENT_TARGET_SOURCE: &str = include_str!("../../js/event_target.js");
         static SHIMS_SOURCE: &str = include_str!("../../js/browser_shims.js");
 
         async_with!(self.context => |ctx| {
             ctx.eval::<(), _>(persona_init)
+                .map_err(|_| rquickjs::Error::Unknown)?;
+            ctx.eval::<(), _>(EVENT_TARGET_SOURCE)
                 .map_err(|_| rquickjs::Error::Unknown)?;
             ctx.eval::<(), _>(SHIMS_SOURCE)
                 .map_err(|_| rquickjs::Error::Unknown)?;

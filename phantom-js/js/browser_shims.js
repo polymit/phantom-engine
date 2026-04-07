@@ -378,3 +378,48 @@ if (globalThis.Intl && Intl.DateTimeFormat) {
 ['__playwright', '__puppeteer', '__webdriver'].forEach(prop => {
     delete window[prop];
 });
+
+// 18. Event polyfills for Tier 1 (QuickJS)
+if (typeof MouseEvent === 'undefined') {
+    globalThis.Event = function Event(type, options) {
+        this.type = type;
+        this.bubbles = !!(options && options.bubbles);
+        this.cancelable = !!(options && options.cancelable);
+        this.timestamp = Date.now();
+    };
+    globalThis.UIEvent = function UIEvent(type, options) {
+        globalThis.Event.call(this, type, options);
+        this.detail = (options && options.detail) || 0;
+        this.view = (options && options.view) || globalThis.window;
+    };
+    globalThis.MouseEvent = function MouseEvent(type, options) {
+        globalThis.UIEvent.call(this, type, options);
+        this.clientX = (options && options.clientX) || 0;
+        this.clientY = (options && options.clientY) || 0;
+        this.button = (options && options.button) || 0;
+        this.buttons = (options && options.buttons) || 0;
+        this.ctrlKey = !!(options && options.ctrlKey);
+        this.shiftKey = !!(options && options.shiftKey);
+        this.altKey = !!(options && options.altKey);
+        this.metaKey = !!(options && options.metaKey);
+    };
+    globalThis.PointerEvent = function PointerEvent(type, options) {
+        globalThis.MouseEvent.call(this, type, options);
+        this.pointerId = (options && options.pointerId) || 0;
+        this.width = (options && options.width) || 1;
+        this.height = (options && options.height) || 1;
+        this.pressure = (options && options.pressure) || 0;
+        this.pointerType = (options && options.pointerType) || 'mouse';
+        this.isPrimary = !!(options && options.isPrimary);
+    };
+    globalThis.FocusEvent = function FocusEvent(type, options) {
+        globalThis.UIEvent.call(this, type, options);
+        this.relatedTarget = (options && options.relatedTarget) || null;
+    };
+}
+
+// 19. HTMLElement inheritance from EventTarget
+// This enables addEventListener/dispatchEvent on nodes returned by querySelector
+if (globalThis.HTMLElement && globalThis.EventTarget) {
+    Object.setPrototypeOf(HTMLElement.prototype, EventTarget.prototype);
+}

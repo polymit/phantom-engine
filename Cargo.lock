@@ -1777,12 +1777,14 @@ name = "phantom-net"
 version = "0.1.0"
 dependencies = [
  "http",
+ "phantom-anti-detect",
  "rand",
  "rand_distr",
  "rusqlite",
  "thiserror 1.0.69",
  "tokio",
  "tracing",
+ "url",
  "wreq",
  "wreq-util",
 ]

@@ -1,6 +1,6 @@
+use phantom_anti_detect::Persona;
 use phantom_net::navigate::{navigate, NavigationConfig, NavigationError};
 use phantom_net::SmartNetworkClient;
-use phantom_anti_detect::Persona;
 use rand::rngs::OsRng;
 use rand::RngCore;
 
@@ -13,14 +13,19 @@ fn make_client() -> SmartNetworkClient {
 #[test]
 fn navigation_config_defaults_are_correct() {
     let config = NavigationConfig::default();
-    assert_eq!(config.viewport_width,  1280.0,
-        "default viewport_width must be 1280.0 per blueprint");
-    assert_eq!(config.viewport_height, 720.0,
-        "default viewport_height must be 720.0 per blueprint");
-    assert_eq!(config.max_retries, 2,
-        "default max_retries must be 2 per blueprint retry policy");
-    assert!(config.task_hint.is_none(),
-        "default task_hint must be None");
+    assert_eq!(
+        config.viewport_width, 1280.0,
+        "default viewport_width must be 1280.0 per blueprint"
+    );
+    assert_eq!(
+        config.viewport_height, 720.0,
+        "default viewport_height must be 720.0 per blueprint"
+    );
+    assert_eq!(
+        config.max_retries, 2,
+        "default max_retries must be 2 per blueprint retry policy"
+    );
+    assert!(config.task_hint.is_none(), "default task_hint must be None");
 }
 
 // ── Test 2: Static HTML navigation — no network required ─────────────
@@ -34,24 +39,28 @@ async fn navigate_real_page_returns_cct() {
     match navigate(&client, "https://httpbin.org/html", &config).await {
         Ok(result) => {
             // status must be 200
-            assert_eq!(result.status, 200,
-                "httpbin /html must return 200");
+            assert_eq!(result.status, 200, "httpbin /html must return 200");
 
             // CCT must have page header
-            assert!(result.cct.starts_with("##PAGE"),
-                "CCT must start with ##PAGE header");
+            assert!(
+                result.cct.starts_with("##PAGE"),
+                "CCT must start with ##PAGE header"
+            );
 
             // CCT must contain the navigated host
-            assert!(result.cct.contains("httpbin.org"),
-                "CCT ##PAGE must contain the navigated URL");
+            assert!(
+                result.cct.contains("httpbin.org"),
+                "CCT ##PAGE must contain the navigated URL"
+            );
 
             // url must not be empty
-            assert!(!result.url.is_empty(),
-                "final url must not be empty");
+            assert!(!result.url.is_empty(), "final url must not be empty");
 
             // page must have a document root
-            assert!(result.page.tree.document_root.is_some(),
-                "ParsedPage must have a document root");
+            assert!(
+                result.page.tree.document_root.is_some(),
+                "ParsedPage must have a document root"
+            );
 
             // node_count must equal what the CCT header reports
             // (may be 0 in headless mode — Taffy has no font metrics so block
@@ -63,11 +72,15 @@ async fn navigate_real_page_returns_cct() {
                 .find_map(|p| p.strip_prefix("nodes="))
                 .and_then(|v| v.parse::<usize>().ok())
                 .unwrap_or(usize::MAX);
-            assert_eq!(header_count, result.node_count,
-                "result.node_count must be consistent with nodes= in CCT header");
+            assert_eq!(
+                header_count, result.node_count,
+                "result.node_count must be consistent with nodes= in CCT header"
+            );
 
-            println!("navigate real page: status={}, nodes={}, url={}",
-                result.status, result.node_count, result.url);
+            println!(
+                "navigate real page: status={}, nodes={}, url={}",
+                result.status, result.node_count, result.url
+            );
         }
         Err(e) => {
             println!("navigate real page: skipped (network): {}", e);
@@ -84,16 +97,26 @@ async fn navigate_cct_header_fields_are_populated() {
     match navigate(&client, "https://httpbin.org/html", &config).await {
         Ok(result) => {
             let header_line = result.cct.lines().next().unwrap_or("");
-            assert!(header_line.starts_with("##PAGE"),
-                "first line must be ##PAGE");
-            assert!(header_line.contains("viewport=1280x720"),
-                "header must contain viewport=1280x720");
-            assert!(header_line.contains("scroll=0,0"),
-                "header must contain scroll=0,0 for fresh navigation");
-            assert!(header_line.contains("mode=full"),
-                "header must be mode=full when no task_hint");
-            assert!(header_line.contains("nodes="),
-                "header must contain nodes= field");
+            assert!(
+                header_line.starts_with("##PAGE"),
+                "first line must be ##PAGE"
+            );
+            assert!(
+                header_line.contains("viewport=1280x720"),
+                "header must contain viewport=1280x720"
+            );
+            assert!(
+                header_line.contains("scroll=0,0"),
+                "header must contain scroll=0,0 for fresh navigation"
+            );
+            assert!(
+                header_line.contains("mode=full"),
+                "header must be mode=full when no task_hint"
+            );
+            assert!(
+                header_line.contains("nodes="),
+                "header must contain nodes= field"
+            );
             println!("CCT header: {}", header_line);
         }
         Err(_) => {
@@ -115,8 +138,7 @@ async fn navigate_selective_mode_when_task_hint_provided() {
         Ok(result) => {
             // CCT must be in selective mode when task_hint is set
             assert!(
-                result.cct.contains("mode=selective")
-                    || result.cct.contains("mode=full"),
+                result.cct.contains("mode=selective") || result.cct.contains("mode=full"),
                 "mode must be present in header"
             );
             // selective is activated at 500+ nodes; httpbin/html likely
@@ -142,8 +164,7 @@ async fn navigate_404_returns_http_error_not_retry() {
         Ok(_) => panic!("404 must return an error, not Ok"),
         Err(NavigationError::HttpError { status, url }) => {
             assert_eq!(status, 404, "status must be 404");
-            assert!(url.contains("httpbin.org"),
-                "url must be present in error");
+            assert!(url.contains("httpbin.org"), "url must be present in error");
             println!("navigate_404: correctly returned HttpError {{ status: 404 }}");
         }
         Err(e) => {
@@ -169,9 +190,14 @@ async fn navigate_node_count_matches_cct_header() {
                 .and_then(|v| v.parse::<usize>().ok())
                 .expect("nodes= field must be present and parseable");
 
-            assert_eq!(header_count, result.node_count,
-                "result.node_count must equal nodes= in CCT header");
-            println!("node_count consistency: {} == {}", header_count, result.node_count);
+            assert_eq!(
+                header_count, result.node_count,
+                "result.node_count must equal nodes= in CCT header"
+            );
+            println!(
+                "node_count consistency: {} == {}",
+                header_count, result.node_count
+            );
         }
         Err(_) => println!("node_count_matches: skipped (network unavailable)"),
     }
@@ -188,10 +214,8 @@ async fn navigate_follows_redirects_and_updates_url() {
         Ok(result) => {
             // After redirect, final URL should differ from the original
             // (redirected to /get which returns JSON, not HTML)
-            assert!(!result.url.is_empty(),
-                "final URL must not be empty");
-            assert_eq!(result.status, 200,
-                "after redirect, status must be 200");
+            assert!(!result.url.is_empty(), "final URL must not be empty");
+            assert_eq!(result.status, 200, "after redirect, status must be 200");
             println!("redirect followed: final_url={}", result.url);
         }
         Err(e) => println!("navigate_redirect: skipped or error: {}", e),
@@ -205,8 +229,7 @@ async fn navigate_empty_url_returns_error_not_panic() {
     let config = NavigationConfig::default();
 
     let result = navigate(&client, "", &config).await;
-    assert!(result.is_err(),
-        "empty URL must return an error, not Ok");
+    assert!(result.is_err(), "empty URL must return an error, not Ok");
     println!("navigate empty url: correctly returned error");
 }
 
@@ -233,13 +256,17 @@ async fn navigate_result_page_is_queryable() {
     match navigate(&client, "https://httpbin.org/html", &config).await {
         Ok(result) => {
             // page.tree must have a document root
-            assert!(result.page.tree.document_root.is_some(),
-                "ParsedPage must have a document root after navigation");
+            assert!(
+                result.page.tree.document_root.is_some(),
+                "ParsedPage must have a document root after navigation"
+            );
 
             // Must be able to query for html tag
             let html_nodes = result.page.tree.get_elements_by_tag_name("html");
-            assert!(!html_nodes.is_empty(),
-                "must find at least one <html> element in parsed page");
+            assert!(
+                !html_nodes.is_empty(),
+                "must find at least one <html> element in parsed page"
+            );
 
             println!("page queryable: html tags found = {}", html_nodes.len());
         }

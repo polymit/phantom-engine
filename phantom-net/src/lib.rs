@@ -72,7 +72,7 @@ impl SmartNetworkClient {
 
     pub fn with_persona(persona: &phantom_anti_detect::Persona) -> Self {
         use phantom_anti_detect::ChromeProfile;
-        
+
         let emulation = match persona.chrome_version {
             ChromeProfile::Chrome133 => wreq_util::Emulation::Chrome133,
             ChromeProfile::Chrome134 => wreq_util::Emulation::Chrome134,
@@ -123,7 +123,8 @@ impl SmartNetworkClient {
     pub fn select_transport(&self, authority: &str) -> Result<Transport, PhantomNetError> {
         let key = normalize_authority(authority)?;
         let t = if let Ok(cache) = self.alt_svc_cache.read() {
-            cache.get(&key)
+            cache
+                .get(&key)
                 .map(|info| {
                     if info.h3 {
                         Transport::Http3
@@ -146,14 +147,12 @@ impl SmartNetworkClient {
         }
     }
 
-    pub async fn fetch(
-        &self,
-        url: &str,
-    ) -> Result<FetchResponse, PhantomNetError> {
-        let parsed_url = Url::parse(url)
-            .map_err(|e| PhantomNetError::InvalidUrl(e.to_string()))?;
+    pub async fn fetch(&self, url: &str) -> Result<FetchResponse, PhantomNetError> {
+        let parsed_url = Url::parse(url).map_err(|e| PhantomNetError::InvalidUrl(e.to_string()))?;
 
-        let res = self.client.get(url)
+        let res = self
+            .client
+            .get(url)
             .send()
             .await
             .map_err(|e| PhantomNetError::RequestFailed(e.to_string()))?;
@@ -165,7 +164,7 @@ impl SmartNetworkClient {
         for (k, v) in res.headers().iter() {
             if let Ok(value_str) = v.to_str() {
                 headers_map.insert(k.as_str().to_string(), value_str.to_string());
-                
+
                 if k.as_str().eq_ignore_ascii_case("alt-svc") {
                     let h3 = value_str.contains("h3=");
                     let max_age_secs = value_str
@@ -187,7 +186,8 @@ impl SmartNetworkClient {
             }
         }
 
-        let body = res.bytes()
+        let body = res
+            .bytes()
             .await
             .map_err(|e| PhantomNetError::RequestFailed(e.to_string()))?
             .to_vec();
@@ -259,14 +259,18 @@ mod tests {
 
         match result {
             Ok(resp) => {
-                assert!(resp.status == 200,
-                    "httpbin.org/get must return 200, got {}", resp.status);
-                assert!(!resp.body.is_empty(),
-                    "response body must not be empty");
-                assert!(!resp.final_url.is_empty(),
-                    "final_url must not be empty");
-                println!("fetch_real_url: status={}, body_len={}",
-                         resp.status, resp.body.len());
+                assert!(
+                    resp.status == 200,
+                    "httpbin.org/get must return 200, got {}",
+                    resp.status
+                );
+                assert!(!resp.body.is_empty(), "response body must not be empty");
+                assert!(!resp.final_url.is_empty(), "final_url must not be empty");
+                println!(
+                    "fetch_real_url: status={}, body_len={}",
+                    resp.status,
+                    resp.body.len()
+                );
             }
             Err(e) => {
                 // Network may be unavailable in sandboxed CI
@@ -290,15 +294,23 @@ mod tests {
         let client = SmartNetworkClient::with_persona(&persona); // intentionally test with mut/non-mut
 
         // Manually inject an Alt-Svc entry as if fetch() had parsed it
-        client.record_alt_svc(
-            "example.com",
-            AltSvcInfo { h3: true, max_age_secs: 3600 },
-        ).unwrap();
+        client
+            .record_alt_svc(
+                "example.com",
+                AltSvcInfo {
+                    h3: true,
+                    max_age_secs: 3600,
+                },
+            )
+            .unwrap();
 
         // Verify transport selection reflects the cached Alt-Svc
         let transport = client.select_transport("example.com").unwrap();
-        assert_eq!(transport, Transport::Http3,
-            "After Alt-Svc h3=true, transport must be Http3");
+        assert_eq!(
+            transport,
+            Transport::Http3,
+            "After Alt-Svc h3=true, transport must be Http3"
+        );
 
         println!("Alt-Svc cache wiring: VERIFIED");
     }

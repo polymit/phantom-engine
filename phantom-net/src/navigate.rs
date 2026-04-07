@@ -6,29 +6,29 @@ use tracing::{info, warn};
 
 #[derive(Debug, Clone)]
 pub struct NavigationConfig {
-    pub viewport_width:  f32,
+    pub viewport_width: f32,
     pub viewport_height: f32,
-    pub max_retries:     u8,
-    pub task_hint:       Option<String>,
+    pub max_retries: u8,
+    pub task_hint: Option<String>,
 }
 
 impl Default for NavigationConfig {
     fn default() -> Self {
         Self {
-            viewport_width:  1280.0,
+            viewport_width: 1280.0,
             viewport_height: 720.0,
-            max_retries:     2,
-            task_hint:       None,
+            max_retries: 2,
+            task_hint: None,
         }
     }
 }
 
 pub struct NavigationResult {
-    pub url:        String,
-    pub status:     u16,
-    pub cct:        String,
+    pub url: String,
+    pub status: u16,
+    pub cct: String,
     pub node_count: usize,
-    pub page:       ParsedPage,
+    pub page: ParsedPage,
 }
 
 impl std::fmt::Debug for NavigationResult {
@@ -51,45 +51,35 @@ pub enum NavigationError {
     },
 
     #[error("HTTP error {status} fetching {url}")]
-    HttpError {
-        status: u16,
-        url:    String,
-    },
+    HttpError { status: u16, url: String },
 
     #[error("HTML is not valid UTF-8 at {url}")]
-    Encoding {
-        url: String,
-    },
+    Encoding { url: String },
 
     #[error("core pipeline failed for {url}: {source}")]
-    Pipeline {
-        url:    String,
-        source: CoreError,
-    },
+    Pipeline { url: String, source: CoreError },
 
     #[error("redirect loop detected for {url}")]
-    RedirectLoop {
-        url: String,
-    },
+    RedirectLoop { url: String },
 
     #[error("all {attempts} attempts failed for {url}")]
-    AllAttemptsFailed {
-        url:      String,
-        attempts: u8,
-    },
+    AllAttemptsFailed { url: String, attempts: u8 },
 }
 
 pub async fn navigate(
-    client:  &SmartNetworkClient,
-    url:     &str,
-    config:  &NavigationConfig,
+    client: &SmartNetworkClient,
+    url: &str,
+    config: &NavigationConfig,
 ) -> Result<NavigationResult, NavigationError> {
     let max_attempts = config.max_retries + 1;
     let mut current_attempt = 1;
 
     loop {
         if current_attempt > 1 {
-            info!("Retrying navigation to {} (attempt {}/{})", url, current_attempt, max_attempts);
+            info!(
+                "Retrying navigation to {} (attempt {}/{})",
+                url, current_attempt, max_attempts
+            );
         }
 
         let response = match client.fetch(url).await {
@@ -153,7 +143,8 @@ pub async fn navigate(
             &final_url,
             config.viewport_width,
             config.viewport_height,
-        ).map_err(|e| NavigationError::Pipeline {
+        )
+        .map_err(|e| NavigationError::Pipeline {
             url: final_url.clone(),
             source: e,
         })?;
@@ -179,7 +170,10 @@ pub async fn navigate(
 
         let node_count = cct.lines().filter(|line| !line.starts_with("##")).count();
 
-        info!("Navigation successful: status {}, nodes {} for url {}", response.status, node_count, final_url);
+        info!(
+            "Navigation successful: status {}, nodes {} for url {}",
+            response.status, node_count, final_url
+        );
 
         return Ok(NavigationResult {
             url: final_url,

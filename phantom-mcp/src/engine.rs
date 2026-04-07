@@ -26,14 +26,16 @@ pub fn init_v8() {
 /// This prevents V8 isolate drop order panics by keeping a single set of
 /// isolates alive for the duration of the test process via Box::leak.
 pub async fn get_test_adapter() -> &'static EngineAdapter {
-    TEST_ADAPTER.get_or_init(|| async {
-        init_v8();
-        // ZERO pre-warming for tests to avoid V8 isolate drop order panics across
-        // multiple tests. Isolates will be created on-demand and dropped cleanly
-        // within each test's lifecycle.
-        let adapter = EngineAdapter::new(5, 0, 5, 0).await;
-        Box::leak(Box::new(adapter)) as &'static EngineAdapter
-    }).await
+    TEST_ADAPTER
+        .get_or_init(|| async {
+            init_v8();
+            // ZERO pre-warming for tests to avoid V8 isolate drop order panics across
+            // multiple tests. Isolates will be created on-demand and dropped cleanly
+            // within each test's lifecycle.
+            let adapter = EngineAdapter::new(5, 0, 5, 0).await;
+            Box::leak(Box::new(adapter)) as &'static EngineAdapter
+        })
+        .await
 }
 
 /// Wrapper around ParsedPage that opts into Send + Sync.
@@ -53,8 +55,8 @@ unsafe impl Sync for SendablePage {}
 /// Stored after each successful navigation so `browser_get_scene_graph`
 /// can re-serialise the DOM with different viewport/scroll parameters.
 pub struct SessionPage {
-    pub page:   SendablePage,
-    pub url:    String,
+    pub page: SendablePage,
+    pub url: String,
     pub status: u16,
 }
 
@@ -73,13 +75,13 @@ impl SessionPage {
 #[derive(Clone)]
 pub struct EngineAdapter {
     /// HTTP client built from the first persona in the pool.
-    pub network:  Arc<SmartNetworkClient>,
+    pub network: Arc<SmartNetworkClient>,
     /// Session lifecycle manager.
-    pub broker:   Arc<SessionBroker>,
+    pub broker: Arc<SessionBroker>,
     /// Pre-warmed QuickJS session pool (Tier 1).
-    pub tier1:    Arc<Tier1Pool>,
+    pub tier1: Arc<Tier1Pool>,
     /// Pre-warmed V8 session pool (Tier 2).
-    pub tier2:    Arc<Tier2Pool>,
+    pub tier2: Arc<Tier2Pool>,
     /// Persona pool for fingerprint rotation across sessions.
     pub personas: Arc<Mutex<PersonaPool>>,
     /// Per-session page storage for scene graph re-serialisation.
@@ -93,10 +95,7 @@ impl EngineAdapter {
     /// Must be called after `v8::Platform` is initialised and after the
     /// Tokio runtime is started. `Tier1Pool::new()` is async; `Tier2Pool::new()`
     /// is synchronous.
-    pub async fn new(
-        t1_max: usize, t1_pre: usize,
-        t2_max: usize, t2_pre: usize
-    ) -> Self {
+    pub async fn new(t1_max: usize, t1_pre: usize, t2_max: usize, t2_pre: usize) -> Self {
         let mut persona_pool = PersonaPool::default_pool();
         let first_persona = persona_pool.next_persona();
         let network = SmartNetworkClient::with_persona(&first_persona);
@@ -110,11 +109,11 @@ impl EngineAdapter {
         let tier2 = Arc::new(Tier2Pool::new(t2_max, t2_pre));
 
         Self {
-            network:    Arc::new(network),
-            broker:     Arc::new(broker),
+            network: Arc::new(network),
+            broker: Arc::new(broker),
             tier1,
             tier2,
-            personas:   Arc::new(Mutex::new(persona_pool)),
+            personas: Arc::new(Mutex::new(persona_pool)),
             page_store: Arc::new(Mutex::new(HashMap::new())),
         }
     }
@@ -134,14 +133,16 @@ impl EngineAdapter {
     /// Clone the stored ParsedPage for re-serialisation.
     /// Returns None if no page has been navigated to yet.
     pub fn get_page(&self) -> Option<ParsedPage> {
-        self.page_store.lock()
+        self.page_store
+            .lock()
             .get(&Uuid::nil())
             .map(|sp| sp.page.0.clone())
     }
 
     /// Get the URL of the currently stored page.
     pub fn get_page_url(&self) -> Option<String> {
-        self.page_store.lock()
+        self.page_store
+            .lock()
             .get(&Uuid::nil())
             .map(|sp| sp.url.clone())
     }

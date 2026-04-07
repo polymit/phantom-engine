@@ -7,17 +7,17 @@ use phantom_net::navigate::{navigate, NavigationConfig, NavigationError};
 
 #[derive(Debug, Deserialize)]
 pub struct NavigateParams {
-    pub url:             String,
-    pub viewport_width:  Option<f32>,
+    pub url: String,
+    pub viewport_width: Option<f32>,
     pub viewport_height: Option<f32>,
-    pub task_hint:       Option<String>,
+    pub task_hint: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
 pub struct NavigateResult {
-    pub url:        String,
-    pub status:     u16,
-    pub cct:        String,
+    pub url: String,
+    pub status: u16,
+    pub cct: String,
     pub node_count: usize,
 }
 
@@ -29,7 +29,7 @@ pub struct NavigateResult {
 /// in a [`JsonRpcResponse`].
 pub async fn handle_navigate(
     adapter: &EngineAdapter,
-    params:  Value,
+    params: Value,
 ) -> Result<Value, (StatusCode, Value)> {
     let params: NavigateParams = serde_json::from_value(params).map_err(|e| {
         (
@@ -39,9 +39,9 @@ pub async fn handle_navigate(
     })?;
 
     let config = NavigationConfig {
-        viewport_width:  params.viewport_width.unwrap_or(1280.0),
+        viewport_width: params.viewport_width.unwrap_or(1280.0),
         viewport_height: params.viewport_height.unwrap_or(720.0),
-        task_hint:       params.task_hint,
+        task_hint: params.task_hint,
         ..Default::default()
     };
 
@@ -55,12 +55,14 @@ pub async fn handle_navigate(
                 NavigationError::Network { .. } => {
                     ("network_error".to_string(), StatusCode::BAD_GATEWAY)
                 }
-                NavigationError::Encoding { .. } => {
-                    ("encoding_error".to_string(), StatusCode::UNPROCESSABLE_ENTITY)
-                }
-                NavigationError::Pipeline { .. } => {
-                    ("pipeline_error".to_string(), StatusCode::INTERNAL_SERVER_ERROR)
-                }
+                NavigationError::Encoding { .. } => (
+                    "encoding_error".to_string(),
+                    StatusCode::UNPROCESSABLE_ENTITY,
+                ),
+                NavigationError::Pipeline { .. } => (
+                    "pipeline_error".to_string(),
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                ),
                 NavigationError::RedirectLoop { .. } => {
                     ("redirect_loop".to_string(), StatusCode::BAD_GATEWAY)
                 }

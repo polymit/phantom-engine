@@ -1777,7 +1777,10 @@ name = "phantom-net"
 version = "0.1.0"
 dependencies = [
  "http",
+ "indextree",
  "phantom-anti-detect",
+ "phantom-core",
+ "phantom-serializer",
  "rand",
  "rand_distr",
  "rusqlite",

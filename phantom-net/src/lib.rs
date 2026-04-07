@@ -4,6 +4,9 @@ use std::sync::RwLock;
 use url::Url;
 use wreq::Client;
 
+pub mod navigate;
+pub use navigate::NavigationResult;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Transport {
     Http2,

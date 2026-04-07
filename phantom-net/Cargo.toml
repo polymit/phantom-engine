@@ -15,6 +15,11 @@ tracing   = "0.1"
 thiserror = "1"
 url = "2"
 phantom-anti-detect = { path = "../phantom-anti-detect" }
+phantom-core = { path = "../phantom-core" }
+phantom-serializer = { path = "../phantom-serializer" }
+
+[dev-dependencies]
+indextree = "=4.8.0"
 
 # DEFERRED TO v0.2 — BoringSSL linker conflict with wreq's boring2
 # tokio-quiche = "=0.16.1"

@@ -2,7 +2,7 @@ use axum::http::StatusCode;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
-use crate::engine::EngineAdapter;
+use crate::engine::{EngineAdapter, SessionPage};
 use phantom_net::navigate::{navigate, NavigationConfig, NavigationError};
 
 #[derive(Debug, Deserialize)]
@@ -74,10 +74,23 @@ pub async fn handle_navigate(
             )
         })?;
 
+    let response_url = result.url.clone();
+    let response_status = result.status;
+    let response_cct = result.cct.clone();
+    let response_node_count = result.node_count;
+
+    // Persist the parsed page so browser_get_scene_graph can re-serialise
+    // with different scroll/mode parameters without re-fetching.
+    adapter.store_page(SessionPage::new(
+        result.page,
+        result.url.clone(),
+        result.status,
+    ));
+
     Ok(json!({
-        "url":        result.url,
-        "status":     result.status,
-        "cct":        result.cct,
-        "node_count": result.node_count,
+        "url":        response_url,
+        "status":     response_status,
+        "cct":        response_cct,
+        "node_count": response_node_count,
     }))
 }

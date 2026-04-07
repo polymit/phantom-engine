@@ -1768,14 +1768,17 @@ dependencies = [
  "once_cell",
  "parking_lot 0.12.5",
  "phantom-anti-detect",
+ "phantom-core",
  "phantom-js",
  "phantom-net",
+ "phantom-serializer",
  "phantom-session",
  "serde",
  "serde_json",
  "thiserror 1.0.69",
  "tokio",
  "tracing",
+ "uuid",
 ]
 
 [[package]]

@@ -34,6 +34,7 @@ impl ViewportBounds {
     }
 }
 
+#[derive(Clone)]
 pub struct LayoutEngine {
     taffy: taffy::TaffyTree,
     node_map: HashMap<indextree::NodeId, taffy::NodeId>,

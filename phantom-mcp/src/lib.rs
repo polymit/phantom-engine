@@ -138,6 +138,40 @@ impl McpServer {
                 }
             }
 
+            "browser_get_scene_graph" => {
+                match tools::scene_graph::handle_get_scene_graph(adapter, req.params).await {
+                    Ok(result) => JsonRpcResponse {
+                        jsonrpc: "2.0".to_string(),
+                        id: req_id,
+                        result: Some(result),
+                        error: None,
+                    },
+                    Err((_status, err_body)) => {
+                        let message = err_body
+                            .get("error")
+                            .and_then(|e| e.get("message"))
+                            .and_then(|m| m.as_str())
+                            .unwrap_or("scene graph failed")
+                            .to_string();
+                        let code_str = err_body
+                            .get("error")
+                            .and_then(|e| e.get("code"))
+                            .and_then(|c| c.as_str())
+                            .unwrap_or("scene_graph_error")
+                            .to_string();
+                        JsonRpcResponse {
+                            jsonrpc: "2.0".to_string(),
+                            id: req_id,
+                            result: None,
+                            error: Some(JsonRpcError {
+                                code: -32000,
+                                message: format!("{}: {}", code_str, message),
+                            }),
+                        }
+                    }
+                }
+            }
+
             _ => JsonRpcResponse {
                 jsonrpc: "2.0".to_string(),
                 id: req_id,

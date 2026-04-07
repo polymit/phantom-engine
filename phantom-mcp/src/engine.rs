@@ -1,13 +1,16 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use parking_lot::Mutex;
 use phantom_anti_detect::{Persona, PersonaPool};
+use phantom_core::ParsedPage;
 use phantom_js::tier1::pool::Tier1Pool;
 use phantom_js::tier2::pool::Tier2Pool;
 use phantom_net::SmartNetworkClient;
 use phantom_session::SessionBroker;
 use std::sync::Once;
 use tokio::sync::OnceCell;
+use uuid::Uuid;
 
 static INIT: Once = Once::new();
 static TEST_ADAPTER: OnceCell<&'static EngineAdapter> = OnceCell::const_new();
@@ -33,6 +36,38 @@ pub async fn get_test_adapter() -> &'static EngineAdapter {
     }).await
 }
 
+/// Wrapper around ParsedPage that opts into Send + Sync.
+///
+/// TaffyTree (inside LayoutEngine) uses RefCell internally, making it !Send.
+/// We only ever access the stored page through a parking_lot::Mutex, which
+/// guarantees exclusive access — the RefCell is never touched concurrently.
+pub struct SendablePage(pub ParsedPage);
+
+// SAFETY: ParsedPage is only accessed through a Mutex<HashMap<..., SessionPage>>.
+// The Mutex serialises all access, so the RefCell inside TaffyTree is never
+// accessed from multiple threads simultaneously.
+unsafe impl Send for SendablePage {}
+unsafe impl Sync for SendablePage {}
+
+/// Per-session snapshot of a navigated page.
+/// Stored after each successful navigation so `browser_get_scene_graph`
+/// can re-serialise the DOM with different viewport/scroll parameters.
+pub struct SessionPage {
+    pub page:   SendablePage,
+    pub url:    String,
+    pub status: u16,
+}
+
+impl SessionPage {
+    pub fn new(page: ParsedPage, url: String, status: u16) -> Self {
+        Self {
+            page: SendablePage(page),
+            url,
+            status,
+        }
+    }
+}
+
 /// EngineAdapter is the single shared state type for the MCP server.
 /// It owns all subsystems. Clone is cheap — all fields are Arc<T>.
 #[derive(Clone)]
@@ -47,6 +82,9 @@ pub struct EngineAdapter {
     pub tier2:    Arc<Tier2Pool>,
     /// Persona pool for fingerprint rotation across sessions.
     pub personas: Arc<Mutex<PersonaPool>>,
+    /// Per-session page storage for scene graph re-serialisation.
+    /// Uses parking_lot::Mutex — lock is never held across .await.
+    pub page_store: Arc<Mutex<HashMap<Uuid, SessionPage>>>,
 }
 
 impl EngineAdapter {
@@ -72,11 +110,12 @@ impl EngineAdapter {
         let tier2 = Arc::new(Tier2Pool::new(t2_max, t2_pre));
 
         Self {
-            network:  Arc::new(network),
-            broker:   Arc::new(broker),
+            network:    Arc::new(network),
+            broker:     Arc::new(broker),
             tier1,
             tier2,
-            personas: Arc::new(Mutex::new(persona_pool)),
+            personas:   Arc::new(Mutex::new(persona_pool)),
+            page_store: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
@@ -84,5 +123,26 @@ impl EngineAdapter {
     /// Each new session should call this to vary the fingerprint.
     pub fn next_persona(&self) -> Persona {
         self.personas.lock().next_persona()
+    }
+
+    /// Store a navigated page snapshot under the single-session key.
+    /// Multi-session keying arrives in a later prompt.
+    pub fn store_page(&self, page: SessionPage) {
+        self.page_store.lock().insert(Uuid::nil(), page);
+    }
+
+    /// Clone the stored ParsedPage for re-serialisation.
+    /// Returns None if no page has been navigated to yet.
+    pub fn get_page(&self) -> Option<ParsedPage> {
+        self.page_store.lock()
+            .get(&Uuid::nil())
+            .map(|sp| sp.page.0.clone())
+    }
+
+    /// Get the URL of the currently stored page.
+    pub fn get_page_url(&self) -> Option<String> {
+        self.page_store.lock()
+            .get(&Uuid::nil())
+            .map(|sp| sp.url.clone())
     }
 }

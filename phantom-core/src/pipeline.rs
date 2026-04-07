@@ -12,6 +12,7 @@ pub enum CoreError {
     Parse(String),
 }
 
+#[derive(Clone)]
 pub struct ParsedPage {
     pub tree: DomTree,
     pub layout: LayoutEngine,

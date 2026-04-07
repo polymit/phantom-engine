@@ -287,3 +287,159 @@ async fn scene_graph_cct_header_contains_correct_url() {
     );
     println!("url in header: {}", header);
 }
+
+// ── browser_click tests ──────────────────────────────────
+
+#[tokio::test]
+async fn click_without_navigate_returns_no_page_error() {
+    let adapter = get_test_adapter().await;
+    let server  = McpServer::new(None);
+    let req = McpServer::parse_request(
+        r##"{"jsonrpc":"2.0","id":1,"method":"browser_click",
+            "params":{"selector":"button"}}"##
+    ).unwrap();
+    let resp = server.handle_request(&adapter, req, None).await.unwrap();
+    assert!(resp.error.is_some(),
+        "click without navigate must return error");
+    let err_str = serde_json::to_string(&resp.error).unwrap();
+    assert!(err_str.contains("no_page_loaded"),
+        "error must be no_page_loaded, got: {}", err_str);
+    println!("click no page: correctly returned no_page_loaded");
+}
+
+#[tokio::test]
+async fn click_nonexistent_selector_returns_element_not_found() {
+    use phantom_mcp::{EngineAdapter, McpServer, engine::SessionPage};
+    use phantom_core::process_html;
+
+    let adapter = EngineAdapter::new(5, 0, 5, 0).await;
+    let server  = McpServer::new(None);
+
+    // Store a page with NO button
+    let page = process_html(
+        "<html><body style='width:1280px;height:720px;'>
+         <p style='width:200px;height:20px;'>No button here</p>
+         </body></html>",
+        "https://click.test", 1280.0, 720.0,
+    ).unwrap();
+    adapter.store_page(SessionPage {
+        page: phantom_mcp::engine::SendablePage(page),
+        url: "https://click.test".to_string(), status: 200
+    });
+
+    let req = McpServer::parse_request(
+        r##"{"jsonrpc":"2.0","id":1,"method":"browser_click",
+            "params":{"selector":"button#nonexistent-id-xyz"}}"##
+    ).unwrap();
+    let resp = server.handle_request(&adapter, req, None).await.unwrap();
+    assert!(resp.error.is_some(),
+        "clicking nonexistent element must return error");
+    let err_str = serde_json::to_string(&resp.error).unwrap();
+    assert!(
+        err_str.contains("element_not_found") || err_str.contains("not_found"),
+        "error must indicate element not found, got: {}", err_str
+    );
+    println!("nonexistent selector: correctly returned element_not_found");
+}
+
+#[tokio::test]
+async fn click_existing_button_returns_success() {
+    use phantom_mcp::{EngineAdapter, McpServer, engine::SessionPage};
+    use phantom_core::process_html;
+
+    let adapter = EngineAdapter::new(5, 0, 5, 0).await;
+    let server  = McpServer::new(None);
+
+    let page = process_html(
+        r#"<html><body style="width:1280px;height:720px;">
+            <button id="submit-btn"
+                    data-testid="submit"
+                    style="width:120px;height:40px;">Submit</button>
+           </body></html>"#,
+        "https://click.test", 1280.0, 720.0,
+    ).unwrap();
+    adapter.store_page(SessionPage {
+        page: phantom_mcp::engine::SendablePage(page), url: "https://click.test".to_string(), status: 200
+    });
+
+    let req = McpServer::parse_request(
+        r##"{"jsonrpc":"2.0","id":1,"method":"browser_click",
+            "params":{"selector":"#submit-btn"}}"##
+    ).unwrap();
+    let resp = server.handle_request(&adapter, req, None).await.unwrap();
+    assert!(resp.error.is_none(),
+        "clicking existing button must not error: {:?}", resp.error);
+    let result = resp.result.unwrap();
+    assert_eq!(result["clicked"].as_bool(), Some(true),
+        "result.clicked must be true");
+    assert!(result["hesitation_ms"].as_u64().is_some(),
+        "result.hesitation_ms must be present");
+    let hesitation = result["hesitation_ms"].as_u64().unwrap();
+    assert!(hesitation >= 20 && hesitation <= 500,
+        "hesitation must be in LogNormal clamp range [20,500], got {}",
+        hesitation);
+    println!("click success: hesitation={}ms", hesitation);
+}
+
+#[tokio::test]
+async fn click_hesitation_is_in_lognormal_range() {
+    use phantom_js::BehaviorEngine;
+    let engine = BehaviorEngine::new();
+    for i in 0..10 {
+        let h = engine.click_hesitation_ms();
+        assert!(h >= 20 && h <= 500,
+            "hesitation[{}] = {}ms must be in [20,500]", i, h);
+    }
+    println!("10 hesitation samples all in [20,500]ms");
+}
+
+#[tokio::test]
+async fn click_missing_selector_param_returns_error() {
+    use phantom_mcp::{EngineAdapter, McpServer, engine::SessionPage};
+    use phantom_core::process_html;
+
+    let adapter = EngineAdapter::new(5, 0, 5, 0).await;
+    let server  = McpServer::new(None);
+
+    let page = process_html(
+        "<html><body style='width:1280px;height:720px;'></body></html>",
+        "https://click.test", 1280.0, 720.0,
+    ).unwrap();
+    adapter.store_page(SessionPage {
+        page: phantom_mcp::engine::SendablePage(page), url: "https://click.test".to_string(), status: 200
+    });
+
+    let req = McpServer::parse_request(
+        r#"{"jsonrpc":"2.0","id":1,"method":"browser_click","params":{}}"#
+    ).unwrap();
+    let resp = server.handle_request(&adapter, req, None).await.unwrap();
+    assert!(resp.error.is_some(),
+        "missing selector must return error");
+    println!("missing selector: error returned as expected");
+}
+
+#[tokio::test]
+async fn click_selector_with_single_quote_does_not_panic() {
+    use phantom_mcp::{EngineAdapter, McpServer, engine::SessionPage};
+    use phantom_core::process_html;
+
+    let adapter = EngineAdapter::new(5, 0, 5, 0).await;
+    let server  = McpServer::new(None);
+
+    let page = process_html(
+        "<html><body style='width:1280px;height:720px;'></body></html>",
+        "https://click.test", 1280.0, 720.0,
+    ).unwrap();
+    adapter.store_page(SessionPage {
+        page: phantom_mcp::engine::SendablePage(page), url: "https://click.test".to_string(), status: 200
+    });
+
+    let req = McpServer::parse_request(
+        r##"{"jsonrpc":"2.0","id":1,"method":"browser_click",
+            "params":{"selector":"[data-label='test']"}}"##
+    ).unwrap();
+    let resp = server.handle_request(&adapter, req, None).await;
+    assert!(resp.is_ok(),
+        "single quote in selector must not panic, got: {:?}", resp.err());
+    println!("single quote in selector: no panic");
+}

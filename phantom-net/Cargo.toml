@@ -13,6 +13,8 @@ tokio     = { version = "1", features = ["full"] }
 http      = "1.0"
 tracing   = "0.1"
 thiserror = "1"
+url = "2"
+phantom-anti-detect = { path = "../phantom-anti-detect" }
 
 # DEFERRED TO v0.2 — BoringSSL linker conflict with wreq's boring2
 # tokio-quiche = "=0.16.1"

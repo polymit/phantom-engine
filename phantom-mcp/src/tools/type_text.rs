@@ -4,28 +4,13 @@ use phantom_js::BehaviorEngine;
 use phantom_serializer::CctDelta;
 use serde_json::{json, Value};
 
+use super::js_escape::escape_js_single_quoted;
+
 #[derive(Debug, serde::Deserialize)]
 struct TypeParams {
     selector: String,
     text: String,
     delay_ms: Option<u64>,
-}
-
-fn escape_js_single_quoted(value: &str) -> String {
-    let mut escaped = String::with_capacity(value.len());
-    for ch in value.chars() {
-        match ch {
-            '\\' => escaped.push_str("\\\\"),
-            '\'' => escaped.push_str("\\'"),
-            '\n' => escaped.push_str("\\n"),
-            '\r' => escaped.push_str("\\r"),
-            '\t' => escaped.push_str("\\t"),
-            '\u{2028}' => escaped.push_str("\\u2028"),
-            '\u{2029}' => escaped.push_str("\\u2029"),
-            _ => escaped.push(ch),
-        }
-    }
-    escaped
 }
 
 pub async fn handle_type(

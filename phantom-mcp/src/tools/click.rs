@@ -4,6 +4,8 @@ use phantom_serializer::CctDelta;
 use serde_json::{json, Value};
 use std::time::Duration;
 
+use super::js_escape::escape_js_single_quoted;
+
 #[derive(Debug, serde::Deserialize)]
 pub struct ClickParams {
     pub selector: String,
@@ -87,7 +89,7 @@ pub async fn handle_click(
 
     session.attach_dom(tree).await;
 
-    let safe_selector = selector.replace('\'', "\\'");
+    let safe_selector = escape_js_single_quoted(&selector);
 
     // 1-2. Dispatch mouse movement along the Bezier path
     let mut path_js = format!(

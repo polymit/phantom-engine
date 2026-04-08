@@ -1,6 +1,7 @@
 pub mod click;
 pub mod cookies;
 pub mod evaluate;
+pub(crate) mod js_escape;
 pub mod navigate;
 pub mod press_key;
 pub mod scene_graph;

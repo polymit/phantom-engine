@@ -1,3 +1,5 @@
+use rand::rngs::OsRng;
+use rand::RngCore;
 use rand_distr::{Distribution, LogNormal};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -64,7 +66,8 @@ pub struct PersonaPool {
 impl PersonaPool {
     pub fn new(personas: Vec<Persona>) -> Self {
         let personas = if personas.is_empty() {
-            vec![Persona::chrome_133(1)]
+            let mut rng = OsRng;
+            vec![Persona::chrome_133(next_seed(&mut rng))]
         } else {
             personas
         };
@@ -72,7 +75,17 @@ impl PersonaPool {
     }
 
     pub fn default_pool() -> Self {
-        Self::new(vec![Persona::chrome_133(1), Persona::chrome_134(2)])
+        let mut rng = OsRng;
+        Self::default_pool_with_rng(&mut rng)
+    }
+
+    fn default_pool_with_rng<R: RngCore + ?Sized>(rng: &mut R) -> Self {
+        let seed_a = next_seed(rng);
+        let seed_b = next_distinct_seed(rng, seed_a);
+        Self::new(vec![
+            Persona::chrome_133(seed_a),
+            Persona::chrome_134(seed_b),
+        ])
     }
 
     pub fn len(&self) -> usize {
@@ -88,6 +101,21 @@ impl PersonaPool {
         self.idx = (self.idx + 1) % self.personas.len();
         p
     }
+}
+
+fn next_seed<R: RngCore + ?Sized>(rng: &mut R) -> u64 {
+    rng.next_u64()
+}
+
+fn next_distinct_seed<R: RngCore + ?Sized>(rng: &mut R, current: u64) -> u64 {
+    let mut next = next_seed(rng);
+    if next == current {
+        next = next_seed(rng);
+        if next == current {
+            next = next.wrapping_add(1);
+        }
+    }
+    next
 }
 
 /// Timing profile used by higher-level behavior systems.
@@ -125,6 +153,7 @@ impl Default for BehaviorTiming {
 #[cfg(test)]
 mod tests {
     use super::{BehaviorTiming, ChromeProfile, Persona, PersonaPool};
+    use rand::rngs::mock::StepRng;
 
     #[test]
     fn persona_pool_rotates_round_robin() {
@@ -146,5 +175,32 @@ mod tests {
         let delay = t.inter_action_delay_ms();
         assert!((20..=500).contains(&click));
         assert!((50..=3000).contains(&delay));
+    }
+
+    #[test]
+    fn default_pool_uses_rng_output_for_canvas_seed() {
+        let mut rng = StepRng::new(41, 17); // 41, 58, ...
+        let mut pool = PersonaPool::default_pool_with_rng(&mut rng);
+
+        let p1 = pool.next_persona();
+        let p2 = pool.next_persona();
+
+        assert_eq!(p1.chrome_version, ChromeProfile::Chrome133);
+        assert_eq!(p2.chrome_version, ChromeProfile::Chrome134);
+        assert_eq!(p1.canvas_noise_seed, 41);
+        assert_eq!(p2.canvas_noise_seed, 58);
+    }
+
+    #[test]
+    fn default_pool_seeds_are_distinct_even_with_repeating_rng() {
+        let mut rng = StepRng::new(7, 0); // always 7
+        let mut pool = PersonaPool::default_pool_with_rng(&mut rng);
+
+        let p1 = pool.next_persona();
+        let p2 = pool.next_persona();
+
+        assert_ne!(p1.canvas_noise_seed, p2.canvas_noise_seed);
+        assert_eq!(p1.canvas_noise_seed, 7);
+        assert_eq!(p2.canvas_noise_seed, 8);
     }
 }

@@ -166,3 +166,87 @@ async fn test_shims_browser_shims_js_syntax() {
 
     session.destroy();
 }
+
+#[tokio::test]
+async fn test_element_value_getter_setter_for_form_controls() {
+    use phantom_core::process_html;
+    use phantom_js::tier1::session::Tier1Session;
+
+    let page = process_html(
+        "<html><body><input id='email' value='a'/><textarea id='bio'>old</textarea></body></html>",
+        "https://type.test",
+        1280.0,
+        720.0,
+    )
+    .expect("html parse must succeed");
+
+    let mut session = Tier1Session::new().await.expect("session must create");
+    session.attach_dom(page.tree).await;
+
+    let input_result = session
+        .eval(
+            "(() => {
+                const el = document.querySelector('#email');
+                if (!el) return 'missing';
+                el.value = el.value + 'bc';
+                return el.value;
+            })()",
+        )
+        .await
+        .expect("input value mutation must succeed");
+    assert_eq!(input_result, "abc", "input.value setter must mutate value");
+
+    let textarea_result = session
+        .eval(
+            "(() => {
+                const el = document.querySelector('#bio');
+                if (!el) return 'missing';
+                el.value = el.value + '!';
+                return el.value;
+            })()",
+        )
+        .await
+        .expect("textarea value mutation must succeed");
+    assert_eq!(
+        textarea_result, "old!",
+        "textarea.value setter must mutate text"
+    );
+
+    session.destroy();
+}
+
+#[tokio::test]
+async fn test_element_is_content_editable_and_text_content_setter() {
+    use phantom_core::process_html;
+    use phantom_js::tier1::session::Tier1Session;
+
+    let page = process_html(
+        "<html><body><div id='editor' contenteditable='true'>x</div></body></html>",
+        "https://type.test",
+        1280.0,
+        720.0,
+    )
+    .expect("html parse must succeed");
+
+    let mut session = Tier1Session::new().await.expect("session must create");
+    session.attach_dom(page.tree).await;
+
+    let result = session
+        .eval(
+            "(() => {
+                const el = document.querySelector('#editor');
+                if (!el) return 'missing';
+                if (!el.isContentEditable) return 'not_editable';
+                el.textContent = (el.textContent || '') + 'y';
+                return el.textContent;
+            })()",
+        )
+        .await
+        .expect("contenteditable mutation must succeed");
+    assert_eq!(
+        result, "xy",
+        "contentEditable element must support writable textContent"
+    );
+
+    session.destroy();
+}

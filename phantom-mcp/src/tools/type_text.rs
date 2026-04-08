@@ -3,6 +3,7 @@ use axum::http::StatusCode;
 use phantom_js::BehaviorEngine;
 use phantom_serializer::CctDelta;
 use serde_json::{json, Value};
+use uuid::Uuid;
 
 use super::js_escape::escape_js_single_quoted;
 
@@ -138,6 +139,17 @@ pub async fn handle_type(
         let delay = typing_delay_ms.unwrap_or_else(|| behavior.char_typing_delay_ms());
         if delay > 0 {
             tokio::time::sleep(std::time::Duration::from_millis(delay)).await;
+        }
+    }
+
+    if let Some(updated_tree) = session
+        .dom_handle
+        .as_ref()
+        .map(|dom| dom.inner.read().clone())
+    {
+        let key = (*adapter.active_page_key.lock()).unwrap_or(Uuid::nil());
+        if let Some(stored_page) = adapter.page_store.lock().get_mut(&key) {
+            stored_page.tree = updated_tree;
         }
     }
 

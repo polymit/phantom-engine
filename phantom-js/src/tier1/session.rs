@@ -1,5 +1,6 @@
+use indextree::NodeId;
 use parking_lot::RwLock;
-use phantom_core::dom::{DomTree, NodeData};
+use phantom_core::dom::{DomNode, DomTree, NodeData};
 use rand::RngCore;
 use rquickjs::{async_with, prelude::*, AsyncContext, AsyncRuntime};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -39,6 +40,27 @@ unsafe impl<'js> rquickjs::JsLifetime<'js> for PhantomDomHandle {
 }
 
 impl PhantomDomHandle {
+    fn set_text_content_for_node(tree: &mut DomTree, node_id: NodeId, text: &str) {
+        if let NodeData::Text { content } = &mut tree.get_mut(node_id).data {
+            *content = text.to_string();
+            return;
+        }
+
+        let children: Vec<_> = node_id.children(&tree.arena).collect();
+        for child in children {
+            child.detach(&mut tree.arena);
+        }
+
+        if text.is_empty() {
+            return;
+        }
+
+        let text_node = tree.arena.new_node(DomNode::new(NodeData::Text {
+            content: text.to_string(),
+        }));
+        node_id.append(text_node, &mut tree.arena);
+    }
+
     pub fn new(tree: DomTree) -> Self {
         Self {
             inner: Arc::new(RwLock::new(tree)),
@@ -62,6 +84,88 @@ impl PhantomDomHandle {
         match tree.node_id_from_raw(arena_id) {
             Some(id) => tree.get_text_content(id),
             None => String::new(),
+        }
+    }
+
+    pub fn set_text_content(&self, arena_id: u64, text: &str) -> bool {
+        let mut tree = self.inner.write();
+        let Some(node_id) = tree.node_id_from_raw(arena_id) else {
+            return false;
+        };
+
+        Self::set_text_content_for_node(&mut tree, node_id, text);
+        true
+    }
+
+    pub fn get_form_value(&self, arena_id: u64) -> Option<String> {
+        let tree = self.inner.read();
+        let node_id = tree.node_id_from_raw(arena_id)?;
+        let node = tree.get(node_id);
+        let NodeData::Element {
+            tag_name,
+            attributes,
+        } = &node.data
+        else {
+            return None;
+        };
+
+        if tag_name.eq_ignore_ascii_case("textarea") {
+            return Some(tree.get_text_content(node_id));
+        }
+
+        if tag_name.eq_ignore_ascii_case("input")
+            || tag_name.eq_ignore_ascii_case("select")
+            || tag_name.eq_ignore_ascii_case("option")
+        {
+            return Some(attributes.get("value").cloned().unwrap_or_default());
+        }
+
+        None
+    }
+
+    pub fn set_form_value(&self, arena_id: u64, value: &str) -> bool {
+        let mut tree = self.inner.write();
+        let Some(node_id) = tree.node_id_from_raw(arena_id) else {
+            return false;
+        };
+
+        let tag_name = match &tree.get(node_id).data {
+            NodeData::Element { tag_name, .. } => tag_name.clone(),
+            _ => return false,
+        };
+
+        if tag_name.eq_ignore_ascii_case("textarea") {
+            Self::set_text_content_for_node(&mut tree, node_id, value);
+            return true;
+        }
+
+        if tag_name.eq_ignore_ascii_case("input")
+            || tag_name.eq_ignore_ascii_case("select")
+            || tag_name.eq_ignore_ascii_case("option")
+        {
+            if let NodeData::Element { attributes, .. } = &mut tree.get_mut(node_id).data {
+                attributes.insert("value".to_string(), value.to_string());
+                return true;
+            }
+        }
+
+        false
+    }
+
+    pub fn is_content_editable(&self, arena_id: u64) -> bool {
+        let tree = self.inner.read();
+        let Some(node_id) = tree.node_id_from_raw(arena_id) else {
+            return false;
+        };
+
+        let NodeData::Element { attributes, .. } = &tree.get(node_id).data else {
+            return false;
+        };
+
+        match attributes.get("contenteditable") {
+            Some(raw) if raw.trim().is_empty() => true,
+            Some(raw) => !raw.trim().eq_ignore_ascii_case("false"),
+            None => false,
         }
     }
 

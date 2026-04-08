@@ -39,10 +39,56 @@ impl JsHTMLElement {
         rquickjs::String::from_str(ctx, &text)
     }
 
+    #[qjs(set, rename = "textContent")]
+    pub fn set_text_content<'js>(&self, ctx: Ctx<'js>, value: String) -> Result<()> {
+        let dom = ctx
+            .userdata::<PhantomDomHandle>()
+            .ok_or(rquickjs::Error::Unknown)?
+            .clone();
+        let _ = dom.set_text_content(self.arena_id, &value);
+        Ok(())
+    }
+
     #[qjs(get, rename = "innerText")]
     pub fn inner_text<'js>(&self, ctx: Ctx<'js>) -> Result<rquickjs::String<'js>> {
         // For v0.1: same as textContent
         self.text_content(ctx)
+    }
+
+    #[qjs(set, rename = "innerText")]
+    pub fn set_inner_text<'js>(&self, ctx: Ctx<'js>, value: String) -> Result<()> {
+        self.set_text_content(ctx, value)
+    }
+
+    #[qjs(get, rename = "value")]
+    pub fn value<'js>(&self, ctx: Ctx<'js>) -> Result<rquickjs::Value<'js>> {
+        let dom = ctx
+            .userdata::<PhantomDomHandle>()
+            .ok_or(rquickjs::Error::Unknown)?
+            .clone();
+        match dom.get_form_value(self.arena_id) {
+            Some(value) => Ok(rquickjs::String::from_str(ctx, &value)?.into_value()),
+            None => Ok(rquickjs::Value::new_null(ctx.clone())),
+        }
+    }
+
+    #[qjs(set, rename = "value")]
+    pub fn set_value<'js>(&self, ctx: Ctx<'js>, value: String) -> Result<()> {
+        let dom = ctx
+            .userdata::<PhantomDomHandle>()
+            .ok_or(rquickjs::Error::Unknown)?
+            .clone();
+        let _ = dom.set_form_value(self.arena_id, &value);
+        Ok(())
+    }
+
+    #[qjs(get, rename = "isContentEditable")]
+    pub fn is_content_editable<'js>(&self, ctx: Ctx<'js>) -> Result<bool> {
+        let dom = ctx
+            .userdata::<PhantomDomHandle>()
+            .ok_or(rquickjs::Error::Unknown)?
+            .clone();
+        Ok(dom.is_content_editable(self.arena_id))
     }
 
     #[qjs(rename = "getAttribute")]

@@ -660,6 +660,60 @@ async fn type_nonexistent_selector_returns_element_not_found() {
 }
 
 #[tokio::test]
+async fn type_input_updates_value_and_persists_for_evaluate() {
+    use phantom_core::process_html;
+    use phantom_mcp::{engine::SessionPage, EngineAdapter, McpServer};
+
+    let adapter = EngineAdapter::new(5, 0, 5, 0).await;
+    let server = McpServer::new_with_adapter(None, adapter.clone());
+    let page = process_html(
+        "<html><body style='width:1280px;height:720px;'><input id='email' value=''/></body></html>",
+        "https://type.test",
+        1280.0,
+        720.0,
+    )
+    .unwrap();
+    adapter.store_page(SessionPage::new(page, "https://type.test".to_string(), 200));
+
+    let type_req = McpServer::parse_request(
+        r##"{"jsonrpc":"2.0","id":1,"method":"browser_type","params":{"selector":"#email","text":"abc","delay_ms":0}}"##,
+    )
+    .unwrap();
+    let type_resp = server
+        .handle_request(&adapter, type_req, None)
+        .await
+        .unwrap();
+    assert!(
+        type_resp.error.is_none(),
+        "browser_type must succeed: {:?}",
+        type_resp.error
+    );
+    let type_result = type_resp.result.unwrap();
+    assert_eq!(type_result["typed"].as_bool(), Some(true));
+    assert_eq!(type_result["characters"].as_u64(), Some(3));
+
+    let eval_req = McpServer::parse_request(
+        r##"{"jsonrpc":"2.0","id":2,"method":"browser_evaluate","params":{"script":"(() => { const el = document.querySelector('#email'); return el ? el.value : null; })()"}}"##,
+    )
+    .unwrap();
+    let eval_resp = server
+        .handle_request(&adapter, eval_req, None)
+        .await
+        .unwrap();
+    assert!(
+        eval_resp.error.is_none(),
+        "browser_evaluate must succeed after typing: {:?}",
+        eval_resp.error
+    );
+    let eval_result = eval_resp.result.unwrap();
+    assert_eq!(
+        eval_result["result"].as_str(),
+        Some("abc"),
+        "typed value must persist in stored page snapshot"
+    );
+}
+
+#[tokio::test]
 async fn press_key_requires_non_empty_key() {
     let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
     let server = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());

@@ -304,7 +304,6 @@ impl EngineAdapter {
     pub async fn close_tab(&self, tab_id: Uuid) -> Option<usize> {
         let mut store = self.tab_store.write().await;
         store.tabs.remove(&tab_id)?;
-        self.page_store.lock().remove(&tab_id);
 
         // Activate the first remaining tab if the closed one was active.
         let was_active = store.active_tab == Some(tab_id);
@@ -317,8 +316,16 @@ impl EngineAdapter {
                 }
             }
         }
-        *self.active_page_key.lock() = store.active_tab;
+        let next_active = store.active_tab;
+        let remaining = store.tabs.len();
 
-        Some(store.tabs.len())
+        // Keep lock order aligned with get_page()/get_page_url() to avoid
+        // transient mismatches and lock inversion.
+        let mut active_page_key = self.active_page_key.lock();
+        let mut page_store = self.page_store.lock();
+        page_store.remove(&tab_id);
+        *active_page_key = next_active;
+
+        Some(remaining)
     }
 }

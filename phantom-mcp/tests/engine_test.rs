@@ -987,6 +987,64 @@ async fn tab_close_removes_tab_from_list() {
     println!("close_tab: tab removed from list");
 }
 
+#[tokio::test]
+async fn tab_close_keeps_active_page_and_store_in_sync() {
+    use phantom_core::process_html;
+    use phantom_mcp::engine::SessionPage;
+
+    let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
+
+    let tab1 = adapter
+        .open_tab(Some("https://sync-tab-1.test".to_string()))
+        .await;
+    let page1 = process_html(
+        "<html><body style='width:1280px;height:720px;'><h1>Tab One</h1></body></html>",
+        "https://sync-tab-1.test",
+        1280.0,
+        720.0,
+    )
+    .unwrap();
+    adapter.store_page(SessionPage::new(
+        page1,
+        "https://sync-tab-1.test".to_string(),
+        200,
+    ));
+
+    let tab2 = adapter
+        .open_tab(Some("https://sync-tab-2.test".to_string()))
+        .await;
+    let page2 = process_html(
+        "<html><body style='width:1280px;height:720px;'><h1>Tab Two</h1></body></html>",
+        "https://sync-tab-2.test",
+        1280.0,
+        720.0,
+    )
+    .unwrap();
+    adapter.store_page(SessionPage::new(
+        page2,
+        "https://sync-tab-2.test".to_string(),
+        200,
+    ));
+
+    let remaining = adapter.close_tab(tab2).await;
+    assert_eq!(remaining, Some(1), "one tab should remain after close");
+
+    assert_eq!(
+        *adapter.active_page_key.lock(),
+        Some(tab1),
+        "active page key should point at the remaining tab"
+    );
+    let pages = adapter.page_store.lock();
+    assert!(
+        pages.contains_key(&tab1),
+        "remaining tab page should stay in page store"
+    );
+    assert!(
+        !pages.contains_key(&tab2),
+        "closed tab page should be removed from page store"
+    );
+}
+
 // ── cookie tests ─────────────────────────────────────────
 
 #[tokio::test]

@@ -248,10 +248,35 @@ async fn rpc_endpoint(
         }
     };
 
-    match server
-        .handle_request(&server.adapter, req, provided_key.as_deref())
-        .await
-    {
+    let server_for_task = server.clone();
+    let adapter_for_task = server.adapter.clone();
+    let rt_handle = tokio::runtime::Handle::current();
+    let task = tokio::task::spawn_blocking(move || {
+        rt_handle.block_on(async move {
+            server_for_task
+                .handle_request(&adapter_for_task, req, provided_key.as_deref())
+                .await
+        })
+    });
+
+    let handled = match task.await {
+        Ok(result) => result,
+        Err(join_err) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({
+                    "jsonrpc": "2.0",
+                    "id": null,
+                    "error": {
+                        "code": -32603,
+                        "message": format!("rpc handler task failed: {}", join_err)
+                    }
+                })),
+            );
+        }
+    };
+
+    match handled {
         Ok(resp) => (
             StatusCode::OK,
             Json(serde_json::to_value(resp).unwrap_or_else(|_| {

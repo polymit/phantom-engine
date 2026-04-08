@@ -103,4 +103,28 @@ mod tests {
             "Only parent remove should remain in final delta set"
         );
     }
+
+    #[test]
+    fn test_pending_queue_is_bounded_when_consumer_stalls() {
+        let mut arena = Arena::<()>::new();
+        let root = arena.new_node(());
+        let mut engine = DeltaEngine::new();
+
+        for _ in 0..5000 {
+            let node = arena.new_node(());
+            engine.push(RawMutation::NodeInserted {
+                node_id: node,
+                parent_id: root,
+            });
+        }
+
+        sleep(Duration::from_millis(20));
+        let out = engine.coalesce();
+
+        assert_eq!(
+            out.len(),
+            4096,
+            "pending mutation queue must stay bounded under stalled consumer"
+        );
+    }
 }

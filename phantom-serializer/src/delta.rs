@@ -3,6 +3,9 @@ use indextree::NodeId;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::time::Instant;
 
+const DEFAULT_WINDOW_MS: u64 = 16;
+const MAX_PENDING_MUTATIONS: usize = 4096;
+
 #[derive(Debug, Clone)]
 pub enum RawMutation {
     NodeInserted {
@@ -37,6 +40,7 @@ pub struct DeltaEngine {
     pending: VecDeque<RawMutation>,
     batch_start: Option<Instant>,
     window_ms: u64,
+    max_pending: usize,
 }
 
 impl DeltaEngine {
@@ -44,13 +48,24 @@ impl DeltaEngine {
         Self {
             pending: VecDeque::new(),
             batch_start: None,
-            window_ms: 16,
+            window_ms: DEFAULT_WINDOW_MS,
+            max_pending: MAX_PENDING_MUTATIONS,
         }
     }
 
     pub fn push(&mut self, mutation: RawMutation) {
         if self.pending.is_empty() {
             self.batch_start = Some(Instant::now());
+        }
+
+        // Coalescing is pull-based. If the consumer stalls, keep memory bounded
+        // by dropping the oldest pending mutation once we hit capacity.
+        if self.pending.len() >= self.max_pending {
+            self.pending.pop_front();
+            tracing::warn!(
+                max_pending = self.max_pending,
+                "DeltaEngine pending queue full; dropping oldest mutation"
+            );
         }
         self.pending.push_back(mutation);
     }
@@ -60,7 +75,8 @@ impl DeltaEngine {
             return Vec::new();
         }
         if let Some(start) = self.batch_start {
-            if (start.elapsed().as_millis() as u64) < self.window_ms {
+            let elapsed_ms = u64::try_from(start.elapsed().as_millis()).unwrap_or(u64::MAX);
+            if elapsed_ms < self.window_ms {
                 return Vec::new();
             }
         }

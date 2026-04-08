@@ -168,6 +168,99 @@ async fn test_shims_browser_shims_js_syntax() {
 }
 
 #[tokio::test]
+async fn test_audio_noise_uses_distinct_seed_from_canvas_noise() {
+    use phantom_js::tier1::session::Tier1Session;
+
+    let session = Tier1Session::new().await.unwrap();
+    let init = r#"
+        globalThis.window = globalThis;
+        globalThis.navigator = {};
+        globalThis.PluginArray = function() {};
+        globalThis.Plugin = function() {};
+        globalThis.MimeType = function() {};
+        globalThis.MimeTypeArray = function() {};
+
+        globalThis.CanvasRenderingContext2D = function() {};
+        CanvasRenderingContext2D.prototype.getImageData = function() {
+            return { data: new Uint8ClampedArray([100, 100, 100, 255]) };
+        };
+
+        globalThis.AudioContext = function() {};
+        AudioContext.prototype.createAnalyser = function() {
+            return {
+                getFloatFrequencyData: function(array) {
+                    for (let i = 0; i < array.length; i++) array[i] = 0;
+                }
+            };
+        };
+
+        globalThis.__phantom_persona = {
+            screen_width: 1920,
+            screen_height: 1080,
+            hardware_concurrency: 8,
+            device_memory: 8,
+            language: 'en-US',
+            languages: ['en-US', 'en'],
+            timezone: 'America/New_York',
+            canvas_noise_seed: 37n,
+            webgl_vendor: 'Google Inc. (NVIDIA)',
+            webgl_renderer: 'ANGLE (NVIDIA, NVIDIA GeForce RTX 3060)',
+            chrome_major: '133',
+            ua_platform: 'Windows',
+            platform_version: '15.0.0',
+            ua_full_version: '133.0.6943.98',
+            ua_architecture: 'x86',
+            ua_bitness: '64',
+            ua_wow64: false,
+            platform: 'Win32',
+        };
+    "#;
+    session.eval(init).await.unwrap();
+
+    let shims_source = include_str!("../js/browser_shims.js");
+    let load = format!(
+        "try {{ eval(`{}`); 'OK' }} catch (e) {{ String(e) + '\\n' + String(e.stack) }}",
+        shims_source.replace("`", "\\`").replace("$", "\\$")
+    );
+    let loaded = session.eval(&load).await.unwrap();
+    assert_eq!(loaded, "OK", "browser_shims.js must load in test harness");
+
+    let result = session
+        .eval(
+            "(() => {
+                const seed = 37n;
+                const A = 1103515245n;
+                const C = 12345n;
+                const M = 2147483648n;
+                const first = (s) => {
+                    s = (s * A + C) % M;
+                    return Number(s) / 2147483648;
+                };
+                const expectedSame = first(seed) * 0.1 - 0.05;
+                const expectedXor = first(seed ^ 0xDEADBEEFn) * 0.1 - 0.05;
+
+                const analyser = new AudioContext().createAnalyser();
+                const arr = new Float32Array(1);
+                analyser.getFloatFrequencyData(arr);
+
+                const audio = arr[0];
+                const distSame = Math.abs(audio - expectedSame);
+                const distXor = Math.abs(audio - expectedXor);
+                return distXor < distSame ? 'xor' : 'same';
+            })()",
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(
+        result, "xor",
+        "audio noise stream must be decorrelated from canvas seed"
+    );
+
+    session.destroy();
+}
+
+#[tokio::test]
 async fn test_element_value_getter_setter_for_form_controls() {
     use phantom_core::process_html;
     use phantom_js::tier1::session::Tier1Session;

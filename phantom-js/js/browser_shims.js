@@ -322,7 +322,7 @@ if (originalCreateAnalyser) {
         const originalGetFloatFrequencyData = analyser.getFloatFrequencyData;
         analyser.getFloatFrequencyData = function(array) {
             originalGetFloatFrequencyData.call(this, array);
-            let seed = BigInt(__phantom_persona.canvas_noise_seed || 1n);
+            let seed = BigInt(__phantom_persona.canvas_noise_seed || 1n) ^ 0xDEADBEEFn;
             const random = () => {
                 seed = (seed * 1103515245n + 12345n) % 2147483648n;
                 return Number(seed) / 2147483648;

@@ -55,8 +55,7 @@ impl CssEngine {
 
     pub fn apply_declaration(style: &mut ComputedStyle, property: &str, value: &str) {
         let val = value.to_lowercase();
-        // Just take the first token string, discarding the semicolon
-        let val_clean = val.trim_end_matches(';').trim();
+        let val_clean = val.trim();
         match property.to_lowercase().as_str() {
             "display" => {
                 style.display = match val_clean {
@@ -137,5 +136,35 @@ impl CssEngine {
         }
 
         style
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::CssEngine;
+    use crate::dom::node::{Display, PointerEvents, Visibility};
+
+    #[test]
+    fn parse_inline_style_keeps_last_declaration_without_trailing_semicolon() {
+        let style = CssEngine::parse_inline_style("display: none; visibility: hidden");
+        assert_eq!(style.display, Display::None);
+        assert_eq!(style.visibility, Visibility::Hidden);
+        assert!(style.visibility_set);
+    }
+
+    #[test]
+    fn parse_inline_style_parses_hyphenated_last_property_without_semicolon() {
+        let style = CssEngine::parse_inline_style("display: block; pointer-events: none");
+        assert_eq!(style.display, Display::Block);
+        assert_eq!(style.pointer_events, PointerEvents::None);
+    }
+
+    #[test]
+    fn apply_declaration_does_not_silently_strip_value_semicolons() {
+        let mut style = CssEngine::parse_inline_style("width: 10px");
+        assert_eq!(style.width, Some(10.0));
+
+        CssEngine::apply_declaration(&mut style, "width", "100px;");
+        assert_eq!(style.width, Some(10.0));
     }
 }

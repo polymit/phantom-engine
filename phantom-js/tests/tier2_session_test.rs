@@ -39,6 +39,26 @@ fn test_tier2_shims_in_snapshot() {
 }
 
 #[test]
+fn test_tier2_datetimeformat_supported_locales_of_is_preserved() {
+    let mut session = phantom_js::tier2::session::Tier2Session::new().unwrap();
+
+    let has_method = session
+        .eval("typeof Intl.DateTimeFormat.supportedLocalesOf")
+        .unwrap();
+    assert_eq!(
+        has_method, "function",
+        "Intl.DateTimeFormat.supportedLocalesOf must be preserved by shim"
+    );
+
+    let callable = session
+        .eval("String(Array.isArray(Intl.DateTimeFormat.supportedLocalesOf(['en-US'])))")
+        .unwrap();
+    assert_eq!(callable, "true", "supportedLocalesOf must remain callable");
+
+    session.destroy();
+}
+
+#[test]
 fn test_tier2_html_element_inherits_event_target_when_present() {
     let mut session = phantom_js::tier2::session::Tier2Session::new().unwrap();
     let has_event_methods = session

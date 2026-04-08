@@ -372,6 +372,8 @@ if (globalThis.Intl && Intl.DateTimeFormat) {
         return new originalDateTimeFormat(locales, opts);
     };
     Intl.DateTimeFormat.prototype = originalDateTimeFormat.prototype;
+    Intl.DateTimeFormat.supportedLocalesOf =
+        originalDateTimeFormat.supportedLocalesOf.bind(originalDateTimeFormat);
 }
 
 // 17. Delete window.__playwright, __puppeteer, __webdriver markers

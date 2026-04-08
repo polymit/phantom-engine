@@ -10,6 +10,7 @@ use phantom_net::SmartNetworkClient;
 use phantom_session::SessionBroker;
 use std::sync::Once;
 use tokio::sync::OnceCell;
+use tokio::sync::RwLock;
 use uuid::Uuid;
 
 static INIT: Once = Once::new();
@@ -70,6 +71,25 @@ impl SessionPage {
     }
 }
 
+/// Snapshot of a single browser tab's metadata.
+///
+/// The tab store does not maintain a live JS context per tab — the active tab
+/// maps to whatever page is currently loaded in the shared session pool.
+#[derive(Debug, Clone)]
+pub struct TabInfo {
+    pub id:     Uuid,
+    pub url:    String,
+    pub title:  String,
+    pub active: bool,
+}
+
+/// In-memory registry of open tabs for multi-page agent workflows.
+#[derive(Debug, Default)]
+pub struct TabStore {
+    pub tabs:       HashMap<Uuid, TabInfo>,
+    pub active_tab: Option<Uuid>,
+}
+
 /// EngineAdapter is the single shared state type for the MCP server.
 /// It owns all subsystems. Clone is cheap — all fields are Arc<T>.
 #[derive(Clone)]
@@ -87,14 +107,16 @@ pub struct EngineAdapter {
     /// Per-session page storage for scene graph re-serialisation.
     /// Uses parking_lot::Mutex — lock is never held across .await.
     pub page_store: Arc<Mutex<HashMap<Uuid, SessionPage>>>,
+    /// Tab registry for multi-page agent workflows.
+    /// Uses tokio::sync::RwLock so callers can hold it safely across awaits.
+    pub tab_store: Arc<RwLock<TabStore>>,
 }
 
 impl EngineAdapter {
-    /// Construct a new EngineAdapter and pre-warm both JS pools.
+    /// Construct with explicit pool sizes. Pre-warms both JS pools.
     ///
-    /// Must be called after `v8::Platform` is initialised and after the
-    /// Tokio runtime is started. `Tier1Pool::new()` is async; `Tier2Pool::new()`
-    /// is synchronous.
+    /// Must be called after `v8::Platform` is initialised and after the Tokio
+    /// runtime is started. `Tier1Pool::new()` is async; `Tier2Pool::new()` is sync.
     pub async fn new(t1_max: usize, t1_pre: usize, t2_max: usize, t2_pre: usize) -> Self {
         let mut persona_pool = PersonaPool::default_pool();
         let first_persona = persona_pool.next_persona();
@@ -115,7 +137,14 @@ impl EngineAdapter {
             tier2,
             personas: Arc::new(Mutex::new(persona_pool)),
             page_store: Arc::new(Mutex::new(HashMap::new())),
+            tab_store: Arc::new(RwLock::new(TabStore::default())),
         }
+    }
+
+    /// Convenience constructor used by blueprint tests that call `EngineAdapter::new().await`.
+    /// Delegates to the 4-arg form with sensible defaults.
+    pub async fn new_default() -> Self {
+        Self::new(5, 0, 5, 0).await
     }
 
     /// Rotate to the next persona and return it.
@@ -145,5 +174,77 @@ impl EngineAdapter {
             .lock()
             .get(&Uuid::nil())
             .map(|sp| sp.url.clone())
+    }
+
+    /// Create a new tab, optionally with a URL, and set it as the active tab.
+    ///
+    /// Navigation is recorded in the tab metadata only — no actual HTTP fetch
+    /// is performed here. The caller is responsible for triggering navigation
+    /// if real page content is needed.
+    pub async fn open_tab(&self, url: Option<String>) -> Uuid {
+        let tab_id = Uuid::new_v4();
+        let url = url.unwrap_or_default();
+        let tab = TabInfo {
+            id:     tab_id,
+            url:    url.clone(),
+            title:  String::new(),
+            active: true,
+        };
+
+        let mut store = self.tab_store.write().await;
+        // Mark all existing tabs as inactive before activating the new one.
+        for existing in store.tabs.values_mut() {
+            existing.active = false;
+        }
+        store.tabs.insert(tab_id, tab);
+        store.active_tab = Some(tab_id);
+
+        tab_id
+    }
+
+    /// Switch the active tab to the given ID.
+    ///
+    /// Returns the `TabInfo` for the newly active tab, or `None` if no tab with
+    /// that ID exists.
+    pub async fn switch_tab(&self, tab_id: Uuid) -> Option<TabInfo> {
+        let mut store = self.tab_store.write().await;
+        if !store.tabs.contains_key(&tab_id) {
+            return None;
+        }
+        for tab in store.tabs.values_mut() {
+            tab.active = tab.id == tab_id;
+        }
+        store.active_tab = Some(tab_id);
+        store.tabs.get(&tab_id).cloned()
+    }
+
+    /// Return all tabs in insertion-independent order.
+    pub async fn list_tabs(&self) -> Vec<TabInfo> {
+        let store = self.tab_store.read().await;
+        store.tabs.values().cloned().collect()
+    }
+
+    /// Remove a tab from the registry.
+    ///
+    /// Returns `Some(remaining_count)` on success, `None` if the tab was not found.
+    /// If the closed tab was the active tab, the first remaining tab (if any)
+    /// is activated automatically.
+    pub async fn close_tab(&self, tab_id: Uuid) -> Option<usize> {
+        let mut store = self.tab_store.write().await;
+        store.tabs.remove(&tab_id)?;
+
+        // Activate the first remaining tab if the closed one was active.
+        let was_active = store.active_tab == Some(tab_id);
+        if was_active {
+            store.active_tab = None;
+            if let Some(next_id) = store.tabs.keys().next().copied() {
+                store.active_tab = Some(next_id);
+                if let Some(tab) = store.tabs.get_mut(&next_id) {
+                    tab.active = true;
+                }
+            }
+        }
+
+        Some(store.tabs.len())
     }
 }

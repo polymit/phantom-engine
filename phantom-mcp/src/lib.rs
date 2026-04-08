@@ -96,6 +96,47 @@ impl McpServer {
 
         let req_id = req.id.clone();
 
+        // Converts a tool handler result into a JsonRpcResponse. All
+        // tools use the same {"error":{"code":...,"message":...}} error body
+        // shape, so one helper eliminates 20 lines of repetition per arm.
+        let tool_response = |req_id: Value,
+                             outcome: Result<Value, (axum::http::StatusCode, Value)>,
+                             fallback_msg: &str,
+                             fallback_code: &str|
+         -> JsonRpcResponse {
+            match outcome {
+                Ok(result) => JsonRpcResponse {
+                    jsonrpc: "2.0".to_string(),
+                    id: req_id,
+                    result: Some(result),
+                    error: None,
+                },
+                Err((_status, err_body)) => {
+                    let message = err_body
+                        .get("error")
+                        .and_then(|e| e.get("message"))
+                        .and_then(|m| m.as_str())
+                        .unwrap_or(fallback_msg)
+                        .to_string();
+                    let code_str = err_body
+                        .get("error")
+                        .and_then(|e| e.get("code"))
+                        .and_then(|c| c.as_str())
+                        .unwrap_or(fallback_code)
+                        .to_string();
+                    JsonRpcResponse {
+                        jsonrpc: "2.0".to_string(),
+                        id: req_id,
+                        result: None,
+                        error: Some(JsonRpcError {
+                            code: -32000,
+                            message: format!("{}: {}", code_str, message),
+                        }),
+                    }
+                }
+            }
+        };
+
         let resp = match req.method.as_str() {
             "ping" => JsonRpcResponse {
                 jsonrpc: "2.0".to_string(),
@@ -105,105 +146,43 @@ impl McpServer {
             },
 
             "browser_navigate" => {
-                match tools::navigate::handle_navigate(adapter, req.params).await {
-                    Ok(result) => JsonRpcResponse {
-                        jsonrpc: "2.0".to_string(),
-                        id: req_id,
-                        result: Some(result),
-                        error: None,
-                    },
-                    Err((_status, err_body)) => {
-                        let message = err_body
-                            .get("error")
-                            .and_then(|e| e.get("message"))
-                            .and_then(|m| m.as_str())
-                            .unwrap_or("navigation failed")
-                            .to_string();
-                        let code_str = err_body
-                            .get("error")
-                            .and_then(|e| e.get("code"))
-                            .and_then(|c| c.as_str())
-                            .unwrap_or("navigation_error")
-                            .to_string();
-                        JsonRpcResponse {
-                            jsonrpc: "2.0".to_string(),
-                            id: req_id,
-                            result: None,
-                            error: Some(JsonRpcError {
-                                code: -32000,
-                                message: format!("{}: {}", code_str, message),
-                            }),
-                        }
-                    }
-                }
+                let outcome = tools::navigate::handle_navigate(adapter, req.params).await;
+                tool_response(req_id, outcome, "navigation failed", "navigation_error")
             }
 
             "browser_get_scene_graph" => {
-                match tools::scene_graph::handle_get_scene_graph(adapter, req.params).await {
-                    Ok(result) => JsonRpcResponse {
-                        jsonrpc: "2.0".to_string(),
-                        id: req_id,
-                        result: Some(result),
-                        error: None,
-                    },
-                    Err((_status, err_body)) => {
-                        let message = err_body
-                            .get("error")
-                            .and_then(|e| e.get("message"))
-                            .and_then(|m| m.as_str())
-                            .unwrap_or("scene graph failed")
-                            .to_string();
-                        let code_str = err_body
-                            .get("error")
-                            .and_then(|e| e.get("code"))
-                            .and_then(|c| c.as_str())
-                            .unwrap_or("scene_graph_error")
-                            .to_string();
-                        JsonRpcResponse {
-                            jsonrpc: "2.0".to_string(),
-                            id: req_id,
-                            result: None,
-                            error: Some(JsonRpcError {
-                                code: -32000,
-                                message: format!("{}: {}", code_str, message),
-                            }),
-                        }
-                    }
-                }
+                let outcome = tools::scene_graph::handle_get_scene_graph(adapter, req.params).await;
+                tool_response(req_id, outcome, "scene graph failed", "scene_graph_error")
             }
 
             "browser_click" => {
-                match tools::click::handle_click(adapter, req.params).await {
-                    Ok(result) => JsonRpcResponse {
-                        jsonrpc: "2.0".to_string(),
-                        id: req_id,
-                        result: Some(result),
-                        error: None,
-                    },
-                    Err((_status, err_body)) => {
-                        let message = err_body
-                            .get("error")
-                            .and_then(|e| e.get("message"))
-                            .and_then(|m| m.as_str())
-                            .unwrap_or("click failed")
-                            .to_string();
-                        let code_str = err_body
-                            .get("error")
-                            .and_then(|e| e.get("code"))
-                            .and_then(|c| c.as_str())
-                            .unwrap_or("click_error")
-                            .to_string();
-                        JsonRpcResponse {
-                            jsonrpc: "2.0".to_string(),
-                            id: req_id,
-                            result: None,
-                            error: Some(JsonRpcError {
-                                code: -32000,
-                                message: format!("{}: {}", code_str, message),
-                            }),
-                        }
-                    }
-                }
+                let outcome = tools::click::handle_click(adapter, req.params).await;
+                tool_response(req_id, outcome, "click failed", "click_error")
+            }
+
+            "browser_evaluate" => {
+                let outcome = tools::evaluate::handle_evaluate(adapter, req.params).await;
+                tool_response(req_id, outcome, "evaluate failed", "js_error")
+            }
+
+            "browser_new_tab" => {
+                let outcome = tools::tabs::handle_new_tab(adapter, req.params).await;
+                tool_response(req_id, outcome, "new tab failed", "tab_error")
+            }
+
+            "browser_switch_tab" => {
+                let outcome = tools::tabs::handle_switch_tab(adapter, req.params).await;
+                tool_response(req_id, outcome, "switch tab failed", "tab_error")
+            }
+
+            "browser_list_tabs" => {
+                let outcome = tools::tabs::handle_list_tabs(adapter, req.params).await;
+                tool_response(req_id, outcome, "list tabs failed", "tab_error")
+            }
+
+            "browser_close_tab" => {
+                let outcome = tools::tabs::handle_close_tab(adapter, req.params).await;
+                tool_response(req_id, outcome, "close tab failed", "tab_error")
             }
 
             _ => JsonRpcResponse {

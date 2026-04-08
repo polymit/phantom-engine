@@ -4,11 +4,24 @@ use rand::RngCore;
 use rquickjs::{async_with, prelude::*, AsyncContext, AsyncRuntime};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
+use std::time::Instant;
 
 use crate::error::PhantomJsError;
 
 const CPU_TIMEOUT_MS: u64 = 10_000;
 static SESSION_ID_COUNTER: AtomicU64 = AtomicU64::new(1);
+
+fn millis_to_u64_saturating(ms: u128) -> u64 {
+    u64::try_from(ms).unwrap_or(u64::MAX)
+}
+
+fn elapsed_ms_u64(start: Instant) -> u64 {
+    millis_to_u64_saturating(start.elapsed().as_millis())
+}
+
+fn deadline_from_now_ms(now_ms: u64) -> u64 {
+    now_ms.saturating_add(CPU_TIMEOUT_MS)
+}
 
 #[derive(Clone)]
 #[rquickjs::class]
@@ -110,7 +123,7 @@ pub struct Tier1Session {
     session_id: u64,
     eval_deadline_ms: Arc<AtomicU64>,
     timer_cancelled: Arc<AtomicBool>,
-    interrupt_epoch: std::time::Instant,
+    interrupt_epoch: Instant,
 }
 
 impl Tier1Session {
@@ -141,15 +154,15 @@ impl Tier1Session {
         // is updated on every eval() invocation. This prevents session age from
         // triggering false-positive timeouts.
         let session_id = SESSION_ID_COUNTER.fetch_add(1, Ordering::Relaxed);
-        let interrupt_epoch = std::time::Instant::now();
+        let interrupt_epoch = Instant::now();
         let eval_deadline_ms = Arc::new(AtomicU64::new(0));
         let timer_cancelled = Arc::new(AtomicBool::new(false));
         let handler_deadline = Arc::clone(&eval_deadline_ms);
         runtime
             .set_interrupt_handler(Some(Box::new(move || {
                 let deadline_ms = handler_deadline.load(Ordering::Relaxed);
-                if deadline_ms != 0 && (interrupt_epoch.elapsed().as_millis() as u64) >= deadline_ms
-                {
+                let now_ms = elapsed_ms_u64(interrupt_epoch);
+                if deadline_ms != 0 && now_ms >= deadline_ms {
                     tracing::warn!("Tier1Session: CPU budget exceeded — terminating JS");
                     return true;
                 }
@@ -244,7 +257,8 @@ impl Tier1Session {
     /// Uses async_with! — NEVER use ctx.with() in this codebase.
     /// Drains microtasks after execution (required for Promises).
     pub async fn eval(&self, script: &str) -> Result<String, PhantomJsError> {
-        let deadline_ms = (self.interrupt_epoch.elapsed().as_millis() as u64) + CPU_TIMEOUT_MS;
+        let now_ms = elapsed_ms_u64(self.interrupt_epoch);
+        let deadline_ms = deadline_from_now_ms(now_ms);
         self.eval_deadline_ms.store(deadline_ms, Ordering::Relaxed);
 
         let script = script.to_string();
@@ -324,5 +338,28 @@ impl Tier1Session {
         drop(self.context);
         drop(self.runtime);
         tracing::debug!("Tier1Session destroyed — all JS resources freed");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{deadline_from_now_ms, millis_to_u64_saturating, CPU_TIMEOUT_MS};
+
+    #[test]
+    fn millis_to_u64_saturates_when_elapsed_overflows_u64() {
+        let over_max = (u64::MAX as u128) + 42;
+        assert_eq!(millis_to_u64_saturating(over_max), u64::MAX);
+    }
+
+    #[test]
+    fn deadline_addition_saturates_at_u64_max() {
+        let near_max = u64::MAX - (CPU_TIMEOUT_MS - 1);
+        assert_eq!(deadline_from_now_ms(near_max), u64::MAX);
+    }
+
+    #[test]
+    fn deadline_addition_keeps_expected_budget_when_safe() {
+        let now_ms = 125_u64;
+        assert_eq!(deadline_from_now_ms(now_ms), now_ms + CPU_TIMEOUT_MS);
     }
 }

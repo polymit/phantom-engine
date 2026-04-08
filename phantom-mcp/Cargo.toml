@@ -23,6 +23,11 @@ phantom-storage = { path = "../phantom-storage" }
 cookie_store = "=0.22.1"
 zstd = "=0.13.3"
 url = "2.5.8"
+tokio-stream = { version = "0.1", features = ["sync"] }
+futures-util = "0.3"
+
+[dev-dependencies]
+tower = { version = "0.5", features = ["util"] }
 
 # BANNED CRATES :
 # reqwest       → uses rustls, produces detectable TLS

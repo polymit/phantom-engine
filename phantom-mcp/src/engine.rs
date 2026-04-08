@@ -116,6 +116,8 @@ pub struct EngineAdapter {
     pub storage: phantom_storage::SessionStorageManager,
     /// Session UUID
     pub session_uuid: uuid::Uuid,
+    /// SSE delta broadcast channel
+    pub delta_tx: tokio::sync::broadcast::Sender<String>,
 }
 
 impl EngineAdapter {
@@ -136,6 +138,8 @@ impl EngineAdapter {
         // Tier2Pool::new() returns Self — we wrap it ourselves.
         let tier2 = Arc::new(Tier2Pool::new(t2_max, t2_pre));
 
+        let (delta_tx, _) = tokio::sync::broadcast::channel(128);
+
         Self {
             network: Arc::new(network),
             broker: Arc::new(broker),
@@ -147,6 +151,7 @@ impl EngineAdapter {
             storage: phantom_storage::SessionStorageManager::new("./storage"),
             session_uuid: uuid::Uuid::nil(),
             cookie_store: Arc::new(tokio::sync::Mutex::new(cookie_store::CookieStore::default())),
+            delta_tx,
         }
     }
 
@@ -154,6 +159,13 @@ impl EngineAdapter {
     /// Delegates to the 4-arg form with sensible defaults.
     pub async fn new_default() -> Self {
         Self::new(5, 0, 5, 0).await
+    }
+
+    pub fn inject_delta(&self, delta: String) -> usize {
+        // Sends a delta string to all SSE subscribers.
+        // Returns the number of active receivers.
+        // Returns 0 if no subscribers (this is fine — not an error).
+        self.delta_tx.send(delta).unwrap_or(0)
     }
 
     /// Rotate to the next persona and return it.

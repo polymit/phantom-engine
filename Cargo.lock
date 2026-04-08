@@ -1766,6 +1766,7 @@ version = "0.1.0"
 dependencies = [
  "axum",
  "cookie_store",
+ "futures-util",
  "once_cell",
  "parking_lot 0.12.5",
  "phantom-anti-detect",
@@ -1779,6 +1780,8 @@ dependencies = [
  "serde_json",
  "thiserror 1.0.69",
  "tokio",
+ "tokio-stream",
+ "tower",
  "tracing",
  "url",
  "uuid",
@@ -2887,6 +2890,18 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "tokio-stream"
+version = "0.1.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "32da49809aab5c3bc678af03902d4ccddea2a87d028d86392a4b1560c6906c70"
+dependencies = [
+ "futures-core",
+ "pin-project-lite",
+ "tokio",
+ "tokio-util",
 ]
 
 [[package]]

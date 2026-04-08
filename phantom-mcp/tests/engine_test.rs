@@ -15,7 +15,7 @@ async fn engine_adapter_constructs_successfully() {
 #[tokio::test]
 async fn handle_navigate_rejects_missing_url_param() {
     let adapter = get_test_adapter().await;
-    let server = McpServer::new(None);
+    let server = McpServer::new_with_adapter(None, adapter.clone());
     let req = McpServer::parse_request(
         r#"{"jsonrpc":"2.0","id":1,"method":"browser_navigate","params":{}}"#,
     )
@@ -31,7 +31,7 @@ async fn handle_navigate_rejects_missing_url_param() {
 #[tokio::test]
 async fn handle_navigate_invalid_url_returns_error() {
     let adapter = get_test_adapter().await;
-    let server = McpServer::new(None);
+    let server = McpServer::new_with_adapter(None, adapter.clone());
     let req = McpServer::parse_request(
         r#"{"jsonrpc":"2.0","id":1,"method":"browser_navigate","params":{"url":"not-a-url"}}"#,
     )
@@ -46,7 +46,7 @@ fn existing_ping_still_works_after_refactor() {
     let rt = tokio::runtime::Runtime::new().unwrap();
     rt.block_on(async {
         let adapter = get_test_adapter().await;
-        let server = McpServer::new(None);
+        let server = McpServer::new_with_adapter(None, adapter.clone());
         let req = McpServer::parse_request(
             r#"{"jsonrpc":"2.0","id":"test","method":"ping","params":{}}"#,
         )
@@ -64,7 +64,7 @@ fn api_key_enforcement_still_works() {
     let rt = tokio::runtime::Runtime::new().unwrap();
     rt.block_on(async {
         let adapter = get_test_adapter().await;
-        let server = McpServer::new(Some("secret-key".to_string()));
+        let server = McpServer::new_with_adapter(Some("secret-key".to_string()), adapter.clone());
         let req =
             McpServer::parse_request(r#"{"jsonrpc":"2.0","id":1,"method":"ping","params":{}}"#)
                 .unwrap();
@@ -86,7 +86,7 @@ fn api_key_enforcement_still_works() {
 async fn scene_graph_before_navigate_returns_no_page_error() {
     let adapter = get_test_adapter().await;
     adapter.page_store.lock().clear();
-    let server = McpServer::new(None);
+    let server = McpServer::new_with_adapter(None, adapter.clone());
     let req = McpServer::parse_request(
         r#"{"jsonrpc":"2.0","id":1,"method":"browser_get_scene_graph","params":{}}"#,
     )
@@ -162,7 +162,7 @@ async fn scene_graph_selective_mode_accepted() {
     use phantom_mcp::engine::SessionPage;
 
     let adapter = get_test_adapter().await;
-    let server = McpServer::new(None);
+    let server = McpServer::new_with_adapter(None, adapter.clone());
 
     let page = process_html(
         r#"<html><body style="width:1280px;height:720px;">
@@ -214,7 +214,7 @@ async fn scene_graph_scroll_params_accepted() {
     use phantom_mcp::engine::SessionPage;
 
     let adapter = get_test_adapter().await;
-    let server = McpServer::new(None);
+    let server = McpServer::new_with_adapter(None, adapter.clone());
 
     let page = process_html(
         "<html><body style='width:1280px;height:2000px;'>
@@ -293,7 +293,7 @@ async fn scene_graph_cct_header_contains_correct_url() {
 #[tokio::test]
 async fn click_without_navigate_returns_no_page_error() {
     let adapter = get_test_adapter().await;
-    let server  = McpServer::new(None);
+    let server  = McpServer::new_with_adapter(None, adapter.clone());
     let req = McpServer::parse_request(
         r##"{"jsonrpc":"2.0","id":1,"method":"browser_click",
             "params":{"selector":"button"}}"##
@@ -313,7 +313,7 @@ async fn click_nonexistent_selector_returns_element_not_found() {
     use phantom_core::process_html;
 
     let adapter = EngineAdapter::new(5, 0, 5, 0).await;
-    let server  = McpServer::new(None);
+    let server  = McpServer::new_with_adapter(None, adapter.clone());
 
     // Store a page with NO button
     let page = process_html(
@@ -348,7 +348,7 @@ async fn click_existing_button_returns_success() {
     use phantom_core::process_html;
 
     let adapter = EngineAdapter::new(5, 0, 5, 0).await;
-    let server  = McpServer::new(None);
+    let server  = McpServer::new_with_adapter(None, adapter.clone());
 
     let page = process_html(
         r#"<html><body style="width:1280px;height:720px;">
@@ -399,7 +399,7 @@ async fn click_missing_selector_param_returns_error() {
     use phantom_core::process_html;
 
     let adapter = EngineAdapter::new(5, 0, 5, 0).await;
-    let server  = McpServer::new(None);
+    let server  = McpServer::new_with_adapter(None, adapter.clone());
 
     let page = process_html(
         "<html><body style='width:1280px;height:720px;'></body></html>",
@@ -424,7 +424,7 @@ async fn click_selector_with_single_quote_does_not_panic() {
     use phantom_core::process_html;
 
     let adapter = EngineAdapter::new(5, 0, 5, 0).await;
-    let server  = McpServer::new(None);
+    let server  = McpServer::new_with_adapter(None, adapter.clone());
 
     let page = process_html(
         "<html><body style='width:1280px;height:720px;'></body></html>",
@@ -453,7 +453,7 @@ async fn evaluate_arithmetic_returns_number() {
     use phantom_mcp::{EngineAdapter, McpServer};
 
     let adapter = EngineAdapter::new(5, 0, 5, 0).await;
-    let server  = McpServer::new(None);
+    let server  = McpServer::new_with_adapter(None, adapter.clone());
 
     let page = process_html(
         "<html><body style='width:1280px;height:720px;'></body></html>",
@@ -489,7 +489,7 @@ async fn evaluate_string_result_has_string_type() {
     use phantom_mcp::{EngineAdapter, McpServer};
 
     let adapter = EngineAdapter::new(5, 0, 5, 0).await;
-    let server  = McpServer::new(None);
+    let server  = McpServer::new_with_adapter(None, adapter.clone());
 
     let page = process_html(
         "<html><body style='width:1280px;height:720px;'></body></html>",
@@ -515,7 +515,7 @@ async fn evaluate_string_result_has_string_type() {
 #[tokio::test]
 async fn evaluate_without_page_returns_no_page_error() {
     let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
-    let server  = phantom_mcp::McpServer::new(None);
+    let server  = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
 
     // Ensure the store is empty for this isolated adapter.
     let req = phantom_mcp::McpServer::parse_request(
@@ -537,7 +537,7 @@ async fn evaluate_without_page_returns_no_page_error() {
 #[tokio::test]
 async fn tab_new_tab_creates_tab_with_id() {
     let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
-    let server  = phantom_mcp::McpServer::new(None);
+    let server  = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
 
     let req = phantom_mcp::McpServer::parse_request(
         r#"{"jsonrpc":"2.0","id":1,"method":"browser_new_tab","params":{"url":"https://example.com"}}"#
@@ -555,7 +555,7 @@ async fn tab_new_tab_creates_tab_with_id() {
 #[tokio::test]
 async fn tab_list_tabs_returns_created_tabs() {
     let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
-    let server  = phantom_mcp::McpServer::new(None);
+    let server  = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
 
     for url in &["https://tab1.com", "https://tab2.com"] {
         let req = phantom_mcp::McpServer::parse_request(&format!(
@@ -581,7 +581,7 @@ async fn tab_list_tabs_returns_created_tabs() {
 #[tokio::test]
 async fn tab_switch_to_nonexistent_tab_returns_error() {
     let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
-    let server  = phantom_mcp::McpServer::new(None);
+    let server  = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
 
     let req = phantom_mcp::McpServer::parse_request(
         r#"{"jsonrpc":"2.0","id":1,"method":"browser_switch_tab",
@@ -601,7 +601,7 @@ async fn tab_switch_to_nonexistent_tab_returns_error() {
 #[tokio::test]
 async fn tab_close_removes_tab_from_list() {
     let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
-    let server  = phantom_mcp::McpServer::new(None);
+    let server  = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
 
     // Create the tab.
     let create_req = phantom_mcp::McpServer::parse_request(
@@ -642,7 +642,7 @@ async fn tab_close_removes_tab_from_list() {
 #[tokio::test]
 async fn cookies_initially_empty() {
     let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
-    let server  = phantom_mcp::McpServer::new(None);
+    let server  = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
     let req = phantom_mcp::McpServer::parse_request(
         r#"{"jsonrpc":"2.0","id":1,"method":"browser_get_cookies","params":{}}"#
     ).unwrap();
@@ -657,7 +657,7 @@ async fn cookies_initially_empty() {
 #[tokio::test]
 async fn clear_cookies_returns_cleared_true() {
     let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
-    let server  = phantom_mcp::McpServer::new(None);
+    let server  = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
     let req = phantom_mcp::McpServer::parse_request(
         r#"{"jsonrpc":"2.0","id":1,"method":"browser_clear_cookies","params":{}}"#
     ).unwrap();
@@ -671,7 +671,7 @@ async fn clear_cookies_returns_cleared_true() {
 async fn session_snapshot_creates_file() {
     use std::path::Path;
     let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
-    let server  = phantom_mcp::McpServer::new(None);
+    let server  = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
     let req = phantom_mcp::McpServer::parse_request(
         r#"{"jsonrpc":"2.0","id":1,"method":"browser_session_snapshot","params":{}}"#
     ).unwrap();
@@ -695,7 +695,7 @@ async fn session_snapshot_creates_file() {
 #[tokio::test]
 async fn session_snapshot_is_zstd_compressed() {
     let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
-    let server  = phantom_mcp::McpServer::new(None);
+    let server  = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
     let req = phantom_mcp::McpServer::parse_request(
         r#"{"jsonrpc":"2.0","id":1,"method":"browser_session_snapshot","params":{}}"#
     ).unwrap();
@@ -737,7 +737,7 @@ async fn storage_session_id_validates_uuid_format() {
 async fn multiple_snapshot_calls_produce_multiple_files() {
     use std::path::Path;
     let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
-    let server  = phantom_mcp::McpServer::new(None);
+    let server  = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
 
     let mut paths = Vec::new();
     for i in 0..2 {
@@ -763,5 +763,120 @@ async fn multiple_snapshot_calls_produce_multiple_files() {
     for p in &paths {
         let _ = std::fs::remove_file(p);
     }
+}
+
+// ── SSE tests ─────────────────────────────────────────
+
+#[tokio::test]
+async fn inject_delta_with_no_subscribers_returns_zero() {
+    let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
+    // No subscribers — send returns RecvError or 0 receivers
+    let receivers = adapter.inject_delta("## SCROLL 0,100".to_string());
+    assert_eq!(receivers, 0,
+        "inject_delta with no subscribers must return 0");
+    println!("inject_delta no subscribers: returns 0");
+}
+
+#[tokio::test]
+async fn inject_delta_with_one_subscriber_delivers_message() {
+    use tokio::time::timeout;
+    use std::time::Duration;
+
+    let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
+    let mut rx = adapter.delta_tx.subscribe();
+
+    let delta = "## SCROLL 0,200".to_string();
+    let sent = adapter.inject_delta(delta.clone());
+    assert!(sent >= 1, "must have at least 1 receiver");
+
+    let received = timeout(Duration::from_millis(100), rx.recv())
+        .await
+        .expect("must receive within 100ms")
+        .expect("channel must not be closed");
+
+    assert_eq!(received, delta,
+        "received delta must match sent delta");
+    println!("inject_delta with subscriber: message delivered");
+}
+
+#[tokio::test]
+async fn sse_endpoint_exists_and_returns_text_event_stream() {
+    use axum::body::Body;
+    use axum::http::{Request, StatusCode};
+    use tower::ServiceExt;
+
+    let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
+    let server  = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
+    let app     = server.router();
+
+    // GET /sse must return 200 with content-type text/event-stream
+    let req = Request::builder()
+        .method("GET")
+        .uri("/sse")
+        .body(Body::empty())
+        .unwrap();
+
+    let resp = app.oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK,
+        "SSE endpoint must return 200");
+    let content_type = resp.headers()
+        .get("content-type")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+    assert!(content_type.contains("text/event-stream"),
+        "content-type must be text/event-stream, got: {}", content_type);
+    println!("SSE endpoint: 200 + text/event-stream verified");
+}
+
+#[tokio::test]
+async fn rpc_endpoint_still_works_after_sse_route_added() {
+    use axum::body::Body;
+    use axum::http::{Request, StatusCode, header};
+    use tower::ServiceExt;
+    use axum::body::to_bytes;
+
+    let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
+    let server  = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
+    let app     = server.router();
+
+    let body = r#"{"jsonrpc":"2.0","id":1,"method":"ping","params":{}}"#;
+    let req = Request::builder()
+        .method("POST")
+        .uri("/rpc")
+        .header(header::CONTENT_TYPE, "application/json")
+        .body(Body::from(body))
+        .unwrap();
+
+    let resp = app.oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK,
+        "/rpc must still return 200 after SSE route added");
+    let bytes = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+    let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+    assert_eq!(json["result"]["ok"].as_bool(), Some(true),
+        "ping must return ok:true");
+    println!("rpc endpoint regression: PASSING");
+}
+
+#[tokio::test]
+async fn broadcast_channel_capacity_is_128() {
+    // Verify that 128 deltas can be queued without dropping.
+    let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
+    let mut rx = adapter.delta_tx.subscribe();
+
+    // Subscribe then send 128 messages before reading
+    for i in 0..128 {
+        adapter.inject_delta(format!("delta_{}", i));
+    }
+
+    // All 128 must be receivable without lagging
+    let mut count = 0;
+    while let Ok(msg) = rx.try_recv() {
+        assert!(msg.starts_with("delta_"),
+            "received message must start with delta_");
+        count += 1;
+    }
+    assert_eq!(count, 128,
+        "all 128 messages must be receivable from broadcast channel");
+    println!("broadcast capacity 128: all {} messages received", count);
 }
 

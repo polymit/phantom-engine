@@ -6,7 +6,6 @@ pub mod id_stabilizer;
 pub mod selective;
 pub mod semantic;
 pub mod serializer;
-pub mod string_intern;
 pub mod visibility;
 pub mod zindex;
 

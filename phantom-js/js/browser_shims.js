@@ -213,14 +213,16 @@ Object.defineProperty(window, 'outerHeight', {
 });
 
 // 6. navigator.connection.rtt
+const connectionSeed = BigInt(__phantom_persona.canvas_noise_seed || 1n) ^ 0xA5A5A5A5n;
+const connectionInfo = Object.freeze({
+    rtt: 100 + Number(connectionSeed % 50n),
+    effectiveType: '4g',
+    downlink: 10.0,
+    saveData: false,
+    type: 'wifi'
+});
 Object.defineProperty(navigator, 'connection', {
-    get: () => ({
-        rtt: 100 + Math.floor(Math.random() * 50),
-        effectiveType: '4g',
-        downlink: 10.0,
-        saveData: false,
-        type: 'wifi'
-    }),
+    get: () => connectionInfo,
     configurable: false,
     enumerable: true
 });

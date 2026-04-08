@@ -35,6 +35,20 @@ fn test_tier2_shims_in_snapshot() {
         "window.chrome shim must be applied from snapshot"
     );
 
+    let stable_rtt = session
+        .eval(
+            "(() => {
+                const reads = [];
+                for (let i = 0; i < 10; i++) reads.push(navigator.connection.rtt);
+                return String(new Set(reads).size === 1);
+            })()",
+        )
+        .unwrap();
+    assert_eq!(
+        stable_rtt, "true",
+        "navigator.connection.rtt must be stable across reads"
+    );
+
     session.destroy();
 }
 

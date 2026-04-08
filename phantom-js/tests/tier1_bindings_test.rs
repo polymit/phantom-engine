@@ -164,6 +164,35 @@ async fn test_shims_browser_shims_js_syntax() {
         "Native Client plugin must not be present"
     );
 
+    let stable_rtt = session
+        .eval(
+            "(() => {
+                const reads = [];
+                for (let i = 0; i < 10; i++) reads.push(navigator.connection.rtt);
+                return String(new Set(reads).size === 1);
+            })()",
+        )
+        .await
+        .unwrap();
+    assert_eq!(
+        stable_rtt, "true",
+        "navigator.connection.rtt must be stable across reads"
+    );
+
+    let bounded_rtt = session
+        .eval(
+            "(() => {
+                const v = navigator.connection.rtt;
+                return String(Number.isInteger(v) && v >= 100 && v < 150);
+            })()",
+        )
+        .await
+        .unwrap();
+    assert_eq!(
+        bounded_rtt, "true",
+        "navigator.connection.rtt must be in [100, 149]"
+    );
+
     session.destroy();
 }
 

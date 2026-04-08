@@ -217,6 +217,21 @@ async fn test_fetch_stub_exists() {
         .unwrap();
     assert_eq!(is_promise, "true", "fetch() must return a Promise");
 
+    session
+        .eval(
+            "globalThis.__fetch_stub_value = 'pending'; \
+             fetch('http://localhost').then(v => { globalThis.__fetch_stub_value = v; }); \
+             'ok';",
+        )
+        .await
+        .unwrap();
+
+    let resolved = session.eval("globalThis.__fetch_stub_value").await.unwrap();
+    assert_eq!(
+        resolved, "fetch_stub_response",
+        "fetch() Promise must resolve to fetch_stub_response"
+    );
+
     session.destroy();
 }
 

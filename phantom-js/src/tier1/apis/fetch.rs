@@ -1,4 +1,4 @@
-use rquickjs::{Ctx, Result};
+use rquickjs::{prelude::This, Ctx, Function, Object, Result};
 
 // window.fetch — v0.1 stub
 //
@@ -9,16 +9,19 @@ use rquickjs::{Ctx, Result};
 // and calling it directly — no ctx.eval() reentrance required.
 
 pub fn register_fetch<'js>(ctx: &Ctx<'js>, globals: &rquickjs::Object<'js>) -> Result<()> {
-    use rquickjs::Function;
-
     let fetch_fn = Function::new(
         ctx.clone(),
         move |ctx: Ctx<'js>,
               _url: String,
               _opts: rquickjs::prelude::Opt<rquickjs::Value<'js>>|
               -> Result<rquickjs::Value<'js>> {
-            // Use a simpler string-based resolve for v0.1
-            ctx.eval("Promise.resolve('fetch_stub_response')")
+            let globals = ctx.globals();
+            let promise_ctor: Object<'js> = globals.get("Promise")?;
+            let resolve: Function<'js> = promise_ctor.get("resolve")?;
+            resolve.call((
+                This(promise_ctor),
+                rquickjs::String::from_str(ctx.clone(), "fetch_stub_response")?,
+            ))
         },
     )?;
 

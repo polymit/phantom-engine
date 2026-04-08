@@ -364,11 +364,11 @@ async fn click_nonexistent_selector_returns_element_not_found() {
         720.0,
     )
     .unwrap();
-    adapter.store_page(SessionPage {
-        page: phantom_mcp::engine::SendablePage(page),
-        url: "https://click.test".to_string(),
-        status: 200,
-    });
+    adapter.store_page(SessionPage::new(
+        page,
+        "https://click.test".to_string(),
+        200,
+    ));
 
     let req = McpServer::parse_request(
         r##"{"jsonrpc":"2.0","id":1,"method":"browser_click",
@@ -408,11 +408,11 @@ async fn click_existing_button_returns_success() {
         720.0,
     )
     .unwrap();
-    adapter.store_page(SessionPage {
-        page: phantom_mcp::engine::SendablePage(page),
-        url: "https://click.test".to_string(),
-        status: 200,
-    });
+    adapter.store_page(SessionPage::new(
+        page,
+        "https://click.test".to_string(),
+        200,
+    ));
 
     let req = McpServer::parse_request(
         r##"{"jsonrpc":"2.0","id":1,"method":"browser_click",
@@ -477,11 +477,11 @@ async fn click_defaults_to_element_center() {
         720.0,
     )
     .unwrap();
-    adapter.store_page(SessionPage {
-        page: phantom_mcp::engine::SendablePage(page),
-        url: "https://click.test".to_string(),
-        status: 200,
-    });
+    adapter.store_page(SessionPage::new(
+        page,
+        "https://click.test".to_string(),
+        200,
+    ));
 
     let req = McpServer::parse_request(
         r##"{"jsonrpc":"2.0","id":1,"method":"browser_click","params":{"selector":"#center-btn"}}"##,
@@ -510,11 +510,11 @@ async fn click_missing_selector_param_returns_error() {
         720.0,
     )
     .unwrap();
-    adapter.store_page(SessionPage {
-        page: phantom_mcp::engine::SendablePage(page),
-        url: "https://click.test".to_string(),
-        status: 200,
-    });
+    adapter.store_page(SessionPage::new(
+        page,
+        "https://click.test".to_string(),
+        200,
+    ));
 
     let req = McpServer::parse_request(
         r#"{"jsonrpc":"2.0","id":1,"method":"browser_click","params":{}}"#,
@@ -540,11 +540,11 @@ async fn click_selector_with_single_quote_does_not_panic() {
         720.0,
     )
     .unwrap();
-    adapter.store_page(SessionPage {
-        page: phantom_mcp::engine::SendablePage(page),
-        url: "https://click.test".to_string(),
-        status: 200,
-    });
+    adapter.store_page(SessionPage::new(
+        page,
+        "https://click.test".to_string(),
+        200,
+    ));
 
     let req = McpServer::parse_request(
         r##"{"jsonrpc":"2.0","id":1,"method":"browser_click",
@@ -574,11 +574,7 @@ async fn type_nonexistent_selector_returns_element_not_found() {
         720.0,
     )
     .unwrap();
-    adapter.store_page(SessionPage {
-        page: phantom_mcp::engine::SendablePage(page),
-        url: "https://type.test".to_string(),
-        status: 200,
-    });
+    adapter.store_page(SessionPage::new(page, "https://type.test".to_string(), 200));
 
     let req = McpServer::parse_request(
         r##"{"jsonrpc":"2.0","id":1,"method":"browser_type","params":{"selector":"#missing","text":"abc"}}"##,
@@ -630,11 +626,7 @@ async fn evaluate_arithmetic_returns_number() {
         720.0,
     )
     .unwrap();
-    adapter.store_page(SessionPage {
-        page: phantom_mcp::engine::SendablePage(page),
-        url: "https://eval.test".to_string(),
-        status: 200,
-    });
+    adapter.store_page(SessionPage::new(page, "https://eval.test".to_string(), 200));
 
     let req = McpServer::parse_request(
         r#"{"jsonrpc":"2.0","id":1,"method":"browser_evaluate","params":{"script":"1 + 1"}}"#,
@@ -675,11 +667,7 @@ async fn evaluate_string_result_has_string_type() {
         720.0,
     )
     .unwrap();
-    adapter.store_page(SessionPage {
-        page: phantom_mcp::engine::SendablePage(page),
-        url: "https://eval.test".to_string(),
-        status: 200,
-    });
+    adapter.store_page(SessionPage::new(page, "https://eval.test".to_string(), 200));
 
     let req = McpServer::parse_request(
         r#"{"jsonrpc":"2.0","id":1,"method":"browser_evaluate","params":{"script":"'hello world'"}}"#
@@ -716,11 +704,7 @@ async fn evaluate_object_result_returns_json_object() {
         720.0,
     )
     .unwrap();
-    adapter.store_page(SessionPage {
-        page: phantom_mcp::engine::SendablePage(page),
-        url: "https://eval.test".to_string(),
-        status: 200,
-    });
+    adapter.store_page(SessionPage::new(page, "https://eval.test".to_string(), 200));
 
     let req = McpServer::parse_request(
         r#"{"jsonrpc":"2.0","id":1,"method":"browser_evaluate","params":{"script":"({ok:true,count:2})"}}"#,

@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use parking_lot::Mutex;
 use phantom_anti_detect::{Persona, PersonaPool};
-use phantom_core::ParsedPage;
+use phantom_core::{rebuild_page_from_tree, DomTree, ParsedPage};
 use phantom_js::tier1::pool::Tier1Pool;
 use phantom_js::tier2::pool::Tier2Pool;
 use phantom_net::SmartNetworkClient;
@@ -39,35 +39,46 @@ pub async fn get_test_adapter() -> &'static EngineAdapter {
         .await
 }
 
-/// Wrapper around ParsedPage that opts into Send + Sync.
-///
-/// TaffyTree (inside LayoutEngine) uses RefCell internally, making it !Send.
-/// We only ever access the stored page through a parking_lot::Mutex, which
-/// guarantees exclusive access — the RefCell is never touched concurrently.
-pub struct SendablePage(pub ParsedPage);
-
-// SAFETY: ParsedPage is only accessed through a Mutex<HashMap<..., SessionPage>>.
-// The Mutex serialises all access, so the RefCell inside TaffyTree is never
-// accessed from multiple threads simultaneously.
-unsafe impl Send for SendablePage {}
-unsafe impl Sync for SendablePage {}
-
 /// Per-session snapshot of a navigated page.
 /// Stored after each successful navigation so `browser_get_scene_graph`
 /// can re-serialise the DOM with different viewport/scroll parameters.
 pub struct SessionPage {
-    pub page: SendablePage,
+    pub tree: DomTree,
     pub url: String,
     pub status: u16,
+    pub viewport_width: f32,
+    pub viewport_height: f32,
 }
 
 impl SessionPage {
     pub fn new(page: ParsedPage, url: String, status: u16) -> Self {
+        Self::with_viewport(page, url, status, 1280.0, 720.0)
+    }
+
+    pub fn with_viewport(
+        page: ParsedPage,
+        url: String,
+        status: u16,
+        viewport_width: f32,
+        viewport_height: f32,
+    ) -> Self {
         Self {
-            page: SendablePage(page),
+            tree: page.tree,
             url,
             status,
+            viewport_width,
+            viewport_height,
         }
+    }
+
+    pub fn to_parsed_page(&self) -> Option<ParsedPage> {
+        rebuild_page_from_tree(
+            self.tree.clone(),
+            &self.url,
+            self.viewport_width,
+            self.viewport_height,
+        )
+        .ok()
     }
 }
 
@@ -191,8 +202,10 @@ impl EngineAdapter {
         let key = *self.active_page_key.lock();
         let store = self.page_store.lock();
         match key {
-            Some(tab_id) => store.get(&tab_id).map(|sp| sp.page.0.clone()),
-            None => store.get(&Uuid::nil()).map(|sp| sp.page.0.clone()),
+            Some(tab_id) => store.get(&tab_id).and_then(SessionPage::to_parsed_page),
+            None => store
+                .get(&Uuid::nil())
+                .and_then(SessionPage::to_parsed_page),
         }
     }
 

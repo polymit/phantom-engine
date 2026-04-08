@@ -83,10 +83,12 @@ pub async fn handle_navigate(
 
     // Persist the parsed page so browser_get_scene_graph can re-serialise
     // with different scroll/mode parameters without re-fetching.
-    adapter.store_page(SessionPage::new(
+    adapter.store_page(SessionPage::with_viewport(
         result.page,
         result.url.clone(),
         result.status,
+        config.viewport_width,
+        config.viewport_height,
     ));
 
     Ok(json!({

@@ -35,6 +35,19 @@ pub fn process_html(
         apply_css_pass(&mut tree, root, None);
     }
 
+    rebuild_page_from_tree(tree, url, viewport_width, viewport_height)
+}
+
+/// Rebuild layout + visibility for an existing DOM tree with computed styles.
+///
+/// This is used when callers persist only the DOM snapshot (which is `Send`)
+/// and need to reconstruct a fresh [`ParsedPage`] on demand.
+pub fn rebuild_page_from_tree(
+    mut tree: DomTree,
+    url: &str,
+    viewport_width: f32,
+    viewport_height: f32,
+) -> Result<ParsedPage, CoreError> {
     // Pass 2: Layout computation
     let mut layout = LayoutEngine::new();
 

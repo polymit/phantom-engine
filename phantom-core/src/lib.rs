@@ -9,4 +9,4 @@ pub use dom::node::{AriaRole, Display, EventListenerType, PointerEvents, Visibil
 pub use dom::{DomNode, DomTree, NodeData};
 pub use layout::bounds::{LayoutEngine, ViewportBounds};
 pub use parser::parse_html;
-pub use pipeline::{process_html, CoreError, ParsedPage};
+pub use pipeline::{process_html, rebuild_page_from_tree, CoreError, ParsedPage};

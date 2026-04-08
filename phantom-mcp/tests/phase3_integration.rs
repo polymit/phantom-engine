@@ -3,7 +3,7 @@ use std::time::Instant;
 use tokio::time::timeout;
 
 use phantom_core::process_html;
-use phantom_mcp::engine::{SendablePage, SessionPage};
+use phantom_mcp::engine::SessionPage;
 use phantom_mcp::{EngineAdapter, McpServer};
 
 const INTEGRATION_HTML: &str = r#"<!DOCTYPE html>
@@ -39,11 +39,11 @@ const INTEGRATION_HTML: &str = r#"<!DOCTYPE html>
 async fn setup_with_page() -> (EngineAdapter, McpServer) {
     let adapter = EngineAdapter::new(5, 0, 5, 0).await;
     let page = process_html(INTEGRATION_HTML, "https://local.test/login", 1280.0, 720.0).unwrap();
-    adapter.store_page(SessionPage {
-        page: SendablePage(page),
-        url: "https://local.test/login".to_string(),
-        status: 200,
-    });
+    adapter.store_page(SessionPage::new(
+        page,
+        "https://local.test/login".to_string(),
+        200,
+    ));
     let server = McpServer::new_with_adapter(None, adapter.clone());
     (adapter, server)
 }
@@ -350,11 +350,11 @@ async fn phase3_selective_mode_on_large_page() {
     }
     html.push_str("</body></html>");
     let page = process_html(&html, "https://large.test", 1280.0, 720.0).unwrap();
-    adapter.store_page(SessionPage {
-        page: SendablePage(page),
-        url: "https://large.test".to_string(),
-        status: 200,
-    });
+    adapter.store_page(SessionPage::new(
+        page,
+        "https://large.test".to_string(),
+        200,
+    ));
 
     let server = McpServer::new_with_adapter(None, adapter.clone());
     let req = McpServer::parse_request(r#"{"jsonrpc":"2.0","id":1,"method":"browser_get_scene_graph","params":{"mode":"selective"}}"#).unwrap();
@@ -422,23 +422,26 @@ async fn phase3_real_page_navigation() {
     )
     .unwrap();
     let resp = server.handle_request(&adapter, req, None).await.unwrap();
-    if resp.error.is_none() {
-        let req2 = McpServer::parse_request(
-            r#"{"jsonrpc":"2.0","id":2,"method":"browser_get_scene_graph","params":{}}"#,
-        )
-        .unwrap();
-        let resp2 = server.handle_request(&adapter, req2, None).await.unwrap();
-        let result = resp2.result.unwrap();
-        let cct = result.get("cct").unwrap().as_str().unwrap();
-        assert!(cct.starts_with("##PAGE"));
-        assert!(cct.contains("httpbin.org"));
-        println!("Navigation took: {}ms", start.elapsed().as_millis());
-    } else {
-        let err = resp.error.unwrap();
-        assert!(
-            err.message.contains("all_attempts_failed") || err.message.contains("network_error"),
-            "unexpected browser_navigate failure: {}",
-            err.message
-        );
+    match resp.error {
+        None => {
+            let req2 = McpServer::parse_request(
+                r#"{"jsonrpc":"2.0","id":2,"method":"browser_get_scene_graph","params":{}}"#,
+            )
+            .unwrap();
+            let resp2 = server.handle_request(&adapter, req2, None).await.unwrap();
+            let result = resp2.result.unwrap();
+            let cct = result.get("cct").unwrap().as_str().unwrap();
+            assert!(cct.starts_with("##PAGE"));
+            assert!(cct.contains("httpbin.org"));
+            println!("Navigation took: {}ms", start.elapsed().as_millis());
+        }
+        Some(err) => {
+            assert!(
+                err.message.contains("all_attempts_failed")
+                    || err.message.contains("network_error"),
+                "unexpected browser_navigate failure: {}",
+                err.message
+            );
+        }
     }
 }

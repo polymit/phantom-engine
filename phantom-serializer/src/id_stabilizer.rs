@@ -3,7 +3,7 @@ use crate::visibility::VisibilityMap;
 use indextree::NodeId;
 use phantom_core::dom::{DomTree, NodeData};
 use std::collections::{HashMap, HashSet};
-use std::hash::{BuildHasher, Hash, Hasher};
+use std::hash::{Hash, Hasher};
 
 pub struct StableIdMap {
     inner: HashMap<NodeId, (String, IdConfidence)>,
@@ -106,9 +106,7 @@ fn process_node_ids(
             }
         }
         NodeData::Text { content } => {
-            let mut hasher = rustc_hash::FxHashSet::<u8>::default()
-                .hasher()
-                .build_hasher();
+            let mut hasher = rustc_hash::FxHasher::default();
             path.hash(&mut hasher);
             content.hash(&mut hasher);
             (format!("n_{:x}", hasher.finish()), IdConfidence::Low)
@@ -140,4 +138,42 @@ fn is_framework_auto_id(id: &str) -> bool {
         || id.starts_with(":r")
         || id.starts_with("__next")
         || id.contains("ember")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::stabilise_ids;
+    use crate::visibility::VisibilityMap;
+    use phantom_core::dom::{DomNode, DomTree, NodeData};
+    use std::collections::HashMap;
+    use std::hash::{Hash, Hasher};
+
+    #[test]
+    fn text_node_id_uses_fxhasher_directly() {
+        let mut tree = DomTree::new();
+        let root = tree.arena.new_node(DomNode::new(NodeData::Document));
+        tree.document_root = Some(root);
+
+        let div = tree.arena.new_node(DomNode::new(NodeData::Element {
+            tag_name: "div".to_string(),
+            attributes: HashMap::new(),
+        }));
+        root.append(div, &mut tree.arena);
+
+        let text_content = "hello";
+        let text = tree.arena.new_node(DomNode::new(NodeData::Text {
+            content: text_content.to_string(),
+        }));
+        div.append(text, &mut tree.arena);
+
+        let ids = stabilise_ids(&tree, &VisibilityMap::new());
+        let actual = ids.get_id(text).expect("text node id should exist");
+
+        let mut hasher = rustc_hash::FxHasher::default();
+        "/0/div[0]/0".hash(&mut hasher);
+        text_content.hash(&mut hasher);
+        let expected = format!("n_{:x}", hasher.finish());
+
+        assert_eq!(actual, expected);
+    }
 }

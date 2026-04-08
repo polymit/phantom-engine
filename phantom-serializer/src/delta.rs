@@ -1,6 +1,6 @@
 use crate::cct_types::CctDelta;
 use indextree::NodeId;
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{hash_map::Entry, HashMap, HashSet, VecDeque};
 use std::time::Instant;
 
 const DEFAULT_WINDOW_MS: u64 = 16;
@@ -93,12 +93,17 @@ impl Default for DeltaEngine {
 }
 
 fn apply_coalescing(mutations: Vec<RawMutation>) -> Vec<CctDelta> {
+    struct AttrState {
+        original_old: Option<String>,
+        latest_new: Option<String>,
+    }
+
     let mut final_muts = Vec::new();
 
     let mut inserted = HashSet::new();
     let mut removed = HashSet::new();
     let mut parent_of: HashMap<NodeId, NodeId> = HashMap::new();
-    let mut attr_map: HashMap<(NodeId, String), RawMutation> = HashMap::new();
+    let mut attr_map: HashMap<(NodeId, String), AttrState> = HashMap::new();
     let mut text_map: HashMap<NodeId, String> = HashMap::new();
     let mut last_scroll = None;
 
@@ -145,28 +150,24 @@ fn apply_coalescing(mutations: Vec<RawMutation>) -> Vec<CctDelta> {
                 {
                     continue;
                 }
-                let key = (node_id, attr.clone());
-
-                // Rule 1: A -> B -> A
-                if let Some(RawMutation::AttrChanged {
-                    old_val: orig_old, ..
-                }) = attr_map.get(&key)
-                {
-                    if *orig_old == new_val {
-                        attr_map.remove(&key);
-                        continue;
+                let key = (node_id, attr);
+                match attr_map.entry(key) {
+                    Entry::Occupied(mut entry) => {
+                        let state = entry.get_mut();
+                        state.latest_new = new_val;
+                        if state.original_old == state.latest_new {
+                            entry.remove_entry();
+                        }
+                    }
+                    Entry::Vacant(entry) => {
+                        if old_val != new_val {
+                            entry.insert(AttrState {
+                                original_old: old_val,
+                                latest_new: new_val,
+                            });
+                        }
                     }
                 }
-                // Rule 2: Keep last value
-                attr_map.insert(
-                    key,
-                    RawMutation::AttrChanged {
-                        node_id,
-                        attr,
-                        old_val,
-                        new_val,
-                    },
-                );
             }
             RawMutation::TextChanged { node_id, new_text } => {
                 if removed.contains(&node_id) || has_removed_ancestor(node_id, &removed, &parent_of)

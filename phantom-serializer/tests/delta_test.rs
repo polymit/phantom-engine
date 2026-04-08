@@ -127,4 +127,38 @@ mod tests {
             "pending mutation queue must stay bounded under stalled consumer"
         );
     }
+
+    #[test]
+    fn test_attr_round_trip_over_multiple_steps_is_noop() {
+        let mut arena = Arena::<()>::new();
+        let node = arena.new_node(());
+        let mut engine = DeltaEngine::new();
+
+        engine.push(RawMutation::AttrChanged {
+            node_id: node,
+            attr: "class".to_string(),
+            old_val: None,
+            new_val: Some("active".to_string()),
+        });
+        engine.push(RawMutation::AttrChanged {
+            node_id: node,
+            attr: "class".to_string(),
+            old_val: Some("active".to_string()),
+            new_val: Some("active loading".to_string()),
+        });
+        engine.push(RawMutation::AttrChanged {
+            node_id: node,
+            attr: "class".to_string(),
+            old_val: Some("active loading".to_string()),
+            new_val: None,
+        });
+
+        sleep(Duration::from_millis(20));
+        let out = engine.coalesce();
+
+        assert!(
+            out.is_empty(),
+            "A -> B -> C -> A attribute transitions must coalesce to no-op"
+        );
+    }
 }

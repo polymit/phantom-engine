@@ -340,6 +340,56 @@ async fn scene_graph_cct_header_contains_correct_url() {
     println!("url in header: {}", header);
 }
 
+#[tokio::test]
+async fn scene_graph_uses_stored_viewport_dimensions() {
+    use phantom_core::process_html;
+    use phantom_mcp::engine::SessionPage;
+
+    let adapter = get_test_adapter().await.clone();
+    let server = McpServer::new_with_adapter(None, adapter.clone());
+
+    let page = process_html(
+        "<html><body style='width:1000px;height:600px;'>
+         <div style='width:200px;height:80px;'>Viewport Test</div>
+         </body></html>",
+        "https://viewport.test",
+        1000.0,
+        600.0,
+    )
+    .unwrap();
+    adapter.store_page(SessionPage::with_viewport(
+        page,
+        "https://viewport.test".to_string(),
+        200,
+        1000.0,
+        600.0,
+    ));
+
+    let req = McpServer::parse_request(
+        r#"{"jsonrpc":"2.0","id":1,"method":"browser_get_scene_graph","params":{}}"#,
+    )
+    .unwrap();
+    let resp = server.handle_request(&adapter, req, None).await.unwrap();
+    assert!(resp.error.is_none(), "{:?}", resp.error);
+
+    let result = resp.result.unwrap();
+    let cct = result["cct"]
+        .as_str()
+        .expect("scene_graph result must include cct");
+    let header = cct.lines().next().unwrap_or("");
+
+    assert!(
+        header.contains("viewport=1000x600"),
+        "scene_graph must use stored viewport dimensions, got: {}",
+        header
+    );
+    assert!(
+        header.contains("total=1000,600"),
+        "scene_graph total bounds must track stored viewport, got: {}",
+        header
+    );
+}
+
 // ── browser_click tests ──────────────────────────────────
 
 #[tokio::test]

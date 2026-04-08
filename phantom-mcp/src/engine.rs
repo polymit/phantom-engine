@@ -236,6 +236,25 @@ impl EngineAdapter {
         }
     }
 
+    /// Clone the stored ParsedPage and its viewport metadata.
+    /// Returns None if no page has been navigated to yet.
+    pub fn get_page_with_viewport(&self) -> Option<(ParsedPage, String, f32, f32)> {
+        let key = *self.active_page_key.lock();
+        let store = self.page_store.lock();
+        let page = match key {
+            Some(tab_id) => store.get(&tab_id),
+            None => store.get(&Uuid::nil()),
+        }?;
+
+        let parsed = page.to_parsed_page()?;
+        Some((
+            parsed,
+            page.url.clone(),
+            page.viewport_width,
+            page.viewport_height,
+        ))
+    }
+
     /// Get the URL of the currently stored page.
     pub fn get_page_url(&self) -> Option<String> {
         let key = *self.active_page_key.lock();

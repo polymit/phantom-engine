@@ -29,17 +29,16 @@ pub async fn handle_get_scene_graph(
         )
     })?;
 
-    let page = adapter.get_page().ok_or_else(|| {
-        (
-            StatusCode::CONFLICT,
-            json!({ "error": {
-                "code": "no_page_loaded",
-                "message": "Call browser_navigate before browser_get_scene_graph"
-            }}),
-        )
-    })?;
-
-    let url = adapter.get_page_url().unwrap_or_default();
+    let (page, url, viewport_width, viewport_height) =
+        adapter.get_page_with_viewport().ok_or_else(|| {
+            (
+                StatusCode::CONFLICT,
+                json!({ "error": {
+                    "code": "no_page_loaded",
+                    "message": "Call browser_navigate before browser_get_scene_graph"
+                }}),
+            )
+        })?;
 
     let mode = match params.mode.as_deref() {
         Some("selective") => SerialiserMode::Selective,
@@ -50,9 +49,9 @@ pub async fn handle_get_scene_graph(
         url: url.clone(),
         scroll_x: params.scroll_x.unwrap_or(0.0),
         scroll_y: params.scroll_y.unwrap_or(0.0),
-        viewport_width: 1280.0,
-        viewport_height: 720.0,
-        total_height: 720.0,
+        viewport_width,
+        viewport_height,
+        total_height: viewport_height,
         mode: mode.clone(),
         task_hint: params.task_hint,
     };

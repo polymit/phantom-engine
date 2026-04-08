@@ -5,25 +5,25 @@ use crate::engine::EngineAdapter;
 
 #[derive(Debug, serde::Deserialize)]
 struct EvaluateParams {
-    pub script:     String,
+    pub script: String,
     pub timeout_ms: Option<u64>,
 }
 
 /// Map a `serde_json::Value` to the JSON type name string.
 fn json_type_name(v: &Value) -> &'static str {
     match v {
-        Value::Null              => "null",
-        Value::Bool(_)           => "boolean",
-        Value::Number(_)         => "number",
-        Value::String(_)         => "string",
-        Value::Array(_)          => "array",
-        Value::Object(_)         => "object",
+        Value::Null => "null",
+        Value::Bool(_) => "boolean",
+        Value::Number(_) => "number",
+        Value::String(_) => "string",
+        Value::Array(_) => "array",
+        Value::Object(_) => "object",
     }
 }
 
 pub async fn handle_evaluate(
     adapter: &EngineAdapter,
-    params:  Value,
+    params: Value,
 ) -> Result<Value, (StatusCode, Value)> {
     let p: EvaluateParams = serde_json::from_value(params).map_err(|e| {
         (
@@ -56,7 +56,7 @@ pub async fn handle_evaluate(
     session.attach_dom(tree).await;
 
     let raw = match session.eval(&p.script).await {
-        Ok(v)  => v,
+        Ok(v) => v,
         Err(e) => {
             adapter.tier1.release_after_use(session);
             // The interrupt handler terminates scripts and the error surfaces

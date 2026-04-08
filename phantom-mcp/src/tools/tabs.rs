@@ -6,7 +6,7 @@ use crate::engine::EngineAdapter;
 
 pub async fn handle_new_tab(
     adapter: &EngineAdapter,
-    params:  Value,
+    params: Value,
 ) -> Result<Value, (StatusCode, Value)> {
     // url is optional — an empty tab is valid
     let url: Option<String> = params
@@ -25,7 +25,7 @@ pub async fn handle_new_tab(
 
 pub async fn handle_switch_tab(
     adapter: &EngineAdapter,
-    params:  Value,
+    params: Value,
 ) -> Result<Value, (StatusCode, Value)> {
     let id_str = params
         .get("tab_id")
@@ -79,7 +79,7 @@ pub async fn handle_list_tabs(
 
 pub async fn handle_close_tab(
     adapter: &EngineAdapter,
-    params:  Value,
+    params: Value,
 ) -> Result<Value, (StatusCode, Value)> {
     let id_str = params
         .get("tab_id")

@@ -293,62 +293,76 @@ async fn scene_graph_cct_header_contains_correct_url() {
 #[tokio::test]
 async fn click_without_navigate_returns_no_page_error() {
     let adapter = get_test_adapter().await;
-    let server  = McpServer::new_with_adapter(None, adapter.clone());
+    let server = McpServer::new_with_adapter(None, adapter.clone());
     let req = McpServer::parse_request(
         r##"{"jsonrpc":"2.0","id":1,"method":"browser_click",
-            "params":{"selector":"button"}}"##
-    ).unwrap();
+            "params":{"selector":"button"}}"##,
+    )
+    .unwrap();
     let resp = server.handle_request(&adapter, req, None).await.unwrap();
-    assert!(resp.error.is_some(),
-        "click without navigate must return error");
+    assert!(
+        resp.error.is_some(),
+        "click without navigate must return error"
+    );
     let err_str = serde_json::to_string(&resp.error).unwrap();
-    assert!(err_str.contains("no_page_loaded"),
-        "error must be no_page_loaded, got: {}", err_str);
+    assert!(
+        err_str.contains("no_page_loaded"),
+        "error must be no_page_loaded, got: {}",
+        err_str
+    );
     println!("click no page: correctly returned no_page_loaded");
 }
 
 #[tokio::test]
 async fn click_nonexistent_selector_returns_element_not_found() {
-    use phantom_mcp::{EngineAdapter, McpServer, engine::SessionPage};
     use phantom_core::process_html;
+    use phantom_mcp::{engine::SessionPage, EngineAdapter, McpServer};
 
     let adapter = EngineAdapter::new(5, 0, 5, 0).await;
-    let server  = McpServer::new_with_adapter(None, adapter.clone());
+    let server = McpServer::new_with_adapter(None, adapter.clone());
 
     // Store a page with NO button
     let page = process_html(
         "<html><body style='width:1280px;height:720px;'>
          <p style='width:200px;height:20px;'>No button here</p>
          </body></html>",
-        "https://click.test", 1280.0, 720.0,
-    ).unwrap();
+        "https://click.test",
+        1280.0,
+        720.0,
+    )
+    .unwrap();
     adapter.store_page(SessionPage {
         page: phantom_mcp::engine::SendablePage(page),
-        url: "https://click.test".to_string(), status: 200
+        url: "https://click.test".to_string(),
+        status: 200,
     });
 
     let req = McpServer::parse_request(
         r##"{"jsonrpc":"2.0","id":1,"method":"browser_click",
-            "params":{"selector":"button#nonexistent-id-xyz"}}"##
-    ).unwrap();
+            "params":{"selector":"button#nonexistent-id-xyz"}}"##,
+    )
+    .unwrap();
     let resp = server.handle_request(&adapter, req, None).await.unwrap();
-    assert!(resp.error.is_some(),
-        "clicking nonexistent element must return error");
+    assert!(
+        resp.error.is_some(),
+        "clicking nonexistent element must return error"
+    );
     let err_str = serde_json::to_string(&resp.error).unwrap();
     assert!(
         err_str.contains("element_not_found") || err_str.contains("not_found"),
-        "error must indicate element not found, got: {}", err_str
+        "error must indicate element not found, got: {}",
+        err_str
     );
     println!("nonexistent selector: correctly returned element_not_found");
 }
 
 #[tokio::test]
 async fn click_existing_button_returns_success() {
-    use phantom_mcp::{EngineAdapter, McpServer, engine::SessionPage};
     use phantom_core::process_html;
+    use phantom_mcp::{engine::SessionPage, EngineAdapter, McpServer};
 
     let adapter = EngineAdapter::new(5, 0, 5, 0).await;
-    let server  = McpServer::new_with_adapter(None, adapter.clone());
+    let server = McpServer::new_with_adapter(None, adapter.clone());
 
     let page = process_html(
         r#"<html><body style="width:1280px;height:720px;">
@@ -356,28 +370,44 @@ async fn click_existing_button_returns_success() {
                     data-testid="submit"
                     style="width:120px;height:40px;">Submit</button>
            </body></html>"#,
-        "https://click.test", 1280.0, 720.0,
-    ).unwrap();
+        "https://click.test",
+        1280.0,
+        720.0,
+    )
+    .unwrap();
     adapter.store_page(SessionPage {
-        page: phantom_mcp::engine::SendablePage(page), url: "https://click.test".to_string(), status: 200
+        page: phantom_mcp::engine::SendablePage(page),
+        url: "https://click.test".to_string(),
+        status: 200,
     });
 
     let req = McpServer::parse_request(
         r##"{"jsonrpc":"2.0","id":1,"method":"browser_click",
-            "params":{"selector":"#submit-btn"}}"##
-    ).unwrap();
+            "params":{"selector":"#submit-btn"}}"##,
+    )
+    .unwrap();
     let resp = server.handle_request(&adapter, req, None).await.unwrap();
-    assert!(resp.error.is_none(),
-        "clicking existing button must not error: {:?}", resp.error);
+    assert!(
+        resp.error.is_none(),
+        "clicking existing button must not error: {:?}",
+        resp.error
+    );
     let result = resp.result.unwrap();
-    assert_eq!(result["clicked"].as_bool(), Some(true),
-        "result.clicked must be true");
-    assert!(result["hesitation_ms"].as_u64().is_some(),
-        "result.hesitation_ms must be present");
+    assert_eq!(
+        result["clicked"].as_bool(),
+        Some(true),
+        "result.clicked must be true"
+    );
+    assert!(
+        result["hesitation_ms"].as_u64().is_some(),
+        "result.hesitation_ms must be present"
+    );
     let hesitation = result["hesitation_ms"].as_u64().unwrap();
-    assert!(hesitation >= 20 && hesitation <= 500,
+    assert!(
+        hesitation >= 20 && hesitation <= 500,
         "hesitation must be in LogNormal clamp range [20,500], got {}",
-        hesitation);
+        hesitation
+    );
     println!("click success: hesitation={}ms", hesitation);
 }
 
@@ -387,60 +417,78 @@ async fn click_hesitation_is_in_lognormal_range() {
     let engine = BehaviorEngine::new();
     for i in 0..10 {
         let h = engine.click_hesitation_ms();
-        assert!(h >= 20 && h <= 500,
-            "hesitation[{}] = {}ms must be in [20,500]", i, h);
+        assert!(
+            h >= 20 && h <= 500,
+            "hesitation[{}] = {}ms must be in [20,500]",
+            i,
+            h
+        );
     }
     println!("10 hesitation samples all in [20,500]ms");
 }
 
 #[tokio::test]
 async fn click_missing_selector_param_returns_error() {
-    use phantom_mcp::{EngineAdapter, McpServer, engine::SessionPage};
     use phantom_core::process_html;
+    use phantom_mcp::{engine::SessionPage, EngineAdapter, McpServer};
 
     let adapter = EngineAdapter::new(5, 0, 5, 0).await;
-    let server  = McpServer::new_with_adapter(None, adapter.clone());
+    let server = McpServer::new_with_adapter(None, adapter.clone());
 
     let page = process_html(
         "<html><body style='width:1280px;height:720px;'></body></html>",
-        "https://click.test", 1280.0, 720.0,
-    ).unwrap();
+        "https://click.test",
+        1280.0,
+        720.0,
+    )
+    .unwrap();
     adapter.store_page(SessionPage {
-        page: phantom_mcp::engine::SendablePage(page), url: "https://click.test".to_string(), status: 200
+        page: phantom_mcp::engine::SendablePage(page),
+        url: "https://click.test".to_string(),
+        status: 200,
     });
 
     let req = McpServer::parse_request(
-        r#"{"jsonrpc":"2.0","id":1,"method":"browser_click","params":{}}"#
-    ).unwrap();
+        r#"{"jsonrpc":"2.0","id":1,"method":"browser_click","params":{}}"#,
+    )
+    .unwrap();
     let resp = server.handle_request(&adapter, req, None).await.unwrap();
-    assert!(resp.error.is_some(),
-        "missing selector must return error");
+    assert!(resp.error.is_some(), "missing selector must return error");
     println!("missing selector: error returned as expected");
 }
 
 #[tokio::test]
 async fn click_selector_with_single_quote_does_not_panic() {
-    use phantom_mcp::{EngineAdapter, McpServer, engine::SessionPage};
     use phantom_core::process_html;
+    use phantom_mcp::{engine::SessionPage, EngineAdapter, McpServer};
 
     let adapter = EngineAdapter::new(5, 0, 5, 0).await;
-    let server  = McpServer::new_with_adapter(None, adapter.clone());
+    let server = McpServer::new_with_adapter(None, adapter.clone());
 
     let page = process_html(
         "<html><body style='width:1280px;height:720px;'></body></html>",
-        "https://click.test", 1280.0, 720.0,
-    ).unwrap();
+        "https://click.test",
+        1280.0,
+        720.0,
+    )
+    .unwrap();
     adapter.store_page(SessionPage {
-        page: phantom_mcp::engine::SendablePage(page), url: "https://click.test".to_string(), status: 200
+        page: phantom_mcp::engine::SendablePage(page),
+        url: "https://click.test".to_string(),
+        status: 200,
     });
 
     let req = McpServer::parse_request(
         r##"{"jsonrpc":"2.0","id":1,"method":"browser_click",
-            "params":{"selector":"[data-label='test']"}}"##
-    ).unwrap();
+            "params":{"selector":"[data-label='test']"}}"##,
+    )
+    .unwrap();
     let resp = server.handle_request(&adapter, req, None).await;
-    assert!(resp.is_ok(),
-        "single quote in selector must not panic, got: {:?}", resp.err());
+    assert!(
+        resp.is_ok(),
+        "single quote in selector must not panic, got: {:?}",
+        resp.err()
+    );
     println!("single quote in selector: no panic");
 }
 
@@ -453,31 +501,40 @@ async fn evaluate_arithmetic_returns_number() {
     use phantom_mcp::{EngineAdapter, McpServer};
 
     let adapter = EngineAdapter::new(5, 0, 5, 0).await;
-    let server  = McpServer::new_with_adapter(None, adapter.clone());
+    let server = McpServer::new_with_adapter(None, adapter.clone());
 
     let page = process_html(
         "<html><body style='width:1280px;height:720px;'></body></html>",
-        "https://eval.test", 1280.0, 720.0,
-    ).unwrap();
+        "https://eval.test",
+        1280.0,
+        720.0,
+    )
+    .unwrap();
     adapter.store_page(SessionPage {
         page: phantom_mcp::engine::SendablePage(page),
-        url:  "https://eval.test".to_string(),
+        url: "https://eval.test".to_string(),
         status: 200,
     });
 
     let req = McpServer::parse_request(
-        r#"{"jsonrpc":"2.0","id":1,"method":"browser_evaluate","params":{"script":"1 + 1"}}"#
-    ).unwrap();
+        r#"{"jsonrpc":"2.0","id":1,"method":"browser_evaluate","params":{"script":"1 + 1"}}"#,
+    )
+    .unwrap();
     let resp = server.handle_request(&adapter, req, None).await.unwrap();
 
-    assert!(resp.error.is_none(), "evaluate 1+1 must not error: {:?}", resp.error);
+    assert!(
+        resp.error.is_none(),
+        "evaluate 1+1 must not error: {:?}",
+        resp.error
+    );
     let result = resp.result.unwrap();
     let val = &result["result"];
     // QuickJS serialises numbers as strings through the current eval path,
     // so the JSON parse may succeed (number 2) or produce raw string "2".
     assert!(
         val.as_f64() == Some(2.0) || val.as_str() == Some("2"),
-        "1+1 must equal 2, got {:?}", val
+        "1+1 must equal 2, got {:?}",
+        val
     );
     println!("evaluate 1+1: {:?}", val);
 }
@@ -489,15 +546,18 @@ async fn evaluate_string_result_has_string_type() {
     use phantom_mcp::{EngineAdapter, McpServer};
 
     let adapter = EngineAdapter::new(5, 0, 5, 0).await;
-    let server  = McpServer::new_with_adapter(None, adapter.clone());
+    let server = McpServer::new_with_adapter(None, adapter.clone());
 
     let page = process_html(
         "<html><body style='width:1280px;height:720px;'></body></html>",
-        "https://eval.test", 1280.0, 720.0,
-    ).unwrap();
+        "https://eval.test",
+        1280.0,
+        720.0,
+    )
+    .unwrap();
     adapter.store_page(SessionPage {
         page: phantom_mcp::engine::SendablePage(page),
-        url:  "https://eval.test".to_string(),
+        url: "https://eval.test".to_string(),
         status: 200,
     });
 
@@ -506,28 +566,41 @@ async fn evaluate_string_result_has_string_type() {
     ).unwrap();
     let resp = server.handle_request(&adapter, req, None).await.unwrap();
 
-    assert!(resp.error.is_none(), "evaluate string must not error: {:?}", resp.error);
+    assert!(
+        resp.error.is_none(),
+        "evaluate string must not error: {:?}",
+        resp.error
+    );
     let result = resp.result.unwrap();
-    assert_eq!(result["type"].as_str(), Some("string"), "type must be 'string'");
+    assert_eq!(
+        result["type"].as_str(),
+        Some("string"),
+        "type must be 'string'"
+    );
     println!("evaluate string: type=string verified");
 }
 
 #[tokio::test]
 async fn evaluate_without_page_returns_no_page_error() {
     let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
-    let server  = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
+    let server = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
 
     // Ensure the store is empty for this isolated adapter.
     let req = phantom_mcp::McpServer::parse_request(
-        r#"{"jsonrpc":"2.0","id":1,"method":"browser_evaluate","params":{"script":"1+1"}}"#
-    ).unwrap();
+        r#"{"jsonrpc":"2.0","id":1,"method":"browser_evaluate","params":{"script":"1+1"}}"#,
+    )
+    .unwrap();
     let resp = server.handle_request(&adapter, req, None).await.unwrap();
 
-    assert!(resp.error.is_some(), "evaluate with no page must return error");
+    assert!(
+        resp.error.is_some(),
+        "evaluate with no page must return error"
+    );
     let err_str = serde_json::to_string(&resp.error).unwrap();
     assert!(
         err_str.contains("no_page_loaded"),
-        "error must be no_page_loaded, got: {}", err_str
+        "error must be no_page_loaded, got: {}",
+        err_str
     );
     println!("evaluate no page: no_page_loaded returned");
 }
@@ -537,63 +610,88 @@ async fn evaluate_without_page_returns_no_page_error() {
 #[tokio::test]
 async fn tab_new_tab_creates_tab_with_id() {
     let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
-    let server  = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
+    let server = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
 
     let req = phantom_mcp::McpServer::parse_request(
         r#"{"jsonrpc":"2.0","id":1,"method":"browser_new_tab","params":{"url":"https://example.com"}}"#
     ).unwrap();
     let resp = server.handle_request(&adapter, req, None).await.unwrap();
 
-    assert!(resp.error.is_none(), "new_tab must not error: {:?}", resp.error);
+    assert!(
+        resp.error.is_none(),
+        "new_tab must not error: {:?}",
+        resp.error
+    );
     let result = resp.result.unwrap();
     let tab_id = result["tab_id"].as_str().unwrap_or("");
-    assert!(!tab_id.is_empty(),  "tab_id must not be empty");
-    assert_eq!(tab_id.len(), 36, "tab_id must be a UUID (36 chars), got: {}", tab_id);
+    assert!(!tab_id.is_empty(), "tab_id must not be empty");
+    assert_eq!(
+        tab_id.len(),
+        36,
+        "tab_id must be a UUID (36 chars), got: {}",
+        tab_id
+    );
     println!("new_tab: tab_id={}", tab_id);
 }
 
 #[tokio::test]
 async fn tab_list_tabs_returns_created_tabs() {
     let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
-    let server  = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
+    let server = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
 
     for url in &["https://tab1.com", "https://tab2.com"] {
         let req = phantom_mcp::McpServer::parse_request(&format!(
             r#"{{"jsonrpc":"2.0","id":1,"method":"browser_new_tab","params":{{"url":"{}"}}}}"#,
             url
-        )).unwrap();
+        ))
+        .unwrap();
         server.handle_request(&adapter, req, None).await.unwrap();
     }
 
     let req = phantom_mcp::McpServer::parse_request(
-        r#"{"jsonrpc":"2.0","id":1,"method":"browser_list_tabs","params":{}}"#
-    ).unwrap();
+        r#"{"jsonrpc":"2.0","id":1,"method":"browser_list_tabs","params":{}}"#,
+    )
+    .unwrap();
     let resp = server.handle_request(&adapter, req, None).await.unwrap();
 
-    assert!(resp.error.is_none(), "list_tabs must not error: {:?}", resp.error);
+    assert!(
+        resp.error.is_none(),
+        "list_tabs must not error: {:?}",
+        resp.error
+    );
     let tabs = resp.result.unwrap()["tabs"]
-        .as_array().expect("tabs must be an array")
+        .as_array()
+        .expect("tabs must be an array")
         .clone();
-    assert!(tabs.len() >= 2, "must have at least 2 tabs, got {}", tabs.len());
+    assert!(
+        tabs.len() >= 2,
+        "must have at least 2 tabs, got {}",
+        tabs.len()
+    );
     println!("list_tabs: {} tabs", tabs.len());
 }
 
 #[tokio::test]
 async fn tab_switch_to_nonexistent_tab_returns_error() {
     let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
-    let server  = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
+    let server = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
 
     let req = phantom_mcp::McpServer::parse_request(
         r#"{"jsonrpc":"2.0","id":1,"method":"browser_switch_tab",
-            "params":{"tab_id":"00000000-0000-0000-0000-000000000000"}}"#
-    ).unwrap();
+            "params":{"tab_id":"00000000-0000-0000-0000-000000000000"}}"#,
+    )
+    .unwrap();
     let resp = server.handle_request(&adapter, req, None).await.unwrap();
 
-    assert!(resp.error.is_some(), "switching to a nonexistent tab must return error");
+    assert!(
+        resp.error.is_some(),
+        "switching to a nonexistent tab must return error"
+    );
     let err_str = serde_json::to_string(&resp.error).unwrap();
     assert!(
         err_str.contains("tab_not_found"),
-        "error must be tab_not_found, got: {}", err_str
+        "error must be tab_not_found, got: {}",
+        err_str
     );
     println!("switch nonexistent: tab_not_found returned");
 }
@@ -601,35 +699,55 @@ async fn tab_switch_to_nonexistent_tab_returns_error() {
 #[tokio::test]
 async fn tab_close_removes_tab_from_list() {
     let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
-    let server  = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
+    let server = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
 
     // Create the tab.
     let create_req = phantom_mcp::McpServer::parse_request(
         r#"{"jsonrpc":"2.0","id":1,"method":"browser_new_tab","params":{"url":"https://closeme.com"}}"#
     ).unwrap();
-    let create_resp = server.handle_request(&adapter, create_req, None).await.unwrap();
+    let create_resp = server
+        .handle_request(&adapter, create_req, None)
+        .await
+        .unwrap();
     let tab_id = create_resp.result.unwrap()["tab_id"]
-        .as_str().unwrap().to_string();
+        .as_str()
+        .unwrap()
+        .to_string();
 
     // Close it.
     let close_req = phantom_mcp::McpServer::parse_request(&format!(
         r#"{{"jsonrpc":"2.0","id":1,"method":"browser_close_tab","params":{{"tab_id":"{}"}}}}"#,
         tab_id
-    )).unwrap();
-    let close_resp = server.handle_request(&adapter, close_req, None).await.unwrap();
-    assert!(close_resp.error.is_none(), "close_tab must not error: {:?}", close_resp.error);
+    ))
+    .unwrap();
+    let close_resp = server
+        .handle_request(&adapter, close_req, None)
+        .await
+        .unwrap();
+    assert!(
+        close_resp.error.is_none(),
+        "close_tab must not error: {:?}",
+        close_resp.error
+    );
     assert_eq!(
-        close_resp.result.unwrap()["closed"].as_bool(), Some(true),
+        close_resp.result.unwrap()["closed"].as_bool(),
+        Some(true),
         "closed must be true"
     );
 
     // Verify it no longer appears in the list.
     let list_req = phantom_mcp::McpServer::parse_request(
-        r#"{"jsonrpc":"2.0","id":1,"method":"browser_list_tabs","params":{}}"#
-    ).unwrap();
-    let list_resp = server.handle_request(&adapter, list_req, None).await.unwrap();
+        r#"{"jsonrpc":"2.0","id":1,"method":"browser_list_tabs","params":{}}"#,
+    )
+    .unwrap();
+    let list_resp = server
+        .handle_request(&adapter, list_req, None)
+        .await
+        .unwrap();
     let tabs = list_resp.result.unwrap()["tabs"]
-        .as_array().unwrap().clone();
+        .as_array()
+        .unwrap()
+        .clone();
     assert!(
         tabs.iter().all(|t| t["id"].as_str() != Some(&tab_id)),
         "closed tab must not appear in list"
@@ -642,10 +760,11 @@ async fn tab_close_removes_tab_from_list() {
 #[tokio::test]
 async fn cookies_initially_empty() {
     let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
-    let server  = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
+    let server = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
     let req = phantom_mcp::McpServer::parse_request(
-        r#"{"jsonrpc":"2.0","id":1,"method":"browser_get_cookies","params":{}}"#
-    ).unwrap();
+        r#"{"jsonrpc":"2.0","id":1,"method":"browser_get_cookies","params":{}}"#,
+    )
+    .unwrap();
     let resp = server.handle_request(&adapter, req, None).await.unwrap();
     assert!(resp.error.is_none(), "{:?}", resp.error);
     let result = resp.result.unwrap();
@@ -657,10 +776,11 @@ async fn cookies_initially_empty() {
 #[tokio::test]
 async fn clear_cookies_returns_cleared_true() {
     let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
-    let server  = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
+    let server = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
     let req = phantom_mcp::McpServer::parse_request(
-        r#"{"jsonrpc":"2.0","id":1,"method":"browser_clear_cookies","params":{}}"#
-    ).unwrap();
+        r#"{"jsonrpc":"2.0","id":1,"method":"browser_clear_cookies","params":{}}"#,
+    )
+    .unwrap();
     let resp = server.handle_request(&adapter, req, None).await.unwrap();
     assert!(resp.error.is_none(), "{:?}", resp.error);
     assert_eq!(resp.result.unwrap()["cleared"].as_bool(), Some(true));
@@ -671,21 +791,30 @@ async fn clear_cookies_returns_cleared_true() {
 async fn session_snapshot_creates_file() {
     use std::path::Path;
     let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
-    let server  = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
+    let server = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
     let req = phantom_mcp::McpServer::parse_request(
-        r#"{"jsonrpc":"2.0","id":1,"method":"browser_session_snapshot","params":{}}"#
-    ).unwrap();
+        r#"{"jsonrpc":"2.0","id":1,"method":"browser_session_snapshot","params":{}}"#,
+    )
+    .unwrap();
     let resp = server.handle_request(&adapter, req, None).await.unwrap();
-    assert!(resp.error.is_none(),
-        "snapshot must not error: {:?}", resp.error);
+    assert!(
+        resp.error.is_none(),
+        "snapshot must not error: {:?}",
+        resp.error
+    );
     let result = resp.result.unwrap();
-    let snapshot_path = result["snapshot_path"].as_str()
+    let snapshot_path = result["snapshot_path"]
+        .as_str()
         .expect("snapshot_path must be present");
-    let size_bytes = result["size_bytes"].as_u64()
+    let size_bytes = result["size_bytes"]
+        .as_u64()
         .expect("size_bytes must be present");
     assert!(size_bytes > 0, "compressed snapshot must not be empty");
-    assert!(Path::new(snapshot_path).exists(),
-        "snapshot file must exist at {}", snapshot_path);
+    assert!(
+        Path::new(snapshot_path).exists(),
+        "snapshot file must exist at {}",
+        snapshot_path
+    );
     println!("snapshot: path={}, size={}b", snapshot_path, size_bytes);
 
     // Clean up
@@ -695,10 +824,11 @@ async fn session_snapshot_creates_file() {
 #[tokio::test]
 async fn session_snapshot_is_zstd_compressed() {
     let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
-    let server  = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
+    let server = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
     let req = phantom_mcp::McpServer::parse_request(
-        r#"{"jsonrpc":"2.0","id":1,"method":"browser_session_snapshot","params":{}}"#
-    ).unwrap();
+        r#"{"jsonrpc":"2.0","id":1,"method":"browser_session_snapshot","params":{}}"#,
+    )
+    .unwrap();
     let resp = server.handle_request(&adapter, req, None).await.unwrap();
     let result = resp.result.unwrap();
     let snapshot_path = result["snapshot_path"].as_str().unwrap();
@@ -706,8 +836,11 @@ async fn session_snapshot_is_zstd_compressed() {
     let bytes = std::fs::read(snapshot_path).expect("snapshot file must be readable");
     // zstd magic bytes: 0xFD 0x2F 0xB5 0x28 (little-endian frame header)
     assert!(bytes.len() >= 4, "snapshot must have at least 4 bytes");
-    assert_eq!(&bytes[0..4], &[0x28, 0xB5, 0x2F, 0xFD],
-        "snapshot must start with zstd magic bytes");
+    assert_eq!(
+        &bytes[0..4],
+        &[0x28, 0xB5, 0x2F, 0xFD],
+        "snapshot must start with zstd magic bytes"
+    );
     println!("snapshot zstd magic bytes: VERIFIED");
 
     // Clean up
@@ -719,17 +852,21 @@ async fn storage_session_id_validates_uuid_format() {
     use phantom_storage::is_valid_session_id;
     // Valid UUIDs must pass
     assert!(is_valid_session_id("550e8400-e29b-41d4-a716-446655440000"));
-    assert!(is_valid_session_id("00000000-0000-0000-0000-000000000000"),
-        "nil UUID must be valid");
+    assert!(
+        is_valid_session_id("00000000-0000-0000-0000-000000000000"),
+        "nil UUID must be valid"
+    );
     // Invalid must fail
-    assert!(!is_valid_session_id("../../../etc/passwd"),
-        "path traversal must fail");
-    assert!(!is_valid_session_id("not-a-uuid"),
-        "non-UUID must fail");
-    assert!(!is_valid_session_id(""),
-        "empty string must fail");
-    assert!(!is_valid_session_id("550e8400-e29b-41d4-a716"),
-        "short UUID must fail");
+    assert!(
+        !is_valid_session_id("../../../etc/passwd"),
+        "path traversal must fail"
+    );
+    assert!(!is_valid_session_id("not-a-uuid"), "non-UUID must fail");
+    assert!(!is_valid_session_id(""), "empty string must fail");
+    assert!(
+        !is_valid_session_id("550e8400-e29b-41d4-a716"),
+        "short UUID must fail"
+    );
     println!("session_id validation: all 6 cases correct");
 }
 
@@ -737,20 +874,22 @@ async fn storage_session_id_validates_uuid_format() {
 async fn multiple_snapshot_calls_produce_multiple_files() {
     use std::path::Path;
     let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
-    let server  = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
+    let server = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
 
     let mut paths = Vec::new();
     for i in 0..2 {
         // Small delay to ensure different timestamps
         tokio::time::sleep(std::time::Duration::from_millis(1000)).await; // wait 1s because timestamps are per-sec
         let req = phantom_mcp::McpServer::parse_request(
-            r#"{"jsonrpc":"2.0","id":1,"method":"browser_session_snapshot","params":{}}"#
-        ).unwrap();
+            r#"{"jsonrpc":"2.0","id":1,"method":"browser_session_snapshot","params":{}}"#,
+        )
+        .unwrap();
         let resp = server.handle_request(&adapter, req, None).await.unwrap();
         let path = resp.result.unwrap()["snapshot_path"]
-            .as_str().unwrap().to_string();
-        assert!(Path::new(&path).exists(),
-            "snapshot {} must exist", i);
+            .as_str()
+            .unwrap()
+            .to_string();
+        assert!(Path::new(&path).exists(), "snapshot {} must exist", i);
         paths.push(path);
     }
 
@@ -772,15 +911,17 @@ async fn inject_delta_with_no_subscribers_returns_zero() {
     let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
     // No subscribers — send returns RecvError or 0 receivers
     let receivers = adapter.inject_delta("## SCROLL 0,100".to_string());
-    assert_eq!(receivers, 0,
-        "inject_delta with no subscribers must return 0");
+    assert_eq!(
+        receivers, 0,
+        "inject_delta with no subscribers must return 0"
+    );
     println!("inject_delta no subscribers: returns 0");
 }
 
 #[tokio::test]
 async fn inject_delta_with_one_subscriber_delivers_message() {
-    use tokio::time::timeout;
     use std::time::Duration;
+    use tokio::time::timeout;
 
     let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
     let mut rx = adapter.delta_tx.subscribe();
@@ -794,8 +935,7 @@ async fn inject_delta_with_one_subscriber_delivers_message() {
         .expect("must receive within 100ms")
         .expect("channel must not be closed");
 
-    assert_eq!(received, delta,
-        "received delta must match sent delta");
+    assert_eq!(received, delta, "received delta must match sent delta");
     println!("inject_delta with subscriber: message delivered");
 }
 
@@ -806,8 +946,8 @@ async fn sse_endpoint_exists_and_returns_text_event_stream() {
     use tower::ServiceExt;
 
     let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
-    let server  = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
-    let app     = server.router();
+    let server = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
+    let app = server.router();
 
     // GET /sse must return 200 with content-type text/event-stream
     let req = Request::builder()
@@ -817,27 +957,34 @@ async fn sse_endpoint_exists_and_returns_text_event_stream() {
         .unwrap();
 
     let resp = app.oneshot(req).await.unwrap();
-    assert_eq!(resp.status(), StatusCode::OK,
-        "SSE endpoint must return 200");
-    let content_type = resp.headers()
+    assert_eq!(
+        resp.status(),
+        StatusCode::OK,
+        "SSE endpoint must return 200"
+    );
+    let content_type = resp
+        .headers()
         .get("content-type")
         .and_then(|v| v.to_str().ok())
         .unwrap_or("");
-    assert!(content_type.contains("text/event-stream"),
-        "content-type must be text/event-stream, got: {}", content_type);
+    assert!(
+        content_type.contains("text/event-stream"),
+        "content-type must be text/event-stream, got: {}",
+        content_type
+    );
     println!("SSE endpoint: 200 + text/event-stream verified");
 }
 
 #[tokio::test]
 async fn rpc_endpoint_still_works_after_sse_route_added() {
-    use axum::body::Body;
-    use axum::http::{Request, StatusCode, header};
-    use tower::ServiceExt;
     use axum::body::to_bytes;
+    use axum::body::Body;
+    use axum::http::{header, Request, StatusCode};
+    use tower::ServiceExt;
 
     let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
-    let server  = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
-    let app     = server.router();
+    let server = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
+    let app = server.router();
 
     let body = r#"{"jsonrpc":"2.0","id":1,"method":"ping","params":{}}"#;
     let req = Request::builder()
@@ -848,12 +995,18 @@ async fn rpc_endpoint_still_works_after_sse_route_added() {
         .unwrap();
 
     let resp = app.oneshot(req).await.unwrap();
-    assert_eq!(resp.status(), StatusCode::OK,
-        "/rpc must still return 200 after SSE route added");
+    assert_eq!(
+        resp.status(),
+        StatusCode::OK,
+        "/rpc must still return 200 after SSE route added"
+    );
     let bytes = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
     let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
-    assert_eq!(json["result"]["ok"].as_bool(), Some(true),
-        "ping must return ok:true");
+    assert_eq!(
+        json["result"]["ok"].as_bool(),
+        Some(true),
+        "ping must return ok:true"
+    );
     println!("rpc endpoint regression: PASSING");
 }
 
@@ -871,12 +1024,15 @@ async fn broadcast_channel_capacity_is_128() {
     // All 128 must be receivable without lagging
     let mut count = 0;
     while let Ok(msg) = rx.try_recv() {
-        assert!(msg.starts_with("delta_"),
-            "received message must start with delta_");
+        assert!(
+            msg.starts_with("delta_"),
+            "received message must start with delta_"
+        );
         count += 1;
     }
-    assert_eq!(count, 128,
-        "all 128 messages must be receivable from broadcast channel");
+    assert_eq!(
+        count, 128,
+        "all 128 messages must be receivable from broadcast channel"
+    );
     println!("broadcast capacity 128: all {} messages received", count);
 }
-

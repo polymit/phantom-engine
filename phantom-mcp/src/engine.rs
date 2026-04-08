@@ -77,16 +77,16 @@ impl SessionPage {
 /// maps to whatever page is currently loaded in the shared session pool.
 #[derive(Debug, Clone)]
 pub struct TabInfo {
-    pub id:     Uuid,
-    pub url:    String,
-    pub title:  String,
+    pub id: Uuid,
+    pub url: String,
+    pub title: String,
     pub active: bool,
 }
 
 /// In-memory registry of open tabs for multi-page agent workflows.
 #[derive(Debug, Default)]
 pub struct TabStore {
-    pub tabs:       HashMap<Uuid, TabInfo>,
+    pub tabs: HashMap<Uuid, TabInfo>,
     pub active_tab: Option<Uuid>,
 }
 
@@ -206,9 +206,9 @@ impl EngineAdapter {
         let tab_id = Uuid::new_v4();
         let url = url.unwrap_or_default();
         let tab = TabInfo {
-            id:     tab_id,
-            url:    url.clone(),
-            title:  String::new(),
+            id: tab_id,
+            url: url.clone(),
+            title: String::new(),
             active: true,
         };
 

@@ -6,8 +6,8 @@ use std::time::Duration;
 #[derive(Debug, serde::Deserialize)]
 pub struct ClickParams {
     pub selector: String,
-    pub x: Option<f64>,  // target x — defaults to element center
-    pub y: Option<f64>,  // target y — defaults to element center
+    pub x: Option<f64>, // target x — defaults to element center
+    pub y: Option<f64>, // target y — defaults to element center
 }
 
 pub async fn handle_click(

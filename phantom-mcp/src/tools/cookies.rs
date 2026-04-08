@@ -8,7 +8,7 @@ pub async fn handle_get_cookies(
     _params: Value,
 ) -> Result<Value, (StatusCode, Value)> {
     let store = adapter.cookie_store.lock().await;
-    
+
     let mut cookies = Vec::new();
     for c in store.iter_unexpired() {
         cookies.push(json!({

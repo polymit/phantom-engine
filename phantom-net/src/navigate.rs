@@ -2,6 +2,7 @@ use crate::{PhantomNetError, SmartNetworkClient};
 use phantom_core::pipeline::CoreError;
 use phantom_core::{process_html, ParsedPage};
 use phantom_serializer::{HeadlessSerializer, SerialiserConfig, SerialiserMode};
+use std::collections::HashMap;
 use tracing::{info, warn};
 
 #[derive(Debug, Clone)]
@@ -59,8 +60,12 @@ pub enum NavigationError {
     #[error("core pipeline failed for {url}: {source}")]
     Pipeline { url: String, source: CoreError },
 
-    #[error("redirect loop detected for {url}")]
-    RedirectLoop { url: String },
+    #[error("unexpected redirect response {status} fetching {url}")]
+    RedirectResponse {
+        status: u16,
+        url: String,
+        location: Option<String>,
+    },
 
     #[error("all {attempts} attempts failed for {url}")]
     AllAttemptsFailed { url: String, attempts: u8 },
@@ -106,8 +111,10 @@ pub async fn navigate(
         };
 
         if response.status >= 300 && response.status < 400 {
-            return Err(NavigationError::RedirectLoop {
+            return Err(NavigationError::RedirectResponse {
+                status: response.status,
                 url: url.to_string(),
+                location: redirect_location(&response.headers),
             });
         }
 
@@ -182,5 +189,40 @@ pub async fn navigate(
             node_count,
             page,
         });
+    }
+}
+
+fn redirect_location(headers: &HashMap<String, String>) -> Option<String> {
+    headers.iter().find_map(|(k, v)| {
+        if k.eq_ignore_ascii_case("location") {
+            Some(v.clone())
+        } else {
+            None
+        }
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::redirect_location;
+    use std::collections::HashMap;
+
+    #[test]
+    fn redirect_location_is_case_insensitive() {
+        let mut headers = HashMap::new();
+        headers.insert(
+            "Location".to_string(),
+            "https://example.com/next".to_string(),
+        );
+        assert_eq!(
+            redirect_location(&headers).as_deref(),
+            Some("https://example.com/next")
+        );
+    }
+
+    #[test]
+    fn redirect_location_returns_none_when_missing() {
+        let headers = HashMap::new();
+        assert!(redirect_location(&headers).is_none());
     }
 }

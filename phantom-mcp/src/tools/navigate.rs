@@ -64,9 +64,10 @@ pub async fn handle_navigate(
                     "pipeline_error".to_string(),
                     StatusCode::INTERNAL_SERVER_ERROR,
                 ),
-                NavigationError::RedirectLoop { .. } => {
-                    ("redirect_loop".to_string(), StatusCode::BAD_GATEWAY)
-                }
+                NavigationError::RedirectResponse { status, .. } => (
+                    format!("redirect_response_{}", status),
+                    StatusCode::BAD_GATEWAY,
+                ),
                 NavigationError::AllAttemptsFailed { .. } => {
                     ("all_attempts_failed".to_string(), StatusCode::BAD_GATEWAY)
                 }

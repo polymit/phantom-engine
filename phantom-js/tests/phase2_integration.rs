@@ -128,7 +128,7 @@ async fn phase2_full_pipeline_tier1() {
         "CCT must start with ##PAGE header"
     );
     assert!(
-        cct.contains("url=https://app.example.com/login"),
+        cct.contains("url=https%3A%2F%2Fapp.example.com%2Flogin"),
         "CCT ##PAGE must contain the URL"
     );
     assert!(

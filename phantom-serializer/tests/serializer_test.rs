@@ -265,10 +265,31 @@ mod tests {
 
         let cct = HeadlessSerializer::serialise(&page, &config);
         let first_line = cct.lines().next().unwrap_or("");
-        assert!(first_line.starts_with("##PAGE url=https://test.com"));
+        assert!(first_line.starts_with("##PAGE url=https%3A%2F%2Ftest.com"));
         assert!(first_line.contains("viewport=1280x720"));
         assert!(first_line.contains("mode=full"));
         println!("Page header: {}", first_line);
+    }
+
+    #[test]
+    fn test_page_header_url_is_percent_encoded() {
+        let page = process_html(
+            "<html><body><p>Hello</p></body></html>",
+            "https://example.com",
+            1280.0,
+            720.0,
+        )
+        .unwrap();
+        let config = SerialiserConfig {
+            url: "https://example.com/path with space?q=a b".to_string(),
+            ..Default::default()
+        };
+
+        let cct = HeadlessSerializer::serialise(&page, &config);
+        let first_line = cct.lines().next().unwrap_or("");
+        assert!(
+            first_line.contains("url=https%3A%2F%2Fexample.com%2Fpath%20with%20space%3Fq%3Da%20b")
+        );
     }
 
     #[test]

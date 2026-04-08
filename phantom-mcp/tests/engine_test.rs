@@ -307,7 +307,8 @@ async fn scene_graph_cct_header_contains_correct_url() {
     use phantom_mcp::engine::SessionPage;
     use phantom_serializer::{HeadlessSerializer, SerialiserConfig};
 
-    let adapter = get_test_adapter().await.clone();
+    init_v8();
+    let adapter = EngineAdapter::new(2, 0, 2, 0).await;
 
     let page = process_html(
         "<html><body style='width:1280px;height:720px;'>

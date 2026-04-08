@@ -103,7 +103,7 @@ mod phase1_integration {
             "CCT must start with ##PAGE header"
         );
         assert!(
-            cct.contains("url=https://app.example.com/login"),
+            cct.contains("url=https%3A%2F%2Fapp.example.com%2Flogin"),
             "CCT page header must contain URL"
         );
         assert!(

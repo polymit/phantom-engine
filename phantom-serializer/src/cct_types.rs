@@ -521,16 +521,32 @@ pub struct CctPageHeader {
     pub mode: SerialiserMode,
 }
 
+fn encode_page_url_field(url: &str) -> String {
+    let mut encoded = String::with_capacity(url.len());
+    for &byte in url.as_bytes() {
+        match byte {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'.' | b'_' | b'~' => {
+                encoded.push(byte as char);
+            }
+            _ => {
+                let _ = write!(encoded, "%{:02X}", byte);
+            }
+        }
+    }
+    encoded
+}
+
 impl fmt::Display for CctPageHeader {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let m = match self.mode {
             SerialiserMode::Full => "full",
             SerialiserMode::Selective => "selective",
         };
+        let encoded_url = encode_page_url_field(&self.url);
         write!(
             f,
             "##PAGE url={} scroll={},{} viewport={}x{} total={},{} nodes={} mode={}",
-            self.url,
+            encoded_url,
             self.scroll_x,
             self.scroll_y,
             self.viewport_width,

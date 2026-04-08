@@ -39,6 +39,21 @@ fn test_tier2_shims_in_snapshot() {
 }
 
 #[test]
+fn test_tier2_html_element_inherits_event_target_when_present() {
+    let mut session = phantom_js::tier2::session::Tier2Session::new().unwrap();
+    let has_event_methods = session
+        .eval(
+            "String(typeof HTMLElement === 'undefined' || typeof HTMLElement.prototype.addEventListener === 'function')",
+        )
+        .unwrap();
+    assert_eq!(
+        has_event_methods, "true",
+        "HTMLElement.prototype must inherit EventTarget methods in snapshot"
+    );
+    session.destroy();
+}
+
+#[test]
 fn test_tier2_session_isolation() {
     // Two Tier2 sessions must not share globals — D-40
     let mut s1 = phantom_js::tier2::session::Tier2Session::new().unwrap();

@@ -96,18 +96,18 @@ fn create_snapshot(flavor: SnapshotFlavor) {
         globalThis.Notification = { permission: 'default' };
     "#).expect("default persona injection must not fail");
 
-    // Pre-execute browser shims into the snapshot
-    // This means every session loaded from this snapshot already has
-    // all anti-detection shims applied — <0.1ms instead of ~1ms
-    let shims = include_str!("js/browser_shims.js");
-    runtime
-        .execute_script("<phantom_shims>", shims)
-        .expect("browser_shims.js must execute without error in snapshot");
-
     let event_target = include_str!("js/event_target.js");
     runtime
         .execute_script("<phantom_event_target>", event_target)
         .expect("event_target.js must execute without error");
+
+    // Pre-execute browser shims into the snapshot.
+    // event_target.js must be loaded first because shim #19 patches
+    // HTMLElement.prototype to inherit from EventTarget.prototype.
+    let shims = include_str!("js/browser_shims.js");
+    runtime
+        .execute_script("<phantom_shims>", shims)
+        .expect("browser_shims.js must execute without error in snapshot");
 
     let mutation_observer = include_str!("js/mutation_observer.js");
     runtime

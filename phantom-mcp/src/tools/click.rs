@@ -1,5 +1,6 @@
 use axum::http::StatusCode;
 use phantom_js::BehaviorEngine;
+use phantom_serializer::CctDelta;
 use serde_json::{json, Value};
 use std::time::Duration;
 
@@ -28,7 +29,7 @@ pub async fn handle_click(
 
     let selector = click_params.selector;
 
-    let (tree, default_x, default_y) = {
+    let (tree, default_x, default_y, target_node_id) = {
         let page = adapter.get_page().ok_or_else(|| {
             (
                 StatusCode::BAD_REQUEST,
@@ -63,7 +64,7 @@ pub async fn handle_click(
         } else {
             360.0
         };
-        (tree, default_x, default_y)
+        (tree, default_x, default_y, target_node_id)
     };
 
     let behavior = BehaviorEngine::new();
@@ -192,6 +193,11 @@ pub async fn handle_click(
 
     // Release session back to pool
     adapter.tier1.release_after_use(session);
+    adapter.inject_cct_delta(CctDelta::Update {
+        node_id: target_node_id,
+        display: None,
+        bounds: None,
+    });
 
     Ok(json!({
         "clicked": true,

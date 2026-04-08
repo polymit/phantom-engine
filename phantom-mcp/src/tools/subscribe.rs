@@ -11,16 +11,17 @@ use tokio_stream::StreamExt;
 pub async fn sse_handler(
     axum::extract::State(server): axum::extract::State<crate::McpServer>,
 ) -> Sse<impl futures_util::stream::Stream<Item = Result<Event, Infallible>>> {
+    let replay = tokio_stream::iter(server.adapter.delta_replay_snapshot().into_iter())
+        .map(|delta| Ok(Event::default().event("dom_delta").data(delta)));
     let rx = server.adapter.delta_tx.subscribe();
-    let stream = BroadcastStream::new(rx).filter_map(|msg| {
-        match msg {
-            Ok(delta) => Some(Ok(Event::default().event("dom_delta").data(delta))),
-            Err(tokio_stream::wrappers::errors::BroadcastStreamRecvError::Lagged(n)) => {
-                tracing::warn!("SSE subscriber lagged by {} messages", n);
-                None // skip lagged events — don't disconnect
-            }
+    let live = BroadcastStream::new(rx).filter_map(|msg| match msg {
+        Ok(delta) => Some(Ok(Event::default().event("dom_delta").data(delta))),
+        Err(tokio_stream::wrappers::errors::BroadcastStreamRecvError::Lagged(n)) => {
+            tracing::warn!("SSE subscriber lagged by {} messages", n);
+            None // skip lagged events — don't disconnect
         }
     });
+    let stream = replay.chain(live);
 
     Sse::new(stream).keep_alive(
         KeepAlive::new()

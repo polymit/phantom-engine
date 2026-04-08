@@ -78,6 +78,7 @@ async fn phase3_full_pipeline_navigate_and_scene_graph() {
 #[tokio::test]
 async fn phase3_click_login_button() {
     let (adapter, server) = setup_with_page().await;
+    let mut rx = adapter.delta_tx.subscribe();
     let req = McpServer::parse_request(
         r##"{"jsonrpc":"2.0","id":1,"method":"browser_click","params":{"selector":"#login-btn"}}"##,
     )
@@ -93,11 +94,21 @@ async fn phase3_click_login_button() {
         result.get("selector").unwrap().as_str().unwrap(),
         "#login-btn"
     );
+    let delta = timeout(Duration::from_millis(200), rx.recv())
+        .await
+        .unwrap()
+        .unwrap();
+    assert!(
+        delta.starts_with("~ "),
+        "click should emit an update delta, got: {}",
+        delta
+    );
 }
 
 #[tokio::test]
 async fn phase3_type_into_email_field() {
     let (adapter, server) = setup_with_page().await;
+    let mut rx = adapter.delta_tx.subscribe();
     let req = McpServer::parse_request(r##"{"jsonrpc":"2.0","id":1,"method":"browser_type","params":{"selector":"#email-input","text":"agent@example.com","delay_ms":0}}"##).unwrap();
     let resp = server.handle_request(&adapter, req, None).await.unwrap();
 
@@ -105,6 +116,15 @@ async fn phase3_type_into_email_field() {
     let result = resp.result.unwrap();
     assert_eq!(result.get("typed").unwrap().as_bool(), Some(true));
     assert_eq!(result.get("characters").unwrap().as_u64(), Some(17));
+    let delta = timeout(Duration::from_millis(200), rx.recv())
+        .await
+        .unwrap()
+        .unwrap();
+    assert!(
+        delta.starts_with("~ "),
+        "type should emit an update delta, got: {}",
+        delta
+    );
 }
 
 #[tokio::test]

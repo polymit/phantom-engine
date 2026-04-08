@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
 
 use parking_lot::Mutex;
@@ -7,6 +7,7 @@ use phantom_core::{rebuild_page_from_tree, DomTree, ParsedPage};
 use phantom_js::tier1::pool::Tier1Pool;
 use phantom_js::tier2::pool::Tier2Pool;
 use phantom_net::SmartNetworkClient;
+use phantom_serializer::CctDelta;
 use phantom_session::SessionBroker;
 use std::sync::Once;
 use tokio::sync::OnceCell;
@@ -15,6 +16,7 @@ use uuid::Uuid;
 
 static INIT: Once = Once::new();
 static TEST_ADAPTER: OnceCell<&'static EngineAdapter> = OnceCell::const_new();
+const DELTA_REPLAY_CAP: usize = 256;
 
 /// Global V8 platform initialiser. Safe to call multiple times.
 pub fn init_v8() {
@@ -132,6 +134,9 @@ pub struct EngineAdapter {
     pub session_uuid: uuid::Uuid,
     /// SSE delta broadcast channel
     pub delta_tx: tokio::sync::broadcast::Sender<String>,
+    /// Replay buffer for late SSE subscribers.
+    /// Keeps the most recent deltas when no receiver is attached.
+    pub delta_replay: Arc<Mutex<VecDeque<String>>>,
 }
 
 impl EngineAdapter {
@@ -167,6 +172,7 @@ impl EngineAdapter {
             session_uuid: uuid::Uuid::new_v4(),
             cookie_store: Arc::new(tokio::sync::Mutex::new(cookie_store::CookieStore::default())),
             delta_tx,
+            delta_replay: Arc::new(Mutex::new(VecDeque::with_capacity(DELTA_REPLAY_CAP))),
         }
     }
 
@@ -177,10 +183,31 @@ impl EngineAdapter {
     }
 
     pub fn inject_delta(&self, delta: String) -> usize {
-        // Sends a delta string to all SSE subscribers.
-        // Returns the number of active receivers.
-        // Returns 0 if no subscribers (this is fine — not an error).
-        self.delta_tx.send(delta).unwrap_or(0)
+        {
+            let mut replay = self.delta_replay.lock();
+            if replay.len() >= DELTA_REPLAY_CAP {
+                replay.pop_front();
+            }
+            replay.push_back(delta.clone());
+        }
+
+        match self.delta_tx.send(delta) {
+            Ok(receivers) => receivers,
+            Err(err) => {
+                tracing::debug!("delta queued with no active SSE subscriber: {}", err.0);
+                0
+            }
+        }
+    }
+
+    /// Sends a typed CCT delta to SSE subscribers.
+    pub fn inject_cct_delta(&self, delta: CctDelta) -> usize {
+        self.inject_delta(delta.to_string())
+    }
+
+    /// Snapshot the replay buffer for diagnostics and tests.
+    pub fn delta_replay_snapshot(&self) -> Vec<String> {
+        self.delta_replay.lock().iter().cloned().collect()
     }
 
     /// Rotate to the next persona and return it.

@@ -1,5 +1,5 @@
-use phantom_mcp::engine::get_test_adapter;
-use phantom_mcp::McpServer;
+use phantom_mcp::engine::{get_test_adapter, init_v8};
+use phantom_mcp::{EngineAdapter, McpServer};
 
 #[tokio::test]
 async fn engine_adapter_constructs_successfully() {
@@ -90,6 +90,25 @@ fn api_key_enforcement_still_works() {
         );
         println!("API key enforcement: VERIFIED");
     });
+}
+
+#[tokio::test]
+async fn inject_delta_is_retained_without_subscribers() {
+    init_v8();
+    let adapter = EngineAdapter::new(2, 0, 2, 0).await;
+    assert!(
+        adapter.delta_replay_snapshot().is_empty(),
+        "new adapter should start with empty replay buffer"
+    );
+
+    let receivers = adapter.inject_delta("##SCROLL 0,99".to_string());
+    assert_eq!(
+        receivers, 0,
+        "send count should be zero without subscribers"
+    );
+
+    let replay = adapter.delta_replay_snapshot();
+    assert_eq!(replay.last().map(String::as_str), Some("##SCROLL 0,99"));
 }
 
 // ── browser_get_scene_graph tests ──────────────────────────────────

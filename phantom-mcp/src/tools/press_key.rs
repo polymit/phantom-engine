@@ -1,5 +1,6 @@
 use crate::engine::EngineAdapter;
 use axum::http::StatusCode;
+use phantom_serializer::CctDelta;
 use serde_json::{json, Value};
 
 #[derive(Debug, serde::Deserialize)]
@@ -51,6 +52,7 @@ pub async fn handle_press_key(
         })?;
         page.tree.clone()
     };
+    let delta_node_id = tree.document_root;
 
     let mut session = adapter.tier1.acquire().await.map_err(|_| {
         (
@@ -83,5 +85,12 @@ pub async fn handle_press_key(
     }
 
     adapter.tier1.release_after_use(session);
+    if let Some(node_id) = delta_node_id {
+        adapter.inject_cct_delta(CctDelta::Update {
+            node_id,
+            display: None,
+            bounds: None,
+        });
+    }
     Ok(json!({ "pressed": true, "key": key }))
 }

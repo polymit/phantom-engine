@@ -1,6 +1,7 @@
 use crate::engine::EngineAdapter;
 use axum::http::StatusCode;
 use phantom_js::BehaviorEngine;
+use phantom_serializer::CctDelta;
 use serde_json::{json, Value};
 
 #[derive(Debug, serde::Deserialize)]
@@ -44,6 +45,11 @@ pub async fn handle_type(
             json!({ "error": { "code": "invalid_params", "message": "selector is required" } }),
         ));
     }
+    let TypeParams {
+        selector,
+        text,
+        delay_ms,
+    } = p;
 
     let tree = {
         let page = adapter.get_page().ok_or_else(|| {
@@ -54,6 +60,7 @@ pub async fn handle_type(
         })?;
         page.tree.clone()
     };
+    let delta_node_id = tree.query_selector(&selector).or(tree.document_root);
 
     let mut session = adapter.tier1.acquire().await.map_err(|_| {
         (
@@ -63,11 +70,6 @@ pub async fn handle_type(
     })?;
     session.attach_dom(tree).await;
 
-    let TypeParams {
-        selector,
-        text,
-        delay_ms,
-    } = p;
     let safe_selector = escape_js_single_quoted(&selector);
     let focus_script = format!(
         "(() => {{
@@ -155,5 +157,12 @@ pub async fn handle_type(
     }
 
     adapter.tier1.release_after_use(session);
+    if let Some(node_id) = delta_node_id {
+        adapter.inject_cct_delta(CctDelta::Update {
+            node_id,
+            display: None,
+            bounds: None,
+        });
+    }
     Ok(json!({ "typed": true, "characters": text.chars().count() }))
 }

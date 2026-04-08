@@ -1,4 +1,5 @@
 use axum::http::StatusCode;
+use phantom_serializer::CctDelta;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
@@ -80,6 +81,7 @@ pub async fn handle_navigate(
     let response_status = result.status;
     let response_cct = result.cct.clone();
     let response_node_count = result.node_count;
+    let delta_root = result.page.tree.document_root;
 
     // Persist the parsed page so browser_get_scene_graph can re-serialise
     // with different scroll/mode parameters without re-fetching.
@@ -90,6 +92,13 @@ pub async fn handle_navigate(
         config.viewport_width,
         config.viewport_height,
     ));
+    if let Some(node_id) = delta_root {
+        adapter.inject_cct_delta(CctDelta::Update {
+            node_id,
+            display: None,
+            bounds: None,
+        });
+    }
 
     Ok(json!({
         "url":        response_url,

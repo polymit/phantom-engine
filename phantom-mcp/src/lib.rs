@@ -162,6 +162,16 @@ impl McpServer {
                 tool_response(req_id, outcome, "evaluate failed", "js_error")
             }
 
+            "browser_type" => {
+                let outcome = tools::type_text::handle_type(adapter, req.params).await;
+                tool_response(req_id, outcome, "type failed", "type_error")
+            }
+
+            "browser_press_key" => {
+                let outcome = tools::press_key::handle_press_key(adapter, req.params).await;
+                tool_response(req_id, outcome, "press key failed", "press_key_error")
+            }
+
             "browser_new_tab" => {
                 let outcome = tools::tabs::handle_new_tab(adapter, req.params).await;
                 tool_response(req_id, outcome, "new tab failed", "tab_error")

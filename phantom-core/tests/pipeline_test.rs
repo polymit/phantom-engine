@@ -92,6 +92,16 @@ mod tests {
         let elapsed = start.elapsed();
 
         assert!(result.is_ok(), "Pipeline failed: {:?}", result.err());
+        let page = result.unwrap();
+        assert!(
+            page.tree.document_root.is_some(),
+            "pipeline benchmark page must produce a document root"
+        );
+        let interactive_nodes = page.tree.query_selector_all("button").len();
+        assert!(
+            interactive_nodes >= 333,
+            "benchmark fixture should include all generated buttons"
+        );
         println!("Pipeline processed ~1000-node page in {:?}", elapsed);
 
         // We do not assert on timing in CI (machine-dependent)

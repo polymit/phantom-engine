@@ -37,8 +37,20 @@ async fn handle_navigate_invalid_url_returns_error() {
     )
     .unwrap();
     let resp = server.handle_request(&adapter, req, None).await.unwrap();
-    // Navigating to "not-a-url" must not panic and must return some response
-    println!("invalid url: response error={:?}", resp.error);
+    assert!(
+        resp.error.is_some(),
+        "invalid URL must produce an error response"
+    );
+    assert!(
+        resp.result.is_none(),
+        "invalid URL must not produce a success result"
+    );
+    let err = resp.error.unwrap();
+    assert!(
+        err.message.contains("network_error"),
+        "invalid URL should map to network_error, got: {}",
+        err.message
+    );
 }
 
 #[test]

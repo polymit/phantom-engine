@@ -69,6 +69,8 @@ mod tests {
         println!("First 200 chars:\n{}", &cct[..cct.len().min(200)]);
 
         assert!(cct.starts_with("##PAGE"));
+        let emitted_nodes = cct.lines().filter(|line| !line.starts_with("##")).count();
+        assert!(emitted_nodes > 0, "serializer must emit at least one node");
     }
 
     #[test]
@@ -280,16 +282,33 @@ mod tests {
         };
 
         // Warm up (first call initialises buffer pool)
-        let _ = HeadlessSerializer::serialise(&page, &config);
+        let warmup = HeadlessSerializer::serialise(&page, &config);
+        assert!(
+            warmup.starts_with("##PAGE"),
+            "warmup serialisation must produce a valid CCT page header"
+        );
 
         // Measure subsequent calls (hot path)
         let iterations = 10;
         let start = Instant::now();
+        let mut last_cct = String::new();
         for _ in 0..iterations {
-            let _ = HeadlessSerializer::serialise(&page, &config);
+            last_cct = HeadlessSerializer::serialise(&page, &config);
         }
         let total = start.elapsed();
         let avg_ms = total.as_millis() as f64 / iterations as f64;
+        assert!(
+            last_cct.starts_with("##PAGE"),
+            "hot-path serialisation must still produce a valid CCT header"
+        );
+        let emitted_nodes = last_cct
+            .lines()
+            .filter(|line| !line.starts_with("##"))
+            .count();
+        assert!(
+            emitted_nodes > 0,
+            "hot-path serialisation must emit at least one node"
+        );
 
         println!("Average serialisation time: {:.2}ms", avg_ms);
         println!("Target: <5ms (goal), <10ms (minimum)");

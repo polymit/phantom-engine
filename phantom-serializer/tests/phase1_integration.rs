@@ -213,16 +213,33 @@ mod phase1_integration {
         };
 
         // Warm-up: initialises the global buffer pool
-        let _ = HeadlessSerializer::serialise(&page, &config);
+        let warmup = HeadlessSerializer::serialise(&page, &config);
+        assert!(
+            warmup.starts_with("##PAGE"),
+            "warmup serialisation must produce a valid CCT page header"
+        );
 
         let iterations = 10u32;
         let start = Instant::now();
+        let mut last_cct = String::new();
         for _ in 0..iterations {
-            let _ = HeadlessSerializer::serialise(&page, &config);
+            last_cct = HeadlessSerializer::serialise(&page, &config);
         }
         let elapsed = start.elapsed();
         let avg_us = elapsed.as_micros() / iterations as u128;
         let avg_ms = avg_us as f64 / 1000.0;
+        assert!(
+            last_cct.starts_with("##PAGE"),
+            "benchmark serialisation must produce a valid CCT page header"
+        );
+        let emitted_nodes = last_cct
+            .lines()
+            .filter(|line| !line.starts_with("##"))
+            .count();
+        assert!(
+            emitted_nodes > 0,
+            "benchmark serialisation must emit at least one node"
+        );
 
         println!("\n=== PHASE 1 BENCHMARK ===");
         println!("Iterations: {}", iterations);

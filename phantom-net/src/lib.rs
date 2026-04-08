@@ -211,7 +211,7 @@ fn normalize_authority(input: &str) -> Result<String, PhantomNetError> {
 
 #[cfg(test)]
 mod tests {
-    use super::{AltSvcInfo, SmartNetworkClient, Transport};
+    use super::{AltSvcInfo, PhantomNetError, SmartNetworkClient, Transport};
 
     #[test]
     fn unknown_authority_defaults_to_h2() {
@@ -241,13 +241,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn fetch_real_url_returns_body() {
-        // Uses Chrome133 persona — real HTTP GET to a stable URL.
-        // This test requires network access.
-        // If it fails with a connection error in CI — that is expected.
-        // The test validates that the client is correctly constructed
-        // and the fetch() method works end-to-end.
-
+    async fn fetch_invalid_url_returns_invalid_url_error() {
         use phantom_anti_detect::Persona;
         use rand::rngs::OsRng;
         use rand::RngCore;
@@ -255,63 +249,40 @@ mod tests {
         let persona = Persona::chrome_133(OsRng.next_u64());
         let client = SmartNetworkClient::with_persona(&persona);
 
-        let result = client.fetch("https://httpbin.org/get").await;
-
-        match result {
-            Ok(resp) => {
-                assert!(
-                    resp.status == 200,
-                    "httpbin.org/get must return 200, got {}",
-                    resp.status
-                );
-                assert!(!resp.body.is_empty(), "response body must not be empty");
-                assert!(!resp.final_url.is_empty(), "final_url must not be empty");
-                println!(
-                    "fetch_real_url: status={}, body_len={}",
-                    resp.status,
-                    resp.body.len()
-                );
-            }
-            Err(e) => {
-                // Network may be unavailable in sandboxed CI
-                println!("fetch_real_url: skipped (network unavailable): {}", e);
-            }
-        }
+        let err = match client.fetch("not-a-url").await {
+            Ok(_) => panic!("invalid URL must not be accepted by fetch"),
+            Err(err) => err,
+        };
+        assert!(
+            matches!(err, PhantomNetError::InvalidUrl(_)),
+            "invalid URL should map to PhantomNetError::InvalidUrl, got: {err}"
+        );
     }
 
     #[tokio::test]
-    async fn fetch_alt_svc_cache_populated_from_response() {
-        // Verifies that fetch() parses Alt-Svc and updates the cache.
-        // Uses a mock — does not require network.
-        // This test verifies the wiring between fetch() and
-        // record_alt_svc(), not the HTTP request itself.
-
-        use phantom_anti_detect::Persona;
-        use rand::rngs::OsRng;
-        use rand::RngCore;
-
-        let persona = Persona::chrome_133(OsRng.next_u64());
-        let client = SmartNetworkClient::with_persona(&persona); // intentionally test with mut/non-mut
-
-        // Manually inject an Alt-Svc entry as if fetch() had parsed it
+    async fn manual_alt_svc_injection_updates_transport_policy() {
+        let client = SmartNetworkClient::new("persona_a");
         client
             .record_alt_svc(
-                "example.com",
+                "LOCALHOST",
                 AltSvcInfo {
                     h3: true,
                     max_age_secs: 3600,
                 },
             )
-            .unwrap();
+            .expect("Alt-Svc insertion should succeed");
 
-        // Verify transport selection reflects the cached Alt-Svc
-        let transport = client.select_transport("example.com").unwrap();
+        let transport = client
+            .select_transport("localhost")
+            .expect("transport lookup should succeed for normalized authority");
         assert_eq!(
             transport,
             Transport::Http3,
-            "After Alt-Svc h3=true, transport must be Http3"
+            "manual Alt-Svc h3 policy should prefer Http3"
         );
-
-        println!("Alt-Svc cache wiring: VERIFIED");
+        assert!(
+            client.alt_svc_entries() >= 1,
+            "Alt-Svc cache should contain at least one entry after insertion"
+        );
     }
 }

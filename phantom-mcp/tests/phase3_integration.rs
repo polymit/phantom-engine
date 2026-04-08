@@ -128,10 +128,18 @@ async fn phase3_evaluate_document_title() {
     let req = McpServer::parse_request(r#"{"jsonrpc":"2.0","id":1,"method":"browser_evaluate","params":{"script":"document.title"}}"#).unwrap();
     let resp = server.handle_request(&adapter, req, None).await.unwrap();
 
-    if let Some(err) = &resp.error {
-        println!("EVALUATE ERROR: {:?}", err);
-    }
     assert!(resp.error.is_none());
+    let result = resp.result.unwrap();
+    assert_eq!(
+        result.get("type").and_then(|v| v.as_str()),
+        Some("string"),
+        "document.title should evaluate to a string"
+    );
+    assert_eq!(
+        result.get("result").and_then(|v| v.as_str()),
+        Some("Phase 3 Integration — Login"),
+        "document.title value should match the fixture title"
+    );
 }
 
 #[tokio::test]
@@ -140,10 +148,18 @@ async fn phase3_evaluate_query_selector_count() {
     let req = McpServer::parse_request(r#"{"jsonrpc":"2.0","id":1,"method":"browser_evaluate","params":{"script":"document.querySelectorAll('input').length"}}"#).unwrap();
     let resp = server.handle_request(&adapter, req, None).await.unwrap();
 
-    if let Some(err) = &resp.error {
-        println!("EVALUATE ERROR 2: {:?}", err);
-    }
     assert!(resp.error.is_none());
+    let result = resp.result.unwrap();
+    assert_eq!(
+        result.get("type").and_then(|v| v.as_str()),
+        Some("number"),
+        "querySelectorAll(...).length should evaluate to a number"
+    );
+    assert_eq!(
+        result.get("result").and_then(|v| v.as_u64()),
+        Some(2),
+        "fixture should contain exactly two input elements"
+    );
 }
 
 #[tokio::test]
@@ -325,9 +341,12 @@ async fn phase3_sse_subscribes_and_receives_delta() {
 #[tokio::test]
 async fn phase3_selective_mode_on_large_page() {
     let adapter = EngineAdapter::new(5, 0, 5, 0).await;
-    let mut html = String::from("<html><body>");
+    let mut html = String::from("<html><body style='width:1280px;height:720px;'>");
     for i in 0..600 {
-        html.push_str(&format!("<div id='d{}'>div {}</div>", i, i));
+        html.push_str(&format!(
+            "<div id='d{}' style='width:20px;height:10px;'>div {}</div>",
+            i, i
+        ));
     }
     html.push_str("</body></html>");
     let page = process_html(&html, "https://large.test", 1280.0, 720.0).unwrap();
@@ -343,9 +362,20 @@ async fn phase3_selective_mode_on_large_page() {
 
     let result = resp.result.unwrap();
     let cct = result.get("cct").unwrap().as_str().unwrap();
-    assert!(cct.contains("mode=selective") || cct.contains("mode=full"));
+    assert_eq!(
+        result.get("mode").and_then(|v| v.as_str()),
+        Some("selective")
+    );
+    assert!(
+        cct.contains("mode=selective"),
+        "CCT header should reflect selective mode"
+    );
     let count = result.get("node_count").unwrap().as_u64().unwrap();
-    assert!(count < 602 || count >= 600);
+    let emitted_count = cct.lines().filter(|line| !line.starts_with("##")).count() as u64;
+    assert_eq!(
+        count, emitted_count,
+        "node_count should match emitted nodes"
+    );
 }
 
 #[tokio::test]
@@ -387,23 +417,28 @@ async fn phase3_real_page_navigation() {
     let server = McpServer::new_with_adapter(None, adapter.clone());
 
     let start = Instant::now();
-    let req = McpServer::parse_request(r#"{"jsonrpc":"2.0","id":1,"method":"browser_navigate","params":{"url":"https://httpbin.org/html"}}"#).unwrap();
-    if let Ok(resp) = server.handle_request(&adapter, req, None).await {
-        if resp.error.is_none() {
-            let req2 = McpServer::parse_request(
-                r#"{"jsonrpc":"2.0","id":2,"method":"browser_get_scene_graph","params":{}}"#,
-            )
-            .unwrap();
-            let resp2 = server.handle_request(&adapter, req2, None).await.unwrap();
-            let result = resp2.result.unwrap();
-            let cct = result.get("cct").unwrap().as_str().unwrap();
-            assert!(cct.starts_with("##PAGE"));
-            assert!(cct.contains("httpbin.org"));
-            println!("Navigation took: {}ms", start.elapsed().as_millis());
-        } else {
-            println!("SKIPPED: Real page navigation failed (potentially offline)");
-        }
+    let req = McpServer::parse_request(
+        r#"{"jsonrpc":"2.0","id":1,"method":"browser_navigate","params":{"url":"https://httpbin.org/html"}}"#,
+    )
+    .unwrap();
+    let resp = server.handle_request(&adapter, req, None).await.unwrap();
+    if resp.error.is_none() {
+        let req2 = McpServer::parse_request(
+            r#"{"jsonrpc":"2.0","id":2,"method":"browser_get_scene_graph","params":{}}"#,
+        )
+        .unwrap();
+        let resp2 = server.handle_request(&adapter, req2, None).await.unwrap();
+        let result = resp2.result.unwrap();
+        let cct = result.get("cct").unwrap().as_str().unwrap();
+        assert!(cct.starts_with("##PAGE"));
+        assert!(cct.contains("httpbin.org"));
+        println!("Navigation took: {}ms", start.elapsed().as_millis());
     } else {
-        println!("SKIPPED: Real page navigation failed (potentially offline)");
+        let err = resp.error.unwrap();
+        assert!(
+            err.message.contains("all_attempts_failed") || err.message.contains("network_error"),
+            "unexpected browser_navigate failure: {}",
+            err.message
+        );
     }
 }

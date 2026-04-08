@@ -30,58 +30,33 @@ async fn install_timers(session: &Tier1Session, session_id: u64, cancelled: Arc<
 
 #[tokio::test]
 async fn test_set_timeout_fires() {
-    // spawn_local requires a LocalSet — timers use tokio::task::spawn_local
-    let local = tokio::task::LocalSet::new();
-    local
-        .run_until(async move {
-            let session = Tier1Session::new().await.unwrap();
-
-            // Set a global flag in JS, then use setTimeout to flip it
-            session
-                .eval("globalThis.__timer_fired = false;")
-                .await
-                .unwrap();
-
-            let session_id = next_session_id();
-            let cancelled = Arc::new(AtomicBool::new(false));
-            install_timers(&session, session_id, Arc::clone(&cancelled)).await;
-
-            session
-                .eval("setTimeout(function() { globalThis.__timer_fired = true; }, 50);")
-                .await
-                .unwrap();
-
-            // Wait well beyond the 50ms timer delay
-            tokio::time::sleep(std::time::Duration::from_millis(300)).await;
-
-            // Drain the microtask queue so the timer callback can run
-            session.eval("").await.unwrap();
-
-            let fired = session.eval("globalThis.__timer_fired").await.unwrap();
-            assert_eq!(
-                fired, "true",
-                "setTimeout callback must have fired after 50ms delay"
-            );
-
-            cancelled.store(true, Ordering::SeqCst);
-            session.destroy();
-        })
-        .await;
-}
-
-#[tokio::test]
-async fn test_set_timeout_without_localset_is_error_not_panic() {
     let session = Tier1Session::new().await.unwrap();
+
+    // Set a global flag in JS, then use setTimeout to flip it
+    session
+        .eval("globalThis.__timer_fired = false;")
+        .await
+        .unwrap();
 
     let session_id = next_session_id();
     let cancelled = Arc::new(AtomicBool::new(false));
     install_timers(&session, session_id, Arc::clone(&cancelled)).await;
 
-    // No LocalSet here: setTimeout must return a JS error, not panic the process.
-    let result = session.eval("setTimeout(function() {}, 1);").await;
-    assert!(
-        result.is_err(),
-        "setTimeout outside LocalSet must fail gracefully"
+    session
+        .eval("setTimeout(function() { globalThis.__timer_fired = true; }, 50);")
+        .await
+        .unwrap();
+
+    // Wait well beyond the 50ms timer delay
+    tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+
+    // Pump the local task set to let the timer callback run.
+    session.eval("").await.unwrap();
+
+    let fired = session.eval("globalThis.__timer_fired").await.unwrap();
+    assert_eq!(
+        fired, "true",
+        "setTimeout callback must have fired after 50ms delay"
     );
 
     cancelled.store(true, Ordering::SeqCst);
@@ -89,60 +64,92 @@ async fn test_set_timeout_without_localset_is_error_not_panic() {
 }
 
 #[tokio::test]
+async fn test_set_timeout_without_localset_fires() {
+    let session = Tier1Session::new().await.unwrap();
+
+    session
+        .eval("globalThis.__timer_fired_no_local = false;")
+        .await
+        .unwrap();
+
+    let session_id = next_session_id();
+    let cancelled = Arc::new(AtomicBool::new(false));
+    install_timers(&session, session_id, Arc::clone(&cancelled)).await;
+
+    // No LocalSet here: timers should still schedule and fire.
+    session
+        .eval("setTimeout(function() { globalThis.__timer_fired_no_local = true; }, 10);")
+        .await
+        .unwrap();
+
+    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    session.eval("").await.unwrap();
+
+    let fired = session
+        .eval("globalThis.__timer_fired_no_local")
+        .await
+        .unwrap();
+    assert_eq!(fired, "true", "timer must fire without LocalSet");
+
+    cancelled.store(true, Ordering::SeqCst);
+    session.destroy();
+}
+
+#[tokio::test]
 async fn test_set_interval_repeats_and_stops() {
-    let local = tokio::task::LocalSet::new();
-    local
-        .run_until(async move {
-            let session = Tier1Session::new().await.unwrap();
+    let session = Tier1Session::new().await.unwrap();
 
-            let session_id = next_session_id();
-            let cancelled = Arc::new(AtomicBool::new(false));
-            install_timers(&session, session_id, Arc::clone(&cancelled)).await;
+    let session_id = next_session_id();
+    let cancelled = Arc::new(AtomicBool::new(false));
+    install_timers(&session, session_id, Arc::clone(&cancelled)).await;
 
-            session
-                .eval("globalThis.__ticks = 0;")
-                .await
-                .unwrap();
-            session
-                .eval(
-                    "globalThis.__interval_id = setInterval(function() { globalThis.__ticks += 1; }, 20);",
-                )
-                .await
-                .unwrap();
+    session.eval("globalThis.__ticks = 0;").await.unwrap();
+    session
+        .eval(
+            "globalThis.__interval_id = setInterval(function() { globalThis.__ticks += 1; }, 20);",
+        )
+        .await
+        .unwrap();
 
-            tokio::time::sleep(std::time::Duration::from_millis(130)).await;
-            let before = session
-                .eval("globalThis.__ticks")
-                .await
-                .unwrap()
-                .parse::<u32>()
-                .unwrap();
-            assert!(
-                before >= 2,
-                "setInterval must fire repeatedly, observed {before} ticks"
-            );
+    for _ in 0..6 {
+        tokio::time::sleep(std::time::Duration::from_millis(25)).await;
+        session.eval("").await.unwrap();
+    }
 
-            session
-                .eval("clearInterval(globalThis.__interval_id);")
-                .await
-                .unwrap();
-            tokio::time::sleep(std::time::Duration::from_millis(80)).await;
+    let before = session
+        .eval("globalThis.__ticks")
+        .await
+        .unwrap()
+        .parse::<u32>()
+        .unwrap();
+    assert!(
+        before >= 2,
+        "setInterval must fire repeatedly, observed {before} ticks"
+    );
 
-            let after = session
-                .eval("globalThis.__ticks")
-                .await
-                .unwrap()
-                .parse::<u32>()
-                .unwrap();
-            assert_eq!(
-                after, before,
-                "clearInterval must stop further interval callbacks"
-            );
+    session
+        .eval("clearInterval(globalThis.__interval_id);")
+        .await
+        .unwrap();
 
-            cancelled.store(true, Ordering::SeqCst);
-            session.destroy();
-        })
-        .await;
+    for _ in 0..4 {
+        tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+        session.eval("").await.unwrap();
+    }
+
+    let after = session
+        .eval("globalThis.__ticks")
+        .await
+        .unwrap()
+        .parse::<u32>()
+        .unwrap();
+    assert_eq!(
+        after, before,
+        "clearInterval must stop further interval callbacks"
+    );
+
+    cancelled.store(true, Ordering::SeqCst);
+    session.destroy();
 }
 
 #[tokio::test]

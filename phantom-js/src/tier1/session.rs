@@ -7,6 +7,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use crate::error::PhantomJsError;
+use tokio::task::LocalSet;
 
 const CPU_TIMEOUT_MS: u64 = 10_000;
 static SESSION_ID_COUNTER: AtomicU64 = AtomicU64::new(1);
@@ -119,6 +120,7 @@ impl PhantomDomHandle {
 pub struct Tier1Session {
     pub runtime: AsyncRuntime,
     pub context: AsyncContext,
+    local: LocalSet,
     pub dom_handle: Option<PhantomDomHandle>,
     session_id: u64,
     eval_deadline_ms: Arc<AtomicU64>,
@@ -178,6 +180,7 @@ impl Tier1Session {
         Ok(Self {
             runtime,
             context,
+            local: LocalSet::new(),
             dom_handle: None,
             session_id,
             eval_deadline_ms,
@@ -204,15 +207,9 @@ impl Tier1Session {
         let canvas_noise_seed = rng.next_u64();
         let handle = PhantomDomHandle::new(tree);
         self.dom_handle = Some(handle.clone());
-
-        crate::tier1::bindings::setup::setup_dom_environment(
-            &self.context,
-            handle,
-            self.session_id,
-            Arc::clone(&self.timer_cancelled),
-        )
-        .await
-        .expect("attach_dom: DOM environment setup must not fail");
+        let context = self.context.clone();
+        let timer_cancelled = Arc::clone(&self.timer_cancelled);
+        let session_id = self.session_id;
 
         // The shims reference `window`, `Plugin`, `PluginArray`, and
         // `__phantom_persona`. These must exist before the shim source runs.
@@ -238,18 +235,31 @@ impl Tier1Session {
             .replace("__CANVAS_NOISE_SEED__", &format!("{canvas_noise_seed}n"));
         static EVENT_TARGET_SOURCE: &str = include_str!("../../js/event_target.js");
         static SHIMS_SOURCE: &str = include_str!("../../js/browser_shims.js");
+        self.local
+            .run_until(async move {
+                crate::tier1::bindings::setup::setup_dom_environment(
+                    &context,
+                    handle,
+                    session_id,
+                    timer_cancelled,
+                )
+                .await
+                .map_err(|_| ())?;
 
-        async_with!(self.context => |ctx| {
-            ctx.eval::<(), _>(persona_init)
-                .map_err(|_| rquickjs::Error::Unknown)?;
-            ctx.eval::<(), _>(EVENT_TARGET_SOURCE)
-                .map_err(|_| rquickjs::Error::Unknown)?;
-            ctx.eval::<(), _>(SHIMS_SOURCE)
-                .map_err(|_| rquickjs::Error::Unknown)?;
-            Ok::<(), rquickjs::Error>(())
-        })
-        .await
-        .expect("attach_dom: shim eval must not fail");
+                async_with!(context => |ctx| {
+                    ctx.eval::<(), _>(persona_init)
+                        .map_err(|_| rquickjs::Error::Unknown)?;
+                    ctx.eval::<(), _>(EVENT_TARGET_SOURCE)
+                        .map_err(|_| rquickjs::Error::Unknown)?;
+                    ctx.eval::<(), _>(SHIMS_SOURCE)
+                        .map_err(|_| rquickjs::Error::Unknown)?;
+                    Ok::<(), rquickjs::Error>(())
+                })
+                .await
+                .map_err(|_| ())
+            })
+            .await
+            .expect("attach_dom: shim setup/eval must not fail");
     }
 
     /// Execute a JavaScript string and return the result as a String.
@@ -261,67 +271,75 @@ impl Tier1Session {
         let deadline_ms = deadline_from_now_ms(now_ms);
         self.eval_deadline_ms.store(deadline_ms, Ordering::Relaxed);
 
+        let context = self.context.clone();
         let script = script.to_string();
-        let result = async_with!(self.context => |ctx| {
-            let result = ctx
-                .eval::<rquickjs::Value, _>(script)
-                .catch(&ctx)
-                .map_err(|_| rquickjs::Error::Exception)?;
+        let result = self
+            .local
+            .run_until(async move {
+                let out = async_with!(context => |ctx| {
+                    let result = ctx
+                        .eval::<rquickjs::Value, _>(script)
+                        .catch(&ctx)
+                        .map_err(|_| rquickjs::Error::Exception)?;
 
-            // Drain microtask queue — critical for MutationObserver
-            // and Promise .then() chains to fire at the right time
-            while ctx.execute_pending_job() {}
+                    // Drain microtask queue — critical for MutationObserver
+                    // and Promise .then() chains to fire at the right time
+                    while ctx.execute_pending_job() {}
 
-            // Convert result to string. Primitives keep their direct representation.
-            // Objects/arrays are JSON-serialised so MCP can return structured data.
-            let as_str = if result.is_string() {
-                result
-                    .as_string()
-                    .and_then(|s| s.to_string().ok())
-                    .unwrap_or_else(|| "undefined".to_string())
-            } else if result.is_undefined() {
-                "undefined".to_string()
-            } else if result.is_null() {
-                "null".to_string()
-            } else if result.is_bool() {
-                if result.as_bool().unwrap_or(false) {
-                    "true".to_string()
-                } else {
-                    "false".to_string()
-                }
-            } else if result.is_number() {
-                result
-                    .as_number()
-                    .map(|n| n.to_string())
-                    .unwrap_or_else(|| "undefined".to_string())
-            } else {
-                let globals = ctx.globals();
-                globals
-                    .set("__phantom_eval_result", result.clone())
-                    .map_err(|_| rquickjs::Error::Unknown)?;
-                let serialised = ctx
-                    .eval::<rquickjs::Value, _>(
-                        "(function(){ \
-                            try { return JSON.stringify(globalThis.__phantom_eval_result); } \
-                            catch (_) { return undefined; } \
-                            finally { try { delete globalThis.__phantom_eval_result; } catch (_) {} } \
-                        })()",
-                    )
-                    .map_err(|_| rquickjs::Error::Unknown)?;
+                    // Convert result to string. Primitives keep their direct representation.
+                    // Objects/arrays are JSON-serialised so MCP can return structured data.
+                    let as_str = if result.is_string() {
+                        result
+                            .as_string()
+                            .and_then(|s| s.to_string().ok())
+                            .unwrap_or_else(|| "undefined".to_string())
+                    } else if result.is_undefined() {
+                        "undefined".to_string()
+                    } else if result.is_null() {
+                        "null".to_string()
+                    } else if result.is_bool() {
+                        if result.as_bool().unwrap_or(false) {
+                            "true".to_string()
+                        } else {
+                            "false".to_string()
+                        }
+                    } else if result.is_number() {
+                        result
+                            .as_number()
+                            .map(|n| n.to_string())
+                            .unwrap_or_else(|| "undefined".to_string())
+                    } else {
+                        let globals = ctx.globals();
+                        globals
+                            .set("__phantom_eval_result", result.clone())
+                            .map_err(|_| rquickjs::Error::Unknown)?;
+                        let serialised = ctx
+                            .eval::<rquickjs::Value, _>(
+                                "(function(){ \
+                                    try { return JSON.stringify(globalThis.__phantom_eval_result); } \
+                                    catch (_) { return undefined; } \
+                                    finally { try { delete globalThis.__phantom_eval_result; } catch (_) {} } \
+                                })()",
+                            )
+                            .map_err(|_| rquickjs::Error::Unknown)?;
 
-                if serialised.is_string() {
-                    serialised
-                        .as_string()
-                        .and_then(|s| s.to_string().ok())
-                        .unwrap_or_else(|| "undefined".to_string())
-                } else {
-                    "undefined".to_string()
-                }
-            };
+                        if serialised.is_string() {
+                            serialised
+                                .as_string()
+                                .and_then(|s| s.to_string().ok())
+                                .unwrap_or_else(|| "undefined".to_string())
+                        } else {
+                            "undefined".to_string()
+                        }
+                    };
 
-            Ok::<String, rquickjs::Error>(as_str)
-        })
-        .await;
+                    Ok::<String, rquickjs::Error>(as_str)
+                })
+                .await;
+                tokio::task::yield_now().await;
+                out
+            })
+            .await;
 
         // Disable interruption between eval calls.
         self.eval_deadline_ms.store(0, Ordering::Relaxed);

@@ -69,9 +69,21 @@ pub async fn handle_session_snapshot(
         )
     })?;
 
-    // 7. Write to path
-    let snapshot_name = format!("snapshot-{}-{}.tar.zst", timestamp, uuid::Uuid::new_v4());
-    let snapshot_path = session_dir.join(&snapshot_name);
+    // 7. Write to path.
+    // Keep the historical `snapshot-<digits>.tar.zst` naming shape for
+    // compatibility with existing on-disk files and external matchers.
+    let snapshot_tick = SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis();
+    let mut snapshot_tick = u64::try_from(snapshot_tick).unwrap_or(u64::MAX);
+    let snapshot_path = loop {
+        let candidate = session_dir.join(format!("snapshot-{}.tar.zst", snapshot_tick));
+        if !candidate.exists() {
+            break candidate;
+        }
+        snapshot_tick = snapshot_tick.saturating_add(1);
+    };
 
     tokio::fs::write(&snapshot_path, &compressed).await.map_err(|e| {
         (

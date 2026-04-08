@@ -1105,6 +1105,21 @@ async fn session_snapshot_creates_file() {
         "snapshot file must exist at {}",
         snapshot_path
     );
+    let file_name = Path::new(snapshot_path)
+        .file_name()
+        .and_then(|v| v.to_str())
+        .expect("snapshot file name must be utf-8");
+    assert!(
+        file_name.starts_with("snapshot-") && file_name.ends_with(".tar.zst"),
+        "snapshot file name must match snapshot-<digits>.tar.zst: {}",
+        file_name
+    );
+    let tick = &file_name["snapshot-".len()..file_name.len() - ".tar.zst".len()];
+    assert!(
+        tick.chars().all(|c| c.is_ascii_digit()),
+        "snapshot tick must be numeric, got: {}",
+        tick
+    );
     println!("snapshot: path={}, size={}b", snapshot_path, size_bytes);
 
     // Clean up

@@ -1,35 +1,21 @@
-use crossbeam::queue::SegQueue;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
-use std::time::Instant;
 
 use crate::error::PhantomJsError;
 use crate::tier1::session::Tier1Session;
 
-struct PooledSession {
-    session: Tier1Session,
-    // Used to evict sessions that sat idle past the 5-minute staleness window.
-    // A session that has been idle for 5+ minutes may have had its QuickJS
-    // interrupt timer fire, leaving the isolate in a killed state.
-    created_at: Instant,
-}
-
 pub struct Tier1Pool {
-    free: SegQueue<PooledSession>,
-    // Tracks every session currently alive — both in `free` and checked-out.
-    // This lets acquire() enforce the hard cap without draining the queue.
+    // Tracks every checked-out session currently alive.
+    // acquire() reserves a slot before constructing Tier1Session.
     live_count: AtomicUsize,
     max_count: usize,
 }
 
-const STALE_SECS: u64 = 300; // 5 minutes — matches blueprint spec
-
 impl Tier1Pool {
     /// Create a pool and pre-warm `pre_warm_count` sessions immediately.
-    /// Blueprint specifies 10 pre-warmed sessions at startup.
+    /// Pre-warm is a one-time constructor warm-up only.
     pub async fn new(max_count: usize, pre_warm_count: usize) -> Arc<Self> {
         let pool = Arc::new(Self {
-            free: SegQueue::new(),
             live_count: AtomicUsize::new(0),
             max_count,
         });
@@ -37,43 +23,22 @@ impl Tier1Pool {
         pool
     }
 
-    /// Fills the pool up to `count` additional sessions.
+    /// Warm up runtime internals by constructing and immediately destroying
+    /// temporary sessions on the current task thread.
+    ///
+    /// We intentionally do not retain pre-warmed Tier1Session instances in a
+    /// cross-thread queue because QuickJS runtime objects are thread-affine.
     async fn pre_warm(&self, count: usize) {
-        for _ in 0..count {
-            if !self.try_reserve_slot() {
-                break;
-            }
+        for _ in 0..count.min(self.max_count) {
             match Tier1Session::new().await {
-                Ok(session) => {
-                    self.free.push(PooledSession {
-                        session,
-                        created_at: Instant::now(),
-                    });
-                }
-                Err(e) => {
-                    self.live_count.fetch_sub(1, Ordering::AcqRel);
-                    tracing::warn!("Tier1Pool pre-warm skipped: {:?}", e);
-                }
+                Ok(session) => session.destroy(),
+                Err(e) => tracing::warn!("Tier1Pool pre-warm skipped: {:?}", e),
             }
         }
     }
 
-    /// Check out a session. Returns a fresh one if the free queue is empty.
-    ///
-    /// Stale sessions (idle > 5 min) are discarded and replaced rather than
-    /// returned — once the QuickJS interrupt timer fires the isolate is dead.
+    /// Check out a fresh Tier1Session.
     pub async fn acquire(&self) -> Result<Tier1Session, PhantomJsError> {
-        // Drain stale entries from the front of the queue before handing one out.
-        while let Some(pooled) = self.free.pop() {
-            if pooled.created_at.elapsed().as_secs() < STALE_SECS {
-                return Ok(pooled.session);
-            }
-            // Stale — destroy and account for the freed slot
-            pooled.session.destroy();
-            self.live_count.fetch_sub(1, Ordering::Relaxed);
-        }
-
-        // Pool miss — spin up a fresh session if capacity allows
         if !self.try_reserve_slot() {
             return Err(PhantomJsError::PoolExhausted {
                 max: self.max_count,
@@ -119,8 +84,3 @@ impl Tier1Pool {
         }
     }
 }
-
-// SAFETY: Tier1Pool manages thread-bound Tier1Sessions (QuickJS). The pool's
-// internal state (SegQueue and atomics) is thread-safe.
-unsafe impl Send for Tier1Pool {}
-unsafe impl Sync for Tier1Pool {}

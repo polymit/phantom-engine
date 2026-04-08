@@ -143,11 +143,8 @@ async fn tier1_pool_acquire_and_release() {
     let result = session.eval("'pool works'").await.unwrap();
     assert_eq!(result, "pool works");
 
-    // D-40: release destroys + spawns a replacement in background
+    // D-40: release destroys the used session immediately.
     pool.release_after_use(session);
-
-    // Allow the background pre-warm task to complete
-    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
 
     // Pool must still be able to hand out a session
     let session2 = pool

@@ -185,6 +185,26 @@ impl McpServer {
                 tool_response(req_id, outcome, "close tab failed", "tab_error")
             }
 
+            "browser_get_cookies" => {
+                let outcome = tools::cookies::handle_get_cookies(adapter, req.params).await;
+                tool_response(req_id, outcome, "get cookies failed", "cookie_error")
+            }
+
+            "browser_set_cookie" => {
+                let outcome = tools::cookies::handle_set_cookie(adapter, req.params).await;
+                tool_response(req_id, outcome, "set cookie failed", "cookie_error")
+            }
+
+            "browser_clear_cookies" => {
+                let outcome = tools::cookies::handle_clear_cookies(adapter, req.params).await;
+                tool_response(req_id, outcome, "clear cookies failed", "cookie_error")
+            }
+
+            "browser_session_snapshot" => {
+                let outcome = tools::snapshot::handle_session_snapshot(adapter, req.params).await;
+                tool_response(req_id, outcome, "session snapshot failed", "snapshot_error")
+            }
+
             _ => JsonRpcResponse {
                 jsonrpc: "2.0".to_string(),
                 id: req_id,

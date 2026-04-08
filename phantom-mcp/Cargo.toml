@@ -19,6 +19,10 @@ phantom-core = { path = "../phantom-core" }
 phantom-serializer = { path = "../phantom-serializer" }
 uuid = { version = "1", features = ["v4"] }
 once_cell = "1"
+phantom-storage = { path = "../phantom-storage" }
+cookie_store = "=0.22.1"
+zstd = "=0.13.3"
+url = "2.5.8"
 
 # BANNED CRATES :
 # reqwest       → uses rustls, produces detectable TLS

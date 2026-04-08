@@ -1765,6 +1765,7 @@ name = "phantom-mcp"
 version = "0.1.0"
 dependencies = [
  "axum",
+ "cookie_store",
  "once_cell",
  "parking_lot 0.12.5",
  "phantom-anti-detect",
@@ -1773,12 +1774,15 @@ dependencies = [
  "phantom-net",
  "phantom-serializer",
  "phantom-session",
+ "phantom-storage",
  "serde",
  "serde_json",
  "thiserror 1.0.69",
  "tokio",
  "tracing",
+ "url",
  "uuid",
+ "zstd",
 ]
 
 [[package]]

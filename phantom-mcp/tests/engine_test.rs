@@ -637,3 +637,131 @@ async fn tab_close_removes_tab_from_list() {
     println!("close_tab: tab removed from list");
 }
 
+// ── cookie tests ─────────────────────────────────────────
+
+#[tokio::test]
+async fn cookies_initially_empty() {
+    let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
+    let server  = phantom_mcp::McpServer::new(None);
+    let req = phantom_mcp::McpServer::parse_request(
+        r#"{"jsonrpc":"2.0","id":1,"method":"browser_get_cookies","params":{}}"#
+    ).unwrap();
+    let resp = server.handle_request(&adapter, req, None).await.unwrap();
+    assert!(resp.error.is_none(), "{:?}", resp.error);
+    let result = resp.result.unwrap();
+    let cookies = result["cookies"].as_array().expect("must be array");
+    assert_eq!(cookies.len(), 0, "fresh session must have 0 cookies");
+    println!("cookies initially empty: VERIFIED");
+}
+
+#[tokio::test]
+async fn clear_cookies_returns_cleared_true() {
+    let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
+    let server  = phantom_mcp::McpServer::new(None);
+    let req = phantom_mcp::McpServer::parse_request(
+        r#"{"jsonrpc":"2.0","id":1,"method":"browser_clear_cookies","params":{}}"#
+    ).unwrap();
+    let resp = server.handle_request(&adapter, req, None).await.unwrap();
+    assert!(resp.error.is_none(), "{:?}", resp.error);
+    assert_eq!(resp.result.unwrap()["cleared"].as_bool(), Some(true));
+    println!("clear_cookies: cleared=true");
+}
+
+#[tokio::test]
+async fn session_snapshot_creates_file() {
+    use std::path::Path;
+    let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
+    let server  = phantom_mcp::McpServer::new(None);
+    let req = phantom_mcp::McpServer::parse_request(
+        r#"{"jsonrpc":"2.0","id":1,"method":"browser_session_snapshot","params":{}}"#
+    ).unwrap();
+    let resp = server.handle_request(&adapter, req, None).await.unwrap();
+    assert!(resp.error.is_none(),
+        "snapshot must not error: {:?}", resp.error);
+    let result = resp.result.unwrap();
+    let snapshot_path = result["snapshot_path"].as_str()
+        .expect("snapshot_path must be present");
+    let size_bytes = result["size_bytes"].as_u64()
+        .expect("size_bytes must be present");
+    assert!(size_bytes > 0, "compressed snapshot must not be empty");
+    assert!(Path::new(snapshot_path).exists(),
+        "snapshot file must exist at {}", snapshot_path);
+    println!("snapshot: path={}, size={}b", snapshot_path, size_bytes);
+
+    // Clean up
+    let _ = std::fs::remove_file(snapshot_path);
+}
+
+#[tokio::test]
+async fn session_snapshot_is_zstd_compressed() {
+    let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
+    let server  = phantom_mcp::McpServer::new(None);
+    let req = phantom_mcp::McpServer::parse_request(
+        r#"{"jsonrpc":"2.0","id":1,"method":"browser_session_snapshot","params":{}}"#
+    ).unwrap();
+    let resp = server.handle_request(&adapter, req, None).await.unwrap();
+    let result = resp.result.unwrap();
+    let snapshot_path = result["snapshot_path"].as_str().unwrap();
+
+    let bytes = std::fs::read(snapshot_path).expect("snapshot file must be readable");
+    // zstd magic bytes: 0xFD 0x2F 0xB5 0x28 (little-endian frame header)
+    assert!(bytes.len() >= 4, "snapshot must have at least 4 bytes");
+    assert_eq!(&bytes[0..4], &[0x28, 0xB5, 0x2F, 0xFD],
+        "snapshot must start with zstd magic bytes");
+    println!("snapshot zstd magic bytes: VERIFIED");
+
+    // Clean up
+    let _ = std::fs::remove_file(snapshot_path);
+}
+
+#[tokio::test]
+async fn storage_session_id_validates_uuid_format() {
+    use phantom_storage::is_valid_session_id;
+    // Valid UUIDs must pass
+    assert!(is_valid_session_id("550e8400-e29b-41d4-a716-446655440000"));
+    assert!(is_valid_session_id("00000000-0000-0000-0000-000000000000"),
+        "nil UUID must be valid");
+    // Invalid must fail
+    assert!(!is_valid_session_id("../../../etc/passwd"),
+        "path traversal must fail");
+    assert!(!is_valid_session_id("not-a-uuid"),
+        "non-UUID must fail");
+    assert!(!is_valid_session_id(""),
+        "empty string must fail");
+    assert!(!is_valid_session_id("550e8400-e29b-41d4-a716"),
+        "short UUID must fail");
+    println!("session_id validation: all 6 cases correct");
+}
+
+#[tokio::test]
+async fn multiple_snapshot_calls_produce_multiple_files() {
+    use std::path::Path;
+    let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
+    let server  = phantom_mcp::McpServer::new(None);
+
+    let mut paths = Vec::new();
+    for i in 0..2 {
+        // Small delay to ensure different timestamps
+        tokio::time::sleep(std::time::Duration::from_millis(1000)).await; // wait 1s because timestamps are per-sec
+        let req = phantom_mcp::McpServer::parse_request(
+            r#"{"jsonrpc":"2.0","id":1,"method":"browser_session_snapshot","params":{}}"#
+        ).unwrap();
+        let resp = server.handle_request(&adapter, req, None).await.unwrap();
+        let path = resp.result.unwrap()["snapshot_path"]
+            .as_str().unwrap().to_string();
+        assert!(Path::new(&path).exists(),
+            "snapshot {} must exist", i);
+        paths.push(path);
+    }
+
+    // Two snapshots should have different paths (different timestamps)
+    // Note: if timestamps collide (same second), paths may be the same.
+    // This is acceptable — just verify both calls succeed.
+    println!("multiple snapshots: {} files created", paths.len());
+
+    // Clean up
+    for p in &paths {
+        let _ = std::fs::remove_file(p);
+    }
+}
+

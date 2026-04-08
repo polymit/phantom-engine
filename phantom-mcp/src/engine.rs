@@ -110,6 +110,12 @@ pub struct EngineAdapter {
     /// Tab registry for multi-page agent workflows.
     /// Uses tokio::sync::RwLock so callers can hold it safely across awaits.
     pub tab_store: Arc<RwLock<TabStore>>,
+    /// Cookie storage.
+    pub cookie_store: Arc<tokio::sync::Mutex<cookie_store::CookieStore>>,
+    /// Storage manager.
+    pub storage: phantom_storage::SessionStorageManager,
+    /// Session UUID
+    pub session_uuid: uuid::Uuid,
 }
 
 impl EngineAdapter {
@@ -138,6 +144,9 @@ impl EngineAdapter {
             personas: Arc::new(Mutex::new(persona_pool)),
             page_store: Arc::new(Mutex::new(HashMap::new())),
             tab_store: Arc::new(RwLock::new(TabStore::default())),
+            storage: phantom_storage::SessionStorageManager::new("./storage"),
+            session_uuid: uuid::Uuid::nil(),
+            cookie_store: Arc::new(tokio::sync::Mutex::new(cookie_store::CookieStore::default())),
         }
     }
 

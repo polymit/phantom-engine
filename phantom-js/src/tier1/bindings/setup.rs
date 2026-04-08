@@ -1,6 +1,5 @@
 use super::document::JsDocument;
 use super::element::JsHTMLElement;
-use super::navigator::JsNavigator;
 use crate::tier1::session::PhantomDomHandle;
 use std::sync::{atomic::AtomicBool, Arc};
 
@@ -29,11 +28,10 @@ pub async fn setup_dom_environment(
         let doc_instance = Class::instance(ctx.clone(), doc)?;
         globals.set("document", doc_instance)?;
 
-        // Register Navigator
-        Class::<JsNavigator>::define(&globals)?;
-        let nav = JsNavigator::new();
-        let nav_instance = Class::instance(ctx.clone(), nav)?;
-        globals.set("navigator", nav_instance)?;
+        // Shims define navigator properties from persona data.
+        // A plain object here is sufficient as the pre-shim base.
+        let nav = rquickjs::Object::new(ctx.clone())?;
+        globals.set("navigator", nav)?;
 
         // Register Web APIs
         crate::tier1::apis::timers::register_timers(

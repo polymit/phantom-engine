@@ -95,15 +95,10 @@ impl Tier1Pool {
     /// Per D-40: post-execution globals are polluted. Recycling a used session
     /// would leak DOM handles and event listeners across session boundaries,
     /// creating a detectable anomaly and a correctness bug. We destroy it
-    /// immediately and spawn a background task to refill the pool slot.
+    /// immediately. The next acquire call lazily fills capacity back up.
     pub fn release_after_use(self: &Arc<Self>, session: Tier1Session) {
         session.destroy();
         self.live_count.fetch_sub(1, Ordering::Relaxed);
-
-        let pool = Arc::clone(self);
-        tokio::spawn(async move {
-            pool.pre_warm(1).await;
-        });
     }
 
     fn try_reserve_slot(&self) -> bool {

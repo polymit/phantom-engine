@@ -88,7 +88,7 @@ async fn phase3_click_login_button() {
     let result = resp.result.unwrap();
     assert_eq!(result.get("clicked").unwrap().as_bool(), Some(true));
     let hesitation = result.get("hesitation_ms").unwrap().as_u64().unwrap();
-    assert!(hesitation >= 20 && hesitation <= 500);
+    assert!((20..=500).contains(&hesitation));
     assert_eq!(
         result.get("selector").unwrap().as_str().unwrap(),
         "#login-btn"

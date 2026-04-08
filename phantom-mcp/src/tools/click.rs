@@ -28,7 +28,7 @@ pub async fn handle_click(
 
     let selector = click_params.selector;
 
-    let tree = {
+    let (tree, default_x, default_y) = {
         let page = adapter.get_page().ok_or_else(|| {
             (
                 StatusCode::BAD_REQUEST,
@@ -40,12 +40,35 @@ pub async fn handle_click(
                 }),
             )
         })?;
-        page.tree.clone()
+        let tree = page.tree.clone();
+        let target_node_id = tree.query_selector(&selector).ok_or_else(|| {
+            (
+                StatusCode::BAD_REQUEST,
+                json!({
+                    "error": {
+                        "code": "element_not_found",
+                        "message": format!("element not found: '{}'", selector)
+                    }
+                }),
+            )
+        })?;
+        let target_bounds = page.layout.get_bounds(target_node_id);
+        let default_x = if target_bounds.width > 0.0 {
+            target_bounds.x as f64 + (target_bounds.width as f64 / 2.0)
+        } else {
+            640.0
+        };
+        let default_y = if target_bounds.height > 0.0 {
+            target_bounds.y as f64 + (target_bounds.height as f64 / 2.0)
+        } else {
+            360.0
+        };
+        (tree, default_x, default_y)
     };
 
     let behavior = BehaviorEngine::new();
-    let target_x = click_params.x.unwrap_or(640.0);
-    let target_y = click_params.y.unwrap_or(360.0);
+    let target_x = click_params.x.unwrap_or(default_x);
+    let target_y = click_params.y.unwrap_or(default_y);
     let mouse_path = behavior.generate_mouse_path((0.0, 0.0), (target_x, target_y));
 
     // Acquire session

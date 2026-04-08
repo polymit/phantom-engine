@@ -99,4 +99,21 @@ mod tests {
         let node = tree.query_selector(r#"[data-name$="é"]"#);
         assert!(node.is_some(), "UTF-8 suffix selector must match safely");
     }
+
+    #[test]
+    fn test_attr_dashmatch_case_insensitive_matches() {
+        let tree = parse_html(
+            r#"
+            <html><body>
+                <div lang="EN-US"></div>
+            </body></html>
+        "#,
+        );
+
+        let node = tree.query_selector(r#"[lang|="en" i]"#);
+        assert!(
+            node.is_some(),
+            "dash-match should honor ASCII-insensitive flag"
+        );
+    }
 }

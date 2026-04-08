@@ -232,7 +232,10 @@ async fn rpc_endpoint(
     headers: HeaderMap,
     body: String,
 ) -> (StatusCode, Json<Value>) {
-    let maybe_key = headers.get("x-api-key").and_then(|v| v.to_str().ok());
+    let provided_key = headers
+        .get("x-api-key")
+        .and_then(|v| v.to_str().ok())
+        .map(str::to_owned);
     let req = match McpServer::parse_request(&body) {
         Ok(req) => req,
         Err(err) => {
@@ -245,7 +248,10 @@ async fn rpc_endpoint(
         }
     };
 
-    match server.handle_request(&server.adapter, req, maybe_key).await {
+    match server
+        .handle_request(&server.adapter, req, provided_key.as_deref())
+        .await
+    {
         Ok(resp) => (
             StatusCode::OK,
             Json(serde_json::to_value(resp).unwrap_or_else(|_| {
@@ -294,7 +300,7 @@ mod tests {
         let req =
             McpServer::parse_request(r#"{"jsonrpc":"2.0","id":"a","method":"ping","params":{}}"#)
                 .unwrap();
-        let resp = server.handle_request(&adapter, req, None).await.unwrap();
+        let resp = server.handle_request(adapter, req, None).await.unwrap();
         assert_eq!(resp.result, Some(json!({ "ok": true, "pong": true })));
         assert!(resp.error.is_none());
     }
@@ -307,7 +313,7 @@ mod tests {
             McpServer::parse_request(r#"{"jsonrpc":"2.0","id":"a","method":"ping","params":{}}"#)
                 .unwrap();
         let err = server
-            .handle_request(&adapter, req, Some("wrong"))
+            .handle_request(adapter, req, Some("wrong"))
             .await
             .unwrap_err();
         assert!(matches!(err, McpError::Unauthorized));

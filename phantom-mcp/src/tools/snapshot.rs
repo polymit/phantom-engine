@@ -70,7 +70,7 @@ pub async fn handle_session_snapshot(
     })?;
 
     // 7. Write to path
-    let snapshot_name = format!("snapshot-{}.tar.zst", timestamp);
+    let snapshot_name = format!("snapshot-{}-{}.tar.zst", timestamp, uuid::Uuid::new_v4());
     let snapshot_path = session_dir.join(&snapshot_name);
 
     tokio::fs::write(&snapshot_path, &compressed).await.map_err(|e| {

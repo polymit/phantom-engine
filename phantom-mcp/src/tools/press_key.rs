@@ -2,27 +2,86 @@ use crate::engine::EngineAdapter;
 use axum::http::StatusCode;
 use serde_json::{json, Value};
 
+#[derive(Debug, serde::Deserialize)]
+struct PressKeyParams {
+    key: String,
+}
+
+fn escape_js_single_quoted(value: &str) -> String {
+    let mut escaped = String::with_capacity(value.len());
+    for ch in value.chars() {
+        match ch {
+            '\\' => escaped.push_str("\\\\"),
+            '\'' => escaped.push_str("\\'"),
+            '\n' => escaped.push_str("\\n"),
+            '\r' => escaped.push_str("\\r"),
+            '\t' => escaped.push_str("\\t"),
+            '\u{2028}' => escaped.push_str("\\u2028"),
+            '\u{2029}' => escaped.push_str("\\u2029"),
+            _ => escaped.push(ch),
+        }
+    }
+    escaped
+}
+
 pub async fn handle_press_key(
     adapter: &EngineAdapter,
     params: Value,
 ) -> Result<Value, (StatusCode, Value)> {
-    let key = params.get("key").and_then(|v| v.as_str());
-
-    if key.is_none() {
+    let p: PressKeyParams = serde_json::from_value(params).map_err(|e| {
+        (
+            StatusCode::BAD_REQUEST,
+            json!({ "error": { "code": "invalid_params", "message": e.to_string() } }),
+        )
+    })?;
+    let key = p.key.trim().to_string();
+    if key.is_empty() {
         return Err((
             StatusCode::BAD_REQUEST,
             json!({ "error": { "code": "invalid_params", "message": "key is required" } }),
         ));
     }
 
-    let store = adapter.page_store.lock();
-    if store.is_empty() {
+    let tree = {
+        let page = adapter.get_page().ok_or_else(|| {
+            (
+                StatusCode::BAD_REQUEST,
+                json!({ "error": { "code": "no_page_loaded", "message": "no page loaded" } }),
+            )
+        })?;
+        page.tree.clone()
+    };
+
+    let mut session = adapter.tier1.acquire().await.map_err(|_| {
+        (
+            StatusCode::SERVICE_UNAVAILABLE,
+            json!({ "error": { "code": "session_pool_exhausted", "message": "tier1 pool exhausted" } }),
+        )
+    })?;
+    session.attach_dom(tree).await;
+
+    let safe_key = escape_js_single_quoted(&key);
+    let script = format!(
+        "(() => {{
+            const __target = document.activeElement || document.body || document.documentElement || document;
+            const __key = '{key}';
+            if (__target && typeof __target.dispatchEvent === 'function' && typeof KeyboardEvent === 'function') {{
+                __target.dispatchEvent(new KeyboardEvent('keydown', {{ bubbles: true, key: __key }}));
+                __target.dispatchEvent(new KeyboardEvent('keypress', {{ bubbles: true, key: __key }}));
+                __target.dispatchEvent(new KeyboardEvent('keyup', {{ bubbles: true, key: __key }}));
+            }}
+            return 'ok';
+        }})()",
+        key = safe_key
+    );
+    if let Err(e) = session.eval(&script).await {
+        adapter.tier1.release_after_use(session);
         return Err((
-            StatusCode::BAD_REQUEST,
-            json!({ "error": { "code": "no_page_loaded", "message": "no page loaded" } }),
+            StatusCode::INTERNAL_SERVER_ERROR,
+            json!({ "error": { "code": "js_error", "message": e.to_string() } }),
         ));
     }
 
-    // Simulate pressing key
-    Ok(json!({ "pressed": true, "key": key.unwrap() }))
+    adapter.tier1.release_after_use(session);
+    Ok(json!({ "pressed": true, "key": key }))
 }

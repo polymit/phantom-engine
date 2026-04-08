@@ -22,12 +22,12 @@ pub async fn handle_get_scene_graph(
     adapter: &EngineAdapter,
     params: Value,
 ) -> Result<Value, (StatusCode, Value)> {
-    let params: SceneGraphParams = serde_json::from_value(params).unwrap_or(SceneGraphParams {
-        mode: None,
-        task_hint: None,
-        scroll_x: None,
-        scroll_y: None,
-    });
+    let params: SceneGraphParams = serde_json::from_value(params).map_err(|e| {
+        (
+            StatusCode::BAD_REQUEST,
+            json!({ "error": { "code": "invalid_params", "message": e.to_string() } }),
+        )
+    })?;
 
     let page = adapter.get_page().ok_or_else(|| {
         (

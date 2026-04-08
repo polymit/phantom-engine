@@ -258,15 +258,51 @@ impl Tier1Session {
             // and Promise .then() chains to fire at the right time
             while ctx.execute_pending_job() {}
 
-            // Convert result to string
-            let as_str = match result {
-                v if v.is_string() => v.as_string().unwrap().to_string()
-                    .unwrap_or_else(|_| "undefined".to_string()),
-                v if v.is_undefined() => "undefined".to_string(),
-                v if v.is_null() => "null".to_string(),
-                v if v.is_bool() => if v.as_bool().unwrap() { "true".to_string() } else { "false".to_string() },
-                v if v.is_number() => v.as_number().unwrap().to_string(),
-                _ => "undefined".to_string(),
+            // Convert result to string. Primitives keep their direct representation.
+            // Objects/arrays are JSON-serialised so MCP can return structured data.
+            let as_str = if result.is_string() {
+                result
+                    .as_string()
+                    .and_then(|s| s.to_string().ok())
+                    .unwrap_or_else(|| "undefined".to_string())
+            } else if result.is_undefined() {
+                "undefined".to_string()
+            } else if result.is_null() {
+                "null".to_string()
+            } else if result.is_bool() {
+                if result.as_bool().unwrap_or(false) {
+                    "true".to_string()
+                } else {
+                    "false".to_string()
+                }
+            } else if result.is_number() {
+                result
+                    .as_number()
+                    .map(|n| n.to_string())
+                    .unwrap_or_else(|| "undefined".to_string())
+            } else {
+                let globals = ctx.globals();
+                globals
+                    .set("__phantom_eval_result", result.clone())
+                    .map_err(|_| rquickjs::Error::Unknown)?;
+                let serialised = ctx
+                    .eval::<rquickjs::Value, _>(
+                        "(function(){ \
+                            try { return JSON.stringify(globalThis.__phantom_eval_result); } \
+                            catch (_) { return undefined; } \
+                            finally { try { delete globalThis.__phantom_eval_result; } catch (_) {} } \
+                        })()",
+                    )
+                    .map_err(|_| rquickjs::Error::Unknown)?;
+
+                if serialised.is_string() {
+                    serialised
+                        .as_string()
+                        .and_then(|s| s.to_string().ok())
+                        .unwrap_or_else(|| "undefined".to_string())
+                } else {
+                    "undefined".to_string()
+                }
             };
 
             Ok::<String, rquickjs::Error>(as_str)

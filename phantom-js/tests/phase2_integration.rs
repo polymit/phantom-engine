@@ -222,7 +222,7 @@ async fn phase2_behavior_engine_in_pipeline() {
 
     let delay = engine.click_hesitation_ms();
     assert!(
-        delay >= 20 && delay <= 500,
+        (20..=500).contains(&delay),
         "Click hesitation must be in valid range, got {}ms",
         delay
     );

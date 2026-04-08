@@ -107,6 +107,9 @@ pub struct EngineAdapter {
     /// Per-session page storage for scene graph re-serialisation.
     /// Uses parking_lot::Mutex — lock is never held across .await.
     pub page_store: Arc<Mutex<HashMap<Uuid, SessionPage>>>,
+    /// Active page context key used by scene graph/evaluate/click tools.
+    /// `None` means the default single-page context (`Uuid::nil()`).
+    pub active_page_key: Arc<Mutex<Option<Uuid>>>,
     /// Tab registry for multi-page agent workflows.
     /// Uses tokio::sync::RwLock so callers can hold it safely across awaits.
     pub tab_store: Arc<RwLock<TabStore>>,
@@ -147,9 +150,10 @@ impl EngineAdapter {
             tier2,
             personas: Arc::new(Mutex::new(persona_pool)),
             page_store: Arc::new(Mutex::new(HashMap::new())),
+            active_page_key: Arc::new(Mutex::new(None)),
             tab_store: Arc::new(RwLock::new(TabStore::default())),
             storage: phantom_storage::SessionStorageManager::new("./storage"),
-            session_uuid: uuid::Uuid::nil(),
+            session_uuid: uuid::Uuid::new_v4(),
             cookie_store: Arc::new(tokio::sync::Mutex::new(cookie_store::CookieStore::default())),
             delta_tx,
         }
@@ -177,24 +181,29 @@ impl EngineAdapter {
     /// Store a navigated page snapshot under the single-session key.
     /// Multi-session keying arrives in a later prompt.
     pub fn store_page(&self, page: SessionPage) {
-        self.page_store.lock().insert(Uuid::nil(), page);
+        let key = (*self.active_page_key.lock()).unwrap_or(Uuid::nil());
+        self.page_store.lock().insert(key, page);
     }
 
     /// Clone the stored ParsedPage for re-serialisation.
     /// Returns None if no page has been navigated to yet.
     pub fn get_page(&self) -> Option<ParsedPage> {
-        self.page_store
-            .lock()
-            .get(&Uuid::nil())
-            .map(|sp| sp.page.0.clone())
+        let key = *self.active_page_key.lock();
+        let store = self.page_store.lock();
+        match key {
+            Some(tab_id) => store.get(&tab_id).map(|sp| sp.page.0.clone()),
+            None => store.get(&Uuid::nil()).map(|sp| sp.page.0.clone()),
+        }
     }
 
     /// Get the URL of the currently stored page.
     pub fn get_page_url(&self) -> Option<String> {
-        self.page_store
-            .lock()
-            .get(&Uuid::nil())
-            .map(|sp| sp.url.clone())
+        let key = *self.active_page_key.lock();
+        let store = self.page_store.lock();
+        match key {
+            Some(tab_id) => store.get(&tab_id).map(|sp| sp.url.clone()),
+            None => store.get(&Uuid::nil()).map(|sp| sp.url.clone()),
+        }
     }
 
     /// Create a new tab, optionally with a URL, and set it as the active tab.
@@ -219,6 +228,7 @@ impl EngineAdapter {
         }
         store.tabs.insert(tab_id, tab);
         store.active_tab = Some(tab_id);
+        *self.active_page_key.lock() = Some(tab_id);
 
         tab_id
     }
@@ -236,6 +246,7 @@ impl EngineAdapter {
             tab.active = tab.id == tab_id;
         }
         store.active_tab = Some(tab_id);
+        *self.active_page_key.lock() = Some(tab_id);
         store.tabs.get(&tab_id).cloned()
     }
 
@@ -253,6 +264,7 @@ impl EngineAdapter {
     pub async fn close_tab(&self, tab_id: Uuid) -> Option<usize> {
         let mut store = self.tab_store.write().await;
         store.tabs.remove(&tab_id)?;
+        self.page_store.lock().remove(&tab_id);
 
         // Activate the first remaining tab if the closed one was active.
         let was_active = store.active_tab == Some(tab_id);
@@ -265,6 +277,7 @@ impl EngineAdapter {
                 }
             }
         }
+        *self.active_page_key.lock() = store.active_tab;
 
         Some(store.tabs.len())
     }

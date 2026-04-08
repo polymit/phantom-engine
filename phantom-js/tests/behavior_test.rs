@@ -31,7 +31,7 @@ fn click_hesitation_has_correct_lognormal_distribution() {
     // All values must respect the clamp bounds
     for &v in &samples {
         assert!(
-            v >= 20 && v <= 500,
+            (20..=500).contains(&v),
             "click_hesitation value {} out of clamp range [20, 500]",
             v
         );
@@ -46,7 +46,7 @@ fn inter_action_delay_stays_within_bounds() {
     for _ in 0..500 {
         let v = engine.inter_action_delay_ms();
         assert!(
-            v >= 50 && v <= 3000,
+            (50..=3000).contains(&v),
             "inter_action delay {} out of clamp range [50, 3000]",
             v
         );
@@ -61,7 +61,7 @@ fn char_typing_delay_stays_within_bounds() {
     for _ in 0..500 {
         let v = engine.char_typing_delay_ms();
         assert!(
-            v >= 30 && v <= 500,
+            (30..=500).contains(&v),
             "char_typing delay {} out of clamp range [30, 500]",
             v
         );

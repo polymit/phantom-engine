@@ -268,8 +268,7 @@ impl<'a> selectors::Element for DomElement<'a> {
                         .split_whitespace()
                         .any(|token| case_cmp(token, expected, *case_sensitivity)),
                     AttrSelectorOperator::DashMatch => {
-                        case_cmp(val, expected, *case_sensitivity)
-                            || val.starts_with(&format!("{}-", expected))
+                        dash_match_cmp(val, expected, *case_sensitivity)
                     }
                     AttrSelectorOperator::Prefix => {
                         !expected.is_empty() && prefix_cmp(val, expected, *case_sensitivity)
@@ -419,6 +418,26 @@ fn substring_cmp(val: &str, needle: &str, cs: CaseSensitivity) -> bool {
             .to_ascii_lowercase()
             .contains(&needle.to_ascii_lowercase()),
     }
+}
+
+fn dash_match_cmp(val: &str, expected: &str, cs: CaseSensitivity) -> bool {
+    if case_cmp(val, expected, cs) {
+        return true;
+    }
+    let mut value_chars = val.chars();
+    for expected_ch in expected.chars() {
+        let Some(value_ch) = value_chars.next() else {
+            return false;
+        };
+        let equal = match cs {
+            CaseSensitivity::CaseSensitive => value_ch == expected_ch,
+            CaseSensitivity::AsciiCaseInsensitive => value_ch.eq_ignore_ascii_case(&expected_ch),
+        };
+        if !equal {
+            return false;
+        }
+    }
+    matches!(value_chars.next(), Some('-'))
 }
 
 // --------------------------------------------------------------------------

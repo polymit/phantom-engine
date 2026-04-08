@@ -3,7 +3,7 @@ use phantom_mcp::McpServer;
 
 #[tokio::test]
 async fn engine_adapter_constructs_successfully() {
-    let adapter = get_test_adapter().await;
+    let adapter = get_test_adapter().await.clone();
     let persona = adapter.next_persona();
     assert!(
         !persona.user_agent.is_empty(),
@@ -14,7 +14,7 @@ async fn engine_adapter_constructs_successfully() {
 
 #[tokio::test]
 async fn handle_navigate_rejects_missing_url_param() {
-    let adapter = get_test_adapter().await;
+    let adapter = get_test_adapter().await.clone();
     let server = McpServer::new_with_adapter(None, adapter.clone());
     let req = McpServer::parse_request(
         r#"{"jsonrpc":"2.0","id":1,"method":"browser_navigate","params":{}}"#,
@@ -30,7 +30,7 @@ async fn handle_navigate_rejects_missing_url_param() {
 
 #[tokio::test]
 async fn handle_navigate_invalid_url_returns_error() {
-    let adapter = get_test_adapter().await;
+    let adapter = get_test_adapter().await.clone();
     let server = McpServer::new_with_adapter(None, adapter.clone());
     let req = McpServer::parse_request(
         r#"{"jsonrpc":"2.0","id":1,"method":"browser_navigate","params":{"url":"not-a-url"}}"#,
@@ -45,7 +45,7 @@ async fn handle_navigate_invalid_url_returns_error() {
 fn existing_ping_still_works_after_refactor() {
     let rt = tokio::runtime::Runtime::new().unwrap();
     rt.block_on(async {
-        let adapter = get_test_adapter().await;
+        let adapter = get_test_adapter().await.clone();
         let server = McpServer::new_with_adapter(None, adapter.clone());
         let req = McpServer::parse_request(
             r#"{"jsonrpc":"2.0","id":"test","method":"ping","params":{}}"#,
@@ -63,7 +63,7 @@ fn api_key_enforcement_still_works() {
     use phantom_mcp::McpError;
     let rt = tokio::runtime::Runtime::new().unwrap();
     rt.block_on(async {
-        let adapter = get_test_adapter().await;
+        let adapter = get_test_adapter().await.clone();
         let server = McpServer::new_with_adapter(Some("secret-key".to_string()), adapter.clone());
         let req =
             McpServer::parse_request(r#"{"jsonrpc":"2.0","id":1,"method":"ping","params":{}}"#)
@@ -84,7 +84,7 @@ fn api_key_enforcement_still_works() {
 
 #[tokio::test]
 async fn scene_graph_before_navigate_returns_no_page_error() {
-    let adapter = get_test_adapter().await;
+    let adapter = get_test_adapter().await.clone();
     adapter.page_store.lock().clear();
     let server = McpServer::new_with_adapter(None, adapter.clone());
     let req = McpServer::parse_request(
@@ -110,7 +110,7 @@ async fn scene_graph_after_store_returns_valid_cct() {
     use phantom_core::process_html;
     use phantom_mcp::engine::SessionPage;
 
-    let adapter = get_test_adapter().await;
+    let adapter = get_test_adapter().await.clone();
 
     let page = process_html(
         r#"<html><body style="width:1280px;height:720px;">
@@ -161,7 +161,7 @@ async fn scene_graph_selective_mode_accepted() {
     use phantom_core::process_html;
     use phantom_mcp::engine::SessionPage;
 
-    let adapter = get_test_adapter().await;
+    let adapter = get_test_adapter().await.clone();
     let server = McpServer::new_with_adapter(None, adapter.clone());
 
     let page = process_html(
@@ -213,7 +213,7 @@ async fn scene_graph_scroll_params_accepted() {
     use phantom_core::process_html;
     use phantom_mcp::engine::SessionPage;
 
-    let adapter = get_test_adapter().await;
+    let adapter = get_test_adapter().await.clone();
     let server = McpServer::new_with_adapter(None, adapter.clone());
 
     let page = process_html(
@@ -250,12 +250,33 @@ async fn scene_graph_scroll_params_accepted() {
 }
 
 #[tokio::test]
+async fn scene_graph_rejects_invalid_params() {
+    let adapter = get_test_adapter().await.clone();
+    let server = McpServer::new_with_adapter(None, adapter.clone());
+    let req = McpServer::parse_request(
+        r#"{"jsonrpc":"2.0","id":1,"method":"browser_get_scene_graph","params":{"scroll_x":"bad"}}"#,
+    )
+    .unwrap();
+    let resp = server.handle_request(&adapter, req, None).await.unwrap();
+    assert!(
+        resp.error.is_some(),
+        "invalid params should return structured invalid_params error"
+    );
+    let err_str = serde_json::to_string(&resp.error).unwrap();
+    assert!(
+        err_str.contains("invalid_params"),
+        "expected invalid_params, got: {}",
+        err_str
+    );
+}
+
+#[tokio::test]
 async fn scene_graph_cct_header_contains_correct_url() {
     use phantom_core::process_html;
     use phantom_mcp::engine::SessionPage;
     use phantom_serializer::{HeadlessSerializer, SerialiserConfig};
 
-    let adapter = get_test_adapter().await;
+    let adapter = get_test_adapter().await.clone();
 
     let page = process_html(
         "<html><body style='width:1280px;height:720px;'>
@@ -292,7 +313,7 @@ async fn scene_graph_cct_header_contains_correct_url() {
 
 #[tokio::test]
 async fn click_without_navigate_returns_no_page_error() {
-    let adapter = get_test_adapter().await;
+    let adapter = get_test_adapter().await.clone();
     let server = McpServer::new_with_adapter(None, adapter.clone());
     let req = McpServer::parse_request(
         r##"{"jsonrpc":"2.0","id":1,"method":"browser_click",
@@ -404,7 +425,7 @@ async fn click_existing_button_returns_success() {
     );
     let hesitation = result["hesitation_ms"].as_u64().unwrap();
     assert!(
-        hesitation >= 20 && hesitation <= 500,
+        (20..=500).contains(&hesitation),
         "hesitation must be in LogNormal clamp range [20,500], got {}",
         hesitation
     );
@@ -418,13 +439,48 @@ async fn click_hesitation_is_in_lognormal_range() {
     for i in 0..10 {
         let h = engine.click_hesitation_ms();
         assert!(
-            h >= 20 && h <= 500,
+            (20..=500).contains(&h),
             "hesitation[{}] = {}ms must be in [20,500]",
             i,
             h
         );
     }
     println!("10 hesitation samples all in [20,500]ms");
+}
+
+#[tokio::test]
+async fn click_defaults_to_element_center() {
+    use phantom_core::process_html;
+    use phantom_mcp::{engine::SessionPage, EngineAdapter, McpServer};
+
+    let adapter = EngineAdapter::new(5, 0, 5, 0).await;
+    let server = McpServer::new_with_adapter(None, adapter.clone());
+
+    let page = process_html(
+        r#"<html><body style="width:1280px;height:720px;">
+            <button id="center-btn" style="width:120px;height:40px;">Center</button>
+           </body></html>"#,
+        "https://click.test",
+        1280.0,
+        720.0,
+    )
+    .unwrap();
+    adapter.store_page(SessionPage {
+        page: phantom_mcp::engine::SendablePage(page),
+        url: "https://click.test".to_string(),
+        status: 200,
+    });
+
+    let req = McpServer::parse_request(
+        r##"{"jsonrpc":"2.0","id":1,"method":"browser_click","params":{"selector":"#center-btn"}}"##,
+    )
+    .unwrap();
+    let resp = server.handle_request(&adapter, req, None).await.unwrap();
+    assert!(resp.error.is_none(), "{:?}", resp.error);
+    let result = resp.result.unwrap();
+
+    assert_eq!(result["x"].as_f64(), Some(60.0));
+    assert_eq!(result["y"].as_f64(), Some(20.0));
 }
 
 #[tokio::test]
@@ -490,6 +546,58 @@ async fn click_selector_with_single_quote_does_not_panic() {
         resp.err()
     );
     println!("single quote in selector: no panic");
+}
+
+#[tokio::test]
+async fn type_nonexistent_selector_returns_element_not_found() {
+    use phantom_core::process_html;
+    use phantom_mcp::{engine::SessionPage, EngineAdapter, McpServer};
+
+    let adapter = EngineAdapter::new(5, 0, 5, 0).await;
+    let server = McpServer::new_with_adapter(None, adapter.clone());
+    let page = process_html(
+        "<html><body style='width:1280px;height:720px;'><input id='present'/></body></html>",
+        "https://type.test",
+        1280.0,
+        720.0,
+    )
+    .unwrap();
+    adapter.store_page(SessionPage {
+        page: phantom_mcp::engine::SendablePage(page),
+        url: "https://type.test".to_string(),
+        status: 200,
+    });
+
+    let req = McpServer::parse_request(
+        r##"{"jsonrpc":"2.0","id":1,"method":"browser_type","params":{"selector":"#missing","text":"abc"}}"##,
+    )
+    .unwrap();
+    let resp = server.handle_request(&adapter, req, None).await.unwrap();
+    assert!(resp.error.is_some(), "missing input should return error");
+    let err_str = serde_json::to_string(&resp.error).unwrap();
+    assert!(
+        err_str.contains("element_not_found"),
+        "expected element_not_found, got: {}",
+        err_str
+    );
+}
+
+#[tokio::test]
+async fn press_key_requires_non_empty_key() {
+    let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
+    let server = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
+    let req = phantom_mcp::McpServer::parse_request(
+        r#"{"jsonrpc":"2.0","id":1,"method":"browser_press_key","params":{"key":""}}"#,
+    )
+    .unwrap();
+    let resp = server.handle_request(&adapter, req, None).await.unwrap();
+    assert!(resp.error.is_some(), "empty key should fail");
+    let err_str = serde_json::to_string(&resp.error).unwrap();
+    assert!(
+        err_str.contains("invalid_params"),
+        "expected invalid_params, got: {}",
+        err_str
+    );
 }
 
 // ── browser_evaluate tests ─────────────────────────────────────────
@@ -581,6 +689,40 @@ async fn evaluate_string_result_has_string_type() {
 }
 
 #[tokio::test]
+async fn evaluate_object_result_returns_json_object() {
+    use phantom_core::process_html;
+    use phantom_mcp::engine::SessionPage;
+    use phantom_mcp::{EngineAdapter, McpServer};
+
+    let adapter = EngineAdapter::new(5, 0, 5, 0).await;
+    let server = McpServer::new_with_adapter(None, adapter.clone());
+
+    let page = process_html(
+        "<html><body style='width:1280px;height:720px;'></body></html>",
+        "https://eval.test",
+        1280.0,
+        720.0,
+    )
+    .unwrap();
+    adapter.store_page(SessionPage {
+        page: phantom_mcp::engine::SendablePage(page),
+        url: "https://eval.test".to_string(),
+        status: 200,
+    });
+
+    let req = McpServer::parse_request(
+        r#"{"jsonrpc":"2.0","id":1,"method":"browser_evaluate","params":{"script":"({ok:true,count:2})"}}"#,
+    )
+    .unwrap();
+    let resp = server.handle_request(&adapter, req, None).await.unwrap();
+    assert!(resp.error.is_none(), "evaluate object must not error");
+    let result = resp.result.unwrap();
+    assert_eq!(result["type"].as_str(), Some("object"));
+    assert_eq!(result["result"]["ok"].as_bool(), Some(true));
+    assert_eq!(result["result"]["count"].as_u64(), Some(2));
+}
+
+#[tokio::test]
 async fn evaluate_without_page_returns_no_page_error() {
     let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
     let server = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
@@ -669,6 +811,81 @@ async fn tab_list_tabs_returns_created_tabs() {
         tabs.len()
     );
     println!("list_tabs: {} tabs", tabs.len());
+}
+
+#[tokio::test]
+async fn tab_switch_changes_scene_graph_context() {
+    use phantom_core::process_html;
+    use phantom_mcp::engine::SessionPage;
+
+    let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
+    let server = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
+
+    let req1 = phantom_mcp::McpServer::parse_request(
+        r#"{"jsonrpc":"2.0","id":1,"method":"browser_new_tab","params":{"url":"https://tab1.test"}}"#,
+    )
+    .unwrap();
+    let resp1 = server.handle_request(&adapter, req1, None).await.unwrap();
+    let tab1 = resp1.result.unwrap()["tab_id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+
+    let page1 = process_html(
+        "<html><body style='width:1280px;height:720px;'><h1>Tab One</h1></body></html>",
+        "https://tab1.test",
+        1280.0,
+        720.0,
+    )
+    .unwrap();
+    adapter.store_page(SessionPage::new(
+        page1,
+        "https://tab1.test".to_string(),
+        200,
+    ));
+
+    let req2 = phantom_mcp::McpServer::parse_request(
+        r#"{"jsonrpc":"2.0","id":2,"method":"browser_new_tab","params":{"url":"https://tab2.test"}}"#,
+    )
+    .unwrap();
+    server.handle_request(&adapter, req2, None).await.unwrap();
+
+    let page2 = process_html(
+        "<html><body style='width:1280px;height:720px;'><h1>Tab Two</h1></body></html>",
+        "https://tab2.test",
+        1280.0,
+        720.0,
+    )
+    .unwrap();
+    adapter.store_page(SessionPage::new(
+        page2,
+        "https://tab2.test".to_string(),
+        200,
+    ));
+
+    let switch_req = phantom_mcp::McpServer::parse_request(&format!(
+        r#"{{"jsonrpc":"2.0","id":3,"method":"browser_switch_tab","params":{{"tab_id":"{}"}}}}"#,
+        tab1
+    ))
+    .unwrap();
+    server
+        .handle_request(&adapter, switch_req, None)
+        .await
+        .unwrap();
+
+    let scene_req = phantom_mcp::McpServer::parse_request(
+        r#"{"jsonrpc":"2.0","id":4,"method":"browser_get_scene_graph","params":{}}"#,
+    )
+    .unwrap();
+    let scene_resp = server
+        .handle_request(&adapter, scene_req, None)
+        .await
+        .unwrap();
+    assert_eq!(
+        scene_resp.result.unwrap()["url"].as_str(),
+        Some("https://tab1.test"),
+        "scene graph URL should track active tab context"
+    );
 }
 
 #[tokio::test]
@@ -878,8 +1095,6 @@ async fn multiple_snapshot_calls_produce_multiple_files() {
 
     let mut paths = Vec::new();
     for i in 0..2 {
-        // Small delay to ensure different timestamps
-        tokio::time::sleep(std::time::Duration::from_millis(1000)).await; // wait 1s because timestamps are per-sec
         let req = phantom_mcp::McpServer::parse_request(
             r#"{"jsonrpc":"2.0","id":1,"method":"browser_session_snapshot","params":{}}"#,
         )
@@ -893,9 +1108,10 @@ async fn multiple_snapshot_calls_produce_multiple_files() {
         paths.push(path);
     }
 
-    // Two snapshots should have different paths (different timestamps)
-    // Note: if timestamps collide (same second), paths may be the same.
-    // This is acceptable — just verify both calls succeed.
+    assert_ne!(
+        paths[0], paths[1],
+        "two snapshot calls should produce distinct paths"
+    );
     println!("multiple snapshots: {} files created", paths.len());
 
     // Clean up

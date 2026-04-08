@@ -4,7 +4,7 @@ use phantom_serializer::CctDelta;
 use serde_json::{json, Value};
 use std::time::Duration;
 
-use super::js_escape::escape_js_single_quoted;
+use super::escape_js_single_quoted;
 
 #[derive(Debug, serde::Deserialize)]
 pub struct ClickParams {

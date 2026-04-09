@@ -1,19 +1,31 @@
+use phantom_anti_detect::{ChromeProfile, GpuProfile, Persona, PersonaPool};
 use std::collections::HashSet;
 use std::panic::catch_unwind;
-use phantom_anti_detect::{ChromeProfile, GpuProfile, Persona, PersonaPool};
 
 #[test]
 fn d60_all_fields_present() {
     let persona = Persona::win11_chrome133_nvidia_rtx3060ti(42);
-    assert!(!persona.platform_version.is_empty(), "platform_version missing");
-    assert!(!persona.ua_full_version.is_empty(), "ua_full_version missing");
-    assert!(!persona.ua_architecture.is_empty(), "ua_architecture missing");
+    assert!(
+        !persona.platform_version.is_empty(),
+        "platform_version missing"
+    );
+    assert!(
+        !persona.ua_full_version.is_empty(),
+        "ua_full_version missing"
+    );
+    assert!(
+        !persona.ua_architecture.is_empty(),
+        "ua_architecture missing"
+    );
     assert!(!persona.ua_bitness.is_empty(), "ua_bitness missing");
     assert!(!persona.ua_platform.is_empty(), "ua_platform missing");
     assert!(!persona.chrome_major.is_empty(), "chrome_major missing");
     assert!(persona.screen_width > 0, "screen_width missing");
     assert!(persona.screen_height > 0, "screen_height missing");
-    assert!(persona.device_pixel_ratio > 0.0, "device_pixel_ratio missing");
+    assert!(
+        persona.device_pixel_ratio > 0.0,
+        "device_pixel_ratio missing"
+    );
 }
 
 #[test]
@@ -54,7 +66,10 @@ fn chrome133_platform_version_windows11() {
 fn chrome134_platform_version_windows11() {
     let p = Persona::win11_chrome134_nvidia_rtx3060ti(1);
     assert_eq!(p.platform_version, "15.0.0");
-    assert_eq!(p.ua_full_version, "134.0.6998.36", "exact blueprint version");
+    assert_eq!(
+        p.ua_full_version, "134.0.6998.36",
+        "exact blueprint version"
+    );
     assert_eq!(p.chrome_major, "134");
 }
 
@@ -77,40 +92,61 @@ fn macos_platform_version_is_14() {
 fn chrome_major_matches_user_agent() {
     let p133 = Persona::win11_chrome133_nvidia_rtx3060ti(1);
     assert_eq!(p133.chrome_major, "133");
-    assert!(p133.user_agent.contains("Chrome/133"), "user agent missing Chrome/133");
-    assert!(p133.ua_full_version.starts_with("133."), "ua full version incorrect");
+    assert!(
+        p133.user_agent.contains("Chrome/133"),
+        "user agent missing Chrome/133"
+    );
+    assert!(
+        p133.ua_full_version.starts_with("133."),
+        "ua full version incorrect"
+    );
 
     let p134 = Persona::win11_chrome134_nvidia_rtx3060ti(1);
     assert_eq!(p134.chrome_major, "134");
-    assert!(p134.user_agent.contains("Chrome/134"), "user agent missing Chrome/134");
+    assert!(
+        p134.user_agent.contains("Chrome/134"),
+        "user agent missing Chrome/134"
+    );
 }
 
 #[test]
 fn gpu_profiles_exact_strings_nvidia() {
     let (v, r) = GpuProfile::WindowsNvidiaRtx3060Ti.strings();
     assert_eq!(v, "Google Inc. (NVIDIA)");
-    assert_eq!(r, "ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Ti Direct3D11 vs_5_0 ps_5_0, D3D11)");
+    assert_eq!(
+        r,
+        "ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Ti Direct3D11 vs_5_0 ps_5_0, D3D11)"
+    );
 }
 
 #[test]
 fn gpu_profiles_exact_strings_amd() {
     let (v, r) = GpuProfile::WindowsAmdRx6600.strings();
     assert_eq!(v, "Google Inc. (AMD)");
-    assert_eq!(r, "ANGLE (AMD, AMD Radeon RX 6600 Direct3D11 vs_5_0 ps_5_0, D3D11)");
+    assert_eq!(
+        r,
+        "ANGLE (AMD, AMD Radeon RX 6600 Direct3D11 vs_5_0 ps_5_0, D3D11)"
+    );
 }
 
 #[test]
 fn gpu_profiles_exact_strings_intel() {
     let (v, r) = GpuProfile::WindowsIntelUhd770.strings();
     assert_eq!(v, "Google Inc. (Intel)");
-    assert_eq!(r, "ANGLE (Intel, Intel(R) UHD Graphics 770 Direct3D11 vs_5_0 ps_5_0, D3D11)");
+    assert_eq!(
+        r,
+        "ANGLE (Intel, Intel(R) UHD Graphics 770 Direct3D11 vs_5_0 ps_5_0, D3D11)"
+    );
 }
 
 #[test]
 fn gpu_profiles_exact_strings_apple_m3() {
     let (v, r) = GpuProfile::MacOsAppleM3Pro.strings();
     assert_eq!(v, "Google Inc.");
-    assert_eq!(r, "ANGLE (Apple, ANGLE Metal Renderer: Apple M3 Pro, Unspecified Version)");
+    assert_eq!(
+        r,
+        "ANGLE (Apple, ANGLE Metal Renderer: Apple M3 Pro, Unspecified Version)"
+    );
 }
 
 #[test]
@@ -125,12 +161,30 @@ fn no_swiftshader_or_mesa_in_any_profile() {
     ];
     for profile in profiles {
         let (vendor, renderer) = profile.strings();
-        assert!(!vendor.contains("SwiftShader"), "SwiftShader = instant bot flag D-53");
-        assert!(!renderer.contains("SwiftShader"), "SwiftShader = instant bot flag D-53");
-        assert!(!vendor.contains("Mesa"), "Mesa in WebGL is generic and flags bots");
-        assert!(!renderer.contains("Mesa"), "Mesa in WebGL is generic and flags bots");
-        assert!(!renderer.contains("llvmpipe"), "llvmpipe is software rendering and flags bots");
-        assert!(vendor.starts_with("Google Inc"), "vendor missing Google Inc prefix");
+        assert!(
+            !vendor.contains("SwiftShader"),
+            "SwiftShader = instant bot flag D-53"
+        );
+        assert!(
+            !renderer.contains("SwiftShader"),
+            "SwiftShader = instant bot flag D-53"
+        );
+        assert!(
+            !vendor.contains("Mesa"),
+            "Mesa in WebGL is generic and flags bots"
+        );
+        assert!(
+            !renderer.contains("Mesa"),
+            "Mesa in WebGL is generic and flags bots"
+        );
+        assert!(
+            !renderer.contains("llvmpipe"),
+            "llvmpipe is software rendering and flags bots"
+        );
+        assert!(
+            vendor.starts_with("Google Inc"),
+            "vendor missing Google Inc prefix"
+        );
     }
 }
 
@@ -178,7 +232,7 @@ fn pool_has_macos_persona() {
 fn pool_rotation_is_round_robin() {
     let mut pool = PersonaPool::default_pool();
     let first = pool.clone_persona(0).user_agent; // Since idx starts at 0, first next_persona will get this
-    
+
     let next_first = pool.next_persona().user_agent;
     assert_eq!(first, next_first);
 
@@ -202,7 +256,11 @@ fn all_canvas_seeds_are_unique() {
     }
 
     let unique: HashSet<&u64> = seeds.iter().collect();
-    assert_eq!(unique.len(), 5, "every persona must have a unique seed — D-52");
+    assert_eq!(
+        unique.len(),
+        5,
+        "every persona must have a unique seed — D-52"
+    );
 }
 
 #[test]

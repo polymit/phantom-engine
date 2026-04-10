@@ -1,9 +1,11 @@
 use axum::http::StatusCode;
+use phantom_storage::is_valid_session_id;
+use phantom_storage::snapshot::{build_snapshot, SnapshotData};
 use serde_json::{json, Value};
+use std::collections::HashMap;
 use std::time::SystemTime;
 
 use crate::engine::EngineAdapter;
-use phantom_storage::is_valid_session_id;
 
 pub async fn handle_session_snapshot(
     adapter: &EngineAdapter,
@@ -34,10 +36,10 @@ pub async fn handle_session_snapshot(
         )
     })?;
 
-    // 3. Serialize cookies
+    // Step 1: Collect cookies_json
     let cookies_json = {
         let store = adapter.cookie_store.lock().await;
-        serde_json::to_string(&*store).map_err(|e| {
+        serde_json::to_vec(&*store).map_err(|e| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 json!({ "error": { "code": "cookie_error", "message": format!("failed to serialize cookies: {}", e) } }),
@@ -45,45 +47,116 @@ pub async fn handle_session_snapshot(
         })?
     };
 
-    // 4. Build manifest JSON
+    // Step 2: Collect local_storage from session storage dir localstorage/ subdir
+    let mut local_storage = HashMap::new();
+    if let Ok(dir) = adapter.storage.localstorage_dir(&uuid_str) {
+        if let Ok(entries) = std::fs::read_dir(&dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.extension().and_then(|s| s.to_str()) == Some("sled") {
+                    if let Some(hash) = path.file_stem().and_then(|s| s.to_str()) {
+                        if let Ok(db) = sled::open(&path) {
+                            let mut map = HashMap::new();
+                            for item in db.iter() {
+                                if let Ok((k, v)) = item {
+                                    map.insert(
+                                        String::from_utf8_lossy(&k).into_owned(),
+                                        String::from_utf8_lossy(&v).into_owned(),
+                                    );
+                                }
+                            }
+                            if let Ok(json_bytes) = serde_json::to_vec(&map) {
+                                local_storage.insert(hash.to_string(), json_bytes);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Step 3: Collect indexeddb from indexeddb/*.sqlite
+    let mut indexeddb = HashMap::new();
+    if let Ok(dir) = adapter.storage.indexeddb_dir(&uuid_str) {
+        if let Ok(entries) = std::fs::read_dir(&dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.extension().and_then(|s| s.to_str()) == Some("sqlite") {
+                    if let Some(hash) = path.file_stem().and_then(|s| s.to_str()) {
+                        if let Ok(bytes) = std::fs::read(&path) {
+                            indexeddb.insert(hash.to_string(), bytes);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Collect cache metadata and blobs
+    let mut cache_blobs = HashMap::new();
+    if let Ok(dir) = adapter.storage.cache_blobs_dir(&uuid_str) {
+        if let Ok(entries) = std::fs::read_dir(&dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_file() {
+                    if let Some(hash) = path.file_name().and_then(|s| s.to_str()) {
+                        if let Ok(bytes) = std::fs::read(&path) {
+                            cache_blobs.insert(hash.to_string(), bytes);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    let cache_meta = match adapter.storage.cache_meta_path(&uuid_str) {
+        Ok(path) => {
+            if path.exists() {
+                if let Ok(db) = sled::open(&path) {
+                    let mut map = HashMap::new();
+                    for item in db.iter() {
+                        if let Ok((k, v)) = item {
+                            map.insert(
+                                String::from_utf8_lossy(&k).into_owned(),
+                                String::from_utf8_lossy(&v).into_owned(),
+                            );
+                        }
+                    }
+                    serde_json::to_vec(&map).ok()
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        }
+        _ => None,
+    };
+
+    let data = SnapshotData {
+        session_id: uuid_str.clone(),
+        cookies_json,
+        local_storage,
+        indexeddb,
+        cache_blobs,
+        cache_meta,
+    };
+
+    // Step 4: Call build_snapshot
+    let compressed = build_snapshot(&data).map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            json!({ "error": { "code": "storage_error", "message": format!("failed to build tar.zst snapshot: {}", e) } }),
+        )
+    })?;
+
+    // Step 5: Write to snapshot-<uuid>-<timestamp>.tar.zst
     let timestamp = SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default()
         .as_secs();
 
-    let manifest = json!({
-        "version": "1.0",
-        "session_uuid": uuid_str,
-        "timestamp": timestamp,
-        "files": ["cookies.json"]
-    });
-
-    // 5. Build tar-like payload
-    let payload = format!("{}\n{}", manifest, cookies_json);
-
-    // 6. Compress with zstd::encode_all
-    let compressed = zstd::encode_all(payload.as_bytes(), 3).map_err(|e| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            json!({ "error": { "code": "io_error", "message": format!("failed to compress snapshot: {}", e) } }),
-        )
-    })?;
-
-    // 7. Write to path.
-    // Keep the historical `snapshot-<digits>.tar.zst` naming shape for
-    // compatibility with existing on-disk files and external matchers.
-    let snapshot_tick = SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_millis();
-    let mut snapshot_tick = u64::try_from(snapshot_tick).unwrap_or(u64::MAX);
-    let snapshot_path = loop {
-        let candidate = session_dir.join(format!("snapshot-{}.tar.zst", snapshot_tick));
-        if !candidate.exists() {
-            break candidate;
-        }
-        snapshot_tick = snapshot_tick.saturating_add(1);
-    };
+    let snapshot_path = session_dir.join(format!("snapshot-{}-{}.tar.zst", uuid_str, timestamp));
 
     tokio::fs::write(&snapshot_path, &compressed).await.map_err(|e| {
         (
@@ -92,7 +165,7 @@ pub async fn handle_session_snapshot(
         )
     })?;
 
-    // 8. Return result
+    // Step 6: Return json
     Ok(json!({
         "snapshot_path": snapshot_path.to_string_lossy().into_owned(),
         "size_bytes": compressed.len()

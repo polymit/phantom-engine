@@ -1,3 +1,5 @@
+pub mod snapshot;
+
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};

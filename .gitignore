@@ -22,3 +22,14 @@ Phantom_Engine_Master_Blueprint_v2.md
 /run_*.rs
 /*.long-type-*.txt
 .codex
+/test_cookie.rs
+
+# Runtime storage
+phantom-mcp/storage/
+**/cookies.bin.tmp
+**/manifest.json.tmp
+**/localstorage/*.sled
+**/indexeddb/*.sqlite
+**/cache/blobs/*
+**/cache/meta.sled
+

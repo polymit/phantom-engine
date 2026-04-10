@@ -361,7 +361,8 @@ impl EngineAdapter {
         let cookies_json = {
             let store = self.cookie_store.lock().await;
             let mut buf = Vec::new();
-            cookie_store::serde::json::save_incl_expired_and_nonpersistent(&store, &mut buf).map_err(|e| e.to_string())?;
+            cookie_store::serde::json::save_incl_expired_and_nonpersistent(&store, &mut buf)
+                .map_err(|e| e.to_string())?;
             buf
         }; // tokio Mutex guard dropped here
 
@@ -448,17 +449,16 @@ impl EngineAdapter {
             .map_err(|e| e.to_string())?;
 
         // HMAC gate — reject before touching any in-memory state
-        let manifest =
-            phantom_storage::snapshot::read_manifest_from_snapshot(&compressed)
-                .map_err(|e| e.to_string())?;
-        phantom_storage::snapshot::verify_manifest(&manifest)
+        let manifest = phantom_storage::snapshot::read_manifest_from_snapshot(&compressed)
             .map_err(|e| e.to_string())?;
+        phantom_storage::snapshot::verify_manifest(&manifest).map_err(|e| e.to_string())?;
 
         // Rehydrate cookies using modern API
         let cookies_bytes = Self::extract_file_from_snapshot(&compressed, "cookies.bin")?;
         if !cookies_bytes.is_empty() {
-            let store = cookie_store::serde::json::load_all(BufReader::new(Cursor::new(&cookies_bytes)))
-                .map_err(|e| format!("cookie deserialise: {}", e))?;
+            let store =
+                cookie_store::serde::json::load_all(BufReader::new(Cursor::new(&cookies_bytes)))
+                    .map_err(|e| format!("cookie deserialise: {}", e))?;
             *self.cookie_store.lock().await = store;
         }
 
@@ -476,9 +476,10 @@ impl EngineAdapter {
                 // localStorage
                 if let Some(rest) = filename.strip_prefix("localstorage/") {
                     let hash = rest.strip_suffix(".json").ok_or("invalid ls filename")?;
-                    let json_bytes =
-                        Self::extract_file_from_snapshot(&compressed_clone, filename)?;
-                    if json_bytes.is_empty() { continue; }
+                    let json_bytes = Self::extract_file_from_snapshot(&compressed_clone, filename)?;
+                    if json_bytes.is_empty() {
+                        continue;
+                    }
 
                     let kv_map: HashMap<String, String> = serde_json::from_slice(&json_bytes)
                         .map_err(|e| format!("localstorage deserialise: {}", e))?;
@@ -489,7 +490,8 @@ impl EngineAdapter {
                         .map_err(|e| e.to_string())?;
                     db.clear().map_err(|e| e.to_string())?;
                     for (k, v) in &kv_map {
-                        db.insert(k.as_bytes(), v.as_bytes()).map_err(|e| e.to_string())?;
+                        db.insert(k.as_bytes(), v.as_bytes())
+                            .map_err(|e| e.to_string())?;
                     }
                     db.flush().map_err(|e| e.to_string())?;
                 }
@@ -498,7 +500,9 @@ impl EngineAdapter {
                     let hash = rest.strip_suffix(".sqlite").ok_or("invalid idb filename")?;
                     let sqlite_bytes =
                         Self::extract_file_from_snapshot(&compressed_clone, filename)?;
-                    if sqlite_bytes.is_empty() { continue; }
+                    if sqlite_bytes.is_empty() {
+                        continue;
+                    }
 
                     let idb_dir = session_dir.join("indexeddb");
                     std::fs::create_dir_all(&idb_dir).map_err(|e| e.to_string())?;
@@ -512,15 +516,13 @@ impl EngineAdapter {
         .map_err(|e| e.to_string())?
         .map_err(|e| e)?;
 
-        self.broker.set_state(session_id, SessionState::Running)
+        self.broker
+            .set_state(session_id, SessionState::Running)
             .map_err(|e| e.to_string())?;
 
         let elapsed = start.elapsed();
         if elapsed.as_millis() >= 50 {
-            tracing::warn!(
-                "resume elapsed: {}ms (target: < 50ms)",
-                elapsed.as_millis()
-            );
+            tracing::warn!("resume elapsed: {}ms (target: < 50ms)", elapsed.as_millis());
         }
         tracing::info!("resume elapsed: {}ms", elapsed.as_millis());
 
@@ -559,8 +561,7 @@ impl EngineAdapter {
     /// Extracts a single file from a zstd-compressed tar archive by exact path match.
     /// Returns an empty Vec if the file is not present — missing files are optional.
     fn extract_file_from_snapshot(compressed: &[u8], filename: &str) -> Result<Vec<u8>, String> {
-        let decompressed =
-            zstd::decode_all(Cursor::new(compressed)).map_err(|e| e.to_string())?;
+        let decompressed = zstd::decode_all(Cursor::new(compressed)).map_err(|e| e.to_string())?;
 
         let mut archive = tar::Archive::new(Cursor::new(&decompressed));
         for entry in archive.entries().map_err(|e| e.to_string())? {

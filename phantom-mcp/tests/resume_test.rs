@@ -59,10 +59,7 @@ async fn resume_cookies_survive_suspend_resume() {
             )
             .unwrap();
         store
-            .parse(
-                "csrf=xyzxyzxyz; Domain=secure.example.com; Path=/",
-                &url,
-            )
+            .parse("csrf=xyzxyzxyz; Domain=secure.example.com; Path=/", &url)
             .unwrap();
     }
 
@@ -117,7 +114,12 @@ async fn resume_localstorage_survives() {
 
     adapter
         .storage
-        .local_storage_set(&session_id_str, "https://example.com", "user_id", "agent_99")
+        .local_storage_set(
+            &session_id_str,
+            "https://example.com",
+            "user_id",
+            "agent_99",
+        )
         .unwrap();
 
     adapter.suspend(session_id).await.unwrap();
@@ -179,7 +181,10 @@ async fn resume_latest_snapshot_is_used() {
     let store = adapter.cookie_store.lock().await;
     let url2 = Url::parse("https://example.com/").unwrap();
     assert!(
-        store.matches(&url2).iter().any(|c| c.name() == "new_cookie"),
+        store
+            .matches(&url2)
+            .iter()
+            .any(|c| c.name() == "new_cookie"),
         "resume must use the LATEST snapshot file"
     );
 }

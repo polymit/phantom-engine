@@ -92,6 +92,67 @@ impl SessionStorageManager {
         Ok(self.session_dir(session_id)?.join("manifest.json"))
     }
 
+    pub fn save_cookies(
+        &self,
+        session_id: &str,
+        store: &cookie_store::CookieStore,
+    ) -> Result<(), StorageError> {
+        let final_path = self.cookies_path(session_id)?;
+        if let Some(parent) = final_path.parent() {
+            std::fs::create_dir_all(parent).map_err(|e| StorageError::Io(e.to_string()))?;
+        }
+
+        let tmp_path = final_path.with_extension("bin.tmp");
+
+        {
+            let file = std::fs::OpenOptions::new()
+                .write(true)
+                .create(true)
+                .truncate(true)
+                .open(&tmp_path)
+                .map_err(|e| StorageError::Io(e.to_string()))?;
+
+            let mut writer = std::io::BufWriter::new(&file);
+            serde_json::to_writer(&mut writer, store)
+                .map_err(|e| StorageError::Serialise(e.to_string()))?;
+
+            use std::io::Write;
+            writer
+                .flush()
+                .map_err(|e| StorageError::Io(e.to_string()))?;
+            file.sync_all()
+                .map_err(|e| StorageError::Io(e.to_string()))?;
+        }
+
+        std::fs::rename(&tmp_path, &final_path).map_err(|e| StorageError::Io(e.to_string()))?;
+
+        Ok(())
+    }
+
+    pub fn load_cookies(
+        &self,
+        session_id: &str,
+    ) -> Result<cookie_store::CookieStore, StorageError> {
+        let path = self.cookies_path(session_id)?;
+        if !path.exists() {
+            return Ok(cookie_store::CookieStore::default());
+        }
+
+        let file = std::fs::File::open(&path).map_err(|e| StorageError::Io(e.to_string()))?;
+        let reader = std::io::BufReader::new(file);
+
+        serde_json::from_reader::<_, cookie_store::CookieStore>(reader)
+            .map_err(|e| StorageError::Serialise(format!("cookie deserialise: {}", e)))
+    }
+
+    pub fn delete_cookies(&self, session_id: &str) -> Result<(), StorageError> {
+        let path = self.cookies_path(session_id)?;
+        if path.exists() {
+            std::fs::remove_file(&path).map_err(|e| StorageError::Io(e.to_string()))?;
+        }
+        Ok(())
+    }
+
     pub fn create_session_dir(&self, session_id: &str) -> Result<PathBuf, StorageError> {
         std::fs::create_dir_all(&self.base_dir).map_err(|e| StorageError::Io(e.to_string()))?;
         let dir = self.session_dir(session_id)?;

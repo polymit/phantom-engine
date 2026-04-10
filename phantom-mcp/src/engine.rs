@@ -8,8 +8,10 @@ use phantom_js::tier1::pool::Tier1Pool;
 use phantom_js::tier2::pool::Tier2Pool;
 use phantom_net::SmartNetworkClient;
 use phantom_serializer::CctDelta;
-use phantom_session::SessionBroker;
+use phantom_session::{SessionBroker, SessionState};
+use phantom_storage::SessionStorageManager;
 use std::sync::Once;
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use tokio::sync::OnceCell;
 use tokio::sync::RwLock;
 use uuid::Uuid;
@@ -347,4 +349,134 @@ impl EngineAdapter {
 
         Some(remaining)
     }
+
+    pub async fn suspend(&self, session_id: Uuid) -> Result<String, String> {
+        let start = Instant::now();
+        let session_id_str = session_id.to_string();
+
+        // STEP 1 — Collect cookies
+        let cookies_json = {
+            let store = self.cookie_store.lock().await; // tokio Mutex OK across await
+            serde_json::to_vec(&*store).map_err(|e| e.to_string())?
+        }; // lock dropped here before any further awaits
+
+        // STEP 2 — Collect localStorage from disk
+        let storage2 = self.storage.clone();
+        let sid2 = session_id_str.clone();
+        let local_storage =
+            tokio::task::spawn_blocking(move || collect_localstorage(&sid2, &storage2))
+                .await
+                .map_err(|e| e.to_string())?;
+
+        // STEP 3 — Collect IndexedDB bytes
+        let storage3 = self.storage.clone();
+        let sid3 = session_id_str.clone();
+        let indexeddb = tokio::task::spawn_blocking(move || collect_indexeddb(&sid3, &storage3))
+            .await
+            .map_err(|e| e.to_string())?;
+
+        // STEP 4 — Build snapshot
+        let data = phantom_storage::snapshot::SnapshotData {
+            session_id: session_id_str.clone(),
+            cookies_json,
+            local_storage,
+            indexeddb,
+            cache_blobs: HashMap::new(), // cache blobs handled in future prompt
+            cache_meta: None,
+        };
+        let compressed =
+            tokio::task::spawn_blocking(move || phantom_storage::snapshot::build_snapshot(&data))
+                .await
+                .map_err(|e| e.to_string())?
+                .map_err(|e| e.to_string())?;
+
+        // STEP 5 — Write to disk
+        let timestamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_err(|e| e.to_string())?
+            .as_secs();
+
+        let storage5 = self.storage.clone();
+        let sid5 = session_id_str.clone();
+        let session_dir = tokio::task::spawn_blocking(move || storage5.create_session_dir(&sid5))
+            .await
+            .map_err(|e| e.to_string())?
+            .map_err(|e| e.to_string())?;
+
+        let path = session_dir.join(format!("snapshot-{}-{}.tar.zst", session_id_str, timestamp));
+        tokio::fs::write(&path, &compressed)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        // STEP 6 — Update SessionBroker state
+        self.broker
+            .set_state(session_id, SessionState::Suspended)
+            .map_err(|e| e.to_string())?;
+
+        let elapsed = start.elapsed();
+        if elapsed.as_millis() >= 200 {
+            tracing::warn!(
+                "suspend elapsed: {}ms (target: < 200ms)",
+                elapsed.as_millis()
+            );
+        }
+        tracing::info!("suspend elapsed: {}ms", elapsed.as_millis());
+
+        Ok(path.to_string_lossy().into_owned())
+    }
+}
+
+fn collect_localstorage(
+    session_id_str: &str,
+    storage: &SessionStorageManager,
+) -> HashMap<String, Vec<u8>> {
+    let mut result = HashMap::new();
+    if let Ok(dir) = storage.localstorage_dir(session_id_str) {
+        if let Ok(entries) = std::fs::read_dir(dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.extension().and_then(|s| s.to_str()) == Some("sled") {
+                    if let Some(hash) = path.file_stem().and_then(|s| s.to_str()) {
+                        if let Ok(db) = sled::open(&path) {
+                            let mut map = HashMap::new();
+                            for item in db.iter() {
+                                if let Ok((k, v)) = item {
+                                    map.insert(
+                                        String::from_utf8_lossy(&k).into_owned(),
+                                        String::from_utf8_lossy(&v).into_owned(),
+                                    );
+                                }
+                            }
+                            if let Ok(json_bytes) = serde_json::to_vec(&map) {
+                                result.insert(hash.to_string(), json_bytes);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    result
+}
+
+fn collect_indexeddb(
+    session_id_str: &str,
+    storage: &SessionStorageManager,
+) -> HashMap<String, Vec<u8>> {
+    let mut result = HashMap::new();
+    if let Ok(dir) = storage.indexeddb_dir(session_id_str) {
+        if let Ok(entries) = std::fs::read_dir(dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.extension().and_then(|s| s.to_str()) == Some("sqlite") {
+                    if let Some(hash) = path.file_stem().and_then(|s| s.to_str()) {
+                        if let Ok(bytes) = std::fs::read(&path) {
+                            result.insert(hash.to_string(), bytes);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    result
 }

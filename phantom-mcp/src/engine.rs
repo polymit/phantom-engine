@@ -1,4 +1,6 @@
 use std::collections::{HashMap, VecDeque};
+use std::io::{BufReader, Cursor, Read};
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use parking_lot::Mutex;
@@ -354,11 +356,14 @@ impl EngineAdapter {
         let start = Instant::now();
         let session_id_str = session_id.to_string();
 
-        // STEP 1 — Collect cookies
+        // Session cookies have no Expires/Max-Age — serde's Serialize impl
+        // filters them out. cookie_store::serde::json preserves them.
         let cookies_json = {
-            let store = self.cookie_store.lock().await; // tokio Mutex OK across await
-            serde_json::to_vec(&*store).map_err(|e| e.to_string())?
-        }; // lock dropped here before any further awaits
+            let store = self.cookie_store.lock().await;
+            let mut buf = Vec::new();
+            cookie_store::serde::json::save_incl_expired_and_nonpersistent(&store, &mut buf).map_err(|e| e.to_string())?;
+            buf
+        }; // tokio Mutex guard dropped here
 
         // STEP 2 — Collect localStorage from disk
         let storage2 = self.storage.clone();
@@ -424,6 +429,156 @@ impl EngineAdapter {
 
         Ok(path.to_string_lossy().into_owned())
     }
+
+    /// Rehydrates session state from the latest snapshot archive on disk.
+    /// Verifies HMAC integrity before loading any data — rejects tampered snapshots.
+    pub async fn resume(&self, session_id: Uuid) -> Result<(), String> {
+        let start = Instant::now();
+        let session_id_str = session_id.to_string();
+
+        let session_dir = self
+            .storage
+            .session_dir(&session_id_str)
+            .map_err(|e| e.to_string())?;
+
+        let snapshot_path = Self::find_latest_snapshot(&session_dir)?;
+
+        let compressed = tokio::fs::read(&snapshot_path)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        // HMAC gate — reject before touching any in-memory state
+        let manifest =
+            phantom_storage::snapshot::read_manifest_from_snapshot(&compressed)
+                .map_err(|e| e.to_string())?;
+        phantom_storage::snapshot::verify_manifest(&manifest)
+            .map_err(|e| e.to_string())?;
+
+        // Rehydrate cookies using modern API
+        let cookies_bytes = Self::extract_file_from_snapshot(&compressed, "cookies.bin")?;
+        if !cookies_bytes.is_empty() {
+            let store = cookie_store::serde::json::load_all(BufReader::new(Cursor::new(&cookies_bytes)))
+                .map_err(|e| format!("cookie deserialise: {}", e))?;
+            *self.cookie_store.lock().await = store;
+        }
+
+        // BATCH REHYDRATION — Consolidate all storage writes into ONE blocking task
+        // for maximum performance (< 50ms) regardless of the number of origins.
+        let storage = self.storage.clone();
+        let sid = session_id_str.clone();
+        let manifest_clone = manifest.clone();
+        let compressed_clone = compressed.clone();
+
+        tokio::task::spawn_blocking(move || {
+            let session_dir = storage.session_dir(&sid).map_err(|e| e.to_string())?;
+
+            for filename in manifest_clone.checksums.keys() {
+                // localStorage
+                if let Some(rest) = filename.strip_prefix("localstorage/") {
+                    let hash = rest.strip_suffix(".json").ok_or("invalid ls filename")?;
+                    let json_bytes =
+                        Self::extract_file_from_snapshot(&compressed_clone, filename)?;
+                    if json_bytes.is_empty() { continue; }
+
+                    let kv_map: HashMap<String, String> = serde_json::from_slice(&json_bytes)
+                        .map_err(|e| format!("localstorage deserialise: {}", e))?;
+
+                    let ls_dir = session_dir.join("localstorage");
+                    std::fs::create_dir_all(&ls_dir).map_err(|e| e.to_string())?;
+                    let db = sled::open(ls_dir.join(format!("{}.sled", hash)))
+                        .map_err(|e| e.to_string())?;
+                    db.clear().map_err(|e| e.to_string())?;
+                    for (k, v) in &kv_map {
+                        db.insert(k.as_bytes(), v.as_bytes()).map_err(|e| e.to_string())?;
+                    }
+                    db.flush().map_err(|e| e.to_string())?;
+                }
+                // IndexedDB
+                else if let Some(rest) = filename.strip_prefix("indexeddb/") {
+                    let hash = rest.strip_suffix(".sqlite").ok_or("invalid idb filename")?;
+                    let sqlite_bytes =
+                        Self::extract_file_from_snapshot(&compressed_clone, filename)?;
+                    if sqlite_bytes.is_empty() { continue; }
+
+                    let idb_dir = session_dir.join("indexeddb");
+                    std::fs::create_dir_all(&idb_dir).map_err(|e| e.to_string())?;
+                    std::fs::write(idb_dir.join(format!("{}.sqlite", hash)), &sqlite_bytes)
+                        .map_err(|e| e.to_string())?;
+                }
+            }
+            Ok::<_, String>(())
+        })
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|e| e)?;
+
+        self.broker.set_state(session_id, SessionState::Running)
+            .map_err(|e| e.to_string())?;
+
+        let elapsed = start.elapsed();
+        if elapsed.as_millis() >= 50 {
+            tracing::warn!(
+                "resume elapsed: {}ms (target: < 50ms)",
+                elapsed.as_millis()
+            );
+        }
+        tracing::info!("resume elapsed: {}ms", elapsed.as_millis());
+
+        Ok(())
+    }
+
+    /// Scans a session directory for `.tar.zst` snapshots and returns the most
+    /// recently modified one. Sorting by mtime ensures the latest suspend wins.
+    fn find_latest_snapshot(session_dir: &Path) -> Result<PathBuf, String> {
+        let entries = std::fs::read_dir(session_dir).map_err(|e| e.to_string())?;
+
+        let mut snapshots: Vec<(PathBuf, std::time::SystemTime)> = Vec::new();
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.extension().and_then(|s| s.to_str()) == Some("zst")
+                && path
+                    .file_name()
+                    .and_then(|s| s.to_str())
+                    .is_some_and(|n| n.ends_with(".tar.zst"))
+            {
+                if let Ok(meta) = path.metadata() {
+                    if let Ok(modified) = meta.modified() {
+                        snapshots.push((path, modified));
+                    }
+                }
+            }
+        }
+
+        snapshots.sort_by_key(|(_, mtime)| *mtime);
+        snapshots
+            .last()
+            .map(|(p, _)| p.clone())
+            .ok_or_else(|| "no snapshot found for session".to_string())
+    }
+
+    /// Extracts a single file from a zstd-compressed tar archive by exact path match.
+    /// Returns an empty Vec if the file is not present — missing files are optional.
+    fn extract_file_from_snapshot(compressed: &[u8], filename: &str) -> Result<Vec<u8>, String> {
+        let decompressed =
+            zstd::decode_all(Cursor::new(compressed)).map_err(|e| e.to_string())?;
+
+        let mut archive = tar::Archive::new(Cursor::new(&decompressed));
+        for entry in archive.entries().map_err(|e| e.to_string())? {
+            let mut entry = entry.map_err(|e| e.to_string())?;
+            let path_str = entry
+                .path()
+                .map_err(|e| e.to_string())?
+                .to_string_lossy()
+                .into_owned();
+            if path_str == filename {
+                let mut buf = Vec::new();
+                entry.read_to_end(&mut buf).map_err(|e| e.to_string())?;
+                return Ok(buf);
+            }
+        }
+
+        Ok(Vec::new())
+    }
 }
 
 fn collect_localstorage(
@@ -439,13 +594,11 @@ fn collect_localstorage(
                     if let Some(hash) = path.file_stem().and_then(|s| s.to_str()) {
                         if let Ok(db) = sled::open(&path) {
                             let mut map = HashMap::new();
-                            for item in db.iter() {
-                                if let Ok((k, v)) = item {
-                                    map.insert(
-                                        String::from_utf8_lossy(&k).into_owned(),
-                                        String::from_utf8_lossy(&v).into_owned(),
-                                    );
-                                }
+                            for (k, v) in db.iter().flatten() {
+                                map.insert(
+                                    String::from_utf8_lossy(&k).into_owned(),
+                                    String::from_utf8_lossy(&v).into_owned(),
+                                );
                             }
                             if let Ok(json_bytes) = serde_json::to_vec(&map) {
                                 result.insert(hash.to_string(), json_bytes);

@@ -57,13 +57,11 @@ pub async fn handle_session_snapshot(
                     if let Some(hash) = path.file_stem().and_then(|s| s.to_str()) {
                         if let Ok(db) = sled::open(&path) {
                             let mut map = HashMap::new();
-                            for item in db.iter() {
-                                if let Ok((k, v)) = item {
-                                    map.insert(
-                                        String::from_utf8_lossy(&k).into_owned(),
-                                        String::from_utf8_lossy(&v).into_owned(),
-                                    );
-                                }
+                            for (k, v) in db.iter().flatten() {
+                                map.insert(
+                                    String::from_utf8_lossy(&k).into_owned(),
+                                    String::from_utf8_lossy(&v).into_owned(),
+                                );
                             }
                             if let Ok(json_bytes) = serde_json::to_vec(&map) {
                                 local_storage.insert(hash.to_string(), json_bytes);
@@ -114,13 +112,11 @@ pub async fn handle_session_snapshot(
             if path.exists() {
                 if let Ok(db) = sled::open(&path) {
                     let mut map = HashMap::new();
-                    for item in db.iter() {
-                        if let Ok((k, v)) = item {
-                            map.insert(
-                                String::from_utf8_lossy(&k).into_owned(),
-                                String::from_utf8_lossy(&v).into_owned(),
-                            );
-                        }
+                    for (k, v) in db.iter().flatten() {
+                        map.insert(
+                            String::from_utf8_lossy(&k).into_owned(),
+                            String::from_utf8_lossy(&v).into_owned(),
+                        );
                     }
                     serde_json::to_vec(&map).ok()
                 } else {

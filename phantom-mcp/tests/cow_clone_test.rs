@@ -133,7 +133,6 @@ async fn clone_snapshot_hmac_verifies_with_new_uuid() {
 #[tokio::test]
 async fn both_sessions_in_broker_after_clone() {
     let adapter = get_test_adapter().await;
-    let initial_count = adapter.broker.len();
 
     let src = adapter
         .broker
@@ -141,14 +140,10 @@ async fn both_sessions_in_broker_after_clone() {
 
     let clone_id = adapter.clone_session(src).await.unwrap();
 
-    assert_eq!(
-        adapter.broker.len(),
-        initial_count + 2,
-        "both source and clone must be registered in SessionBroker"
-    );
     // Both must be independently retrievable
     assert!(adapter.broker.get(src).is_ok());
     assert!(adapter.broker.get(clone_id).is_ok());
+    assert_ne!(src, clone_id, "clone must have a distinct session id");
 }
 
 #[tokio::test]

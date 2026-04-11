@@ -14,12 +14,10 @@ use phantom_session::{SessionBroker, SessionState};
 use phantom_storage::SessionStorageManager;
 use std::sync::Once;
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
-use tokio::sync::OnceCell;
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
 static INIT: Once = Once::new();
-static TEST_ADAPTER: OnceCell<&'static EngineAdapter> = OnceCell::const_new();
 const DELTA_REPLAY_CAP: usize = 256;
 
 /// Global V8 platform initialiser. Safe to call multiple times.
@@ -30,19 +28,14 @@ pub fn init_v8() {
 }
 
 /// Returns a shared EngineAdapter instance for testing.
-/// This prevents V8 isolate drop order panics by keeping a single set of
-/// isolates alive for the duration of the test process via Box::leak.
+/// To avoid isolate drop-order issues in tests, we leak each adapter instance.
+/// Each call gets a fresh isolated adapter to prevent cross-test state bleed.
 pub async fn get_test_adapter() -> &'static EngineAdapter {
-    TEST_ADAPTER
-        .get_or_init(|| async {
-            init_v8();
-            // ZERO pre-warming for tests to avoid V8 isolate drop order panics across
-            // multiple tests. Isolates will be created on-demand and dropped cleanly
-            // within each test's lifecycle.
-            let adapter = EngineAdapter::new(5, 0, 5, 0).await;
-            Box::leak(Box::new(adapter)) as &'static EngineAdapter
-        })
-        .await
+    init_v8();
+    // ZERO pre-warming for tests to avoid additional startup and to keep test
+    // fixtures isolated from one another.
+    let adapter = EngineAdapter::new(5, 0, 5, 0).await;
+    Box::leak(Box::new(adapter))
 }
 
 /// Per-session snapshot of a navigated page.

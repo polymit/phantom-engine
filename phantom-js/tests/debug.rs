@@ -5,7 +5,9 @@ async fn main() {
     let mut session = Tier1Session::new().await.unwrap();
     let tree = DomTree::new();
     session.attach_dom(tree).await;
-    let res = session.eval(r#"
+    let res = session
+        .eval(
+            r#"
         globalThis.CanvasRenderingContext2D = function() {};
         CanvasRenderingContext2D.prototype.measureText = function(text) {
             return { width: 50.0 };
@@ -15,9 +17,11 @@ async fn main() {
             check: function(f, t) { return false; },
             load: function(f, t) { return Promise.reject("Not loaded"); }
         };
-    "#).await;
+    "#,
+        )
+        .await;
     println!("MOCK Eval Result: {:?}", res);
-    
+
     let shims_source = include_str!("../js/browser_shims.js");
     let res = session.eval(shims_source).await;
     println!("SHIM Eval Result: {:?}", res);

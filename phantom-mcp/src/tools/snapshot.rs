@@ -150,7 +150,7 @@ pub async fn handle_session_snapshot(
     let timestamp = SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default()
-        .as_secs();
+        .as_millis();
 
     let snapshot_path = session_dir.join(format!("snapshot-{}-{}.tar.zst", uuid_str, timestamp));
 

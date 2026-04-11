@@ -115,7 +115,7 @@ impl SessionStorageManager {
                 .map_err(|e| StorageError::Io(e.to_string()))?;
 
             let mut writer = std::io::BufWriter::new(&file);
-            serde_json::to_writer(&mut writer, store)
+            cookie_store::serde::json::save_incl_expired_and_nonpersistent(store, &mut writer)
                 .map_err(|e| StorageError::Serialise(e.to_string()))?;
 
             use std::io::Write;
@@ -143,7 +143,7 @@ impl SessionStorageManager {
         let file = std::fs::File::open(&path).map_err(|e| StorageError::Io(e.to_string()))?;
         let reader = std::io::BufReader::new(file);
 
-        serde_json::from_reader::<_, cookie_store::CookieStore>(reader)
+        cookie_store::serde::json::load_all(reader)
             .map_err(|e| StorageError::Serialise(format!("cookie deserialise: {}", e)))
     }
 

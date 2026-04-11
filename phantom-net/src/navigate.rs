@@ -78,16 +78,19 @@ pub async fn navigate(
 ) -> Result<NavigationResult, NavigationError> {
     let max_attempts = config.max_retries + 1;
     let mut current_attempt = 1;
+    let mut current_url = url.to_string();
+    let mut redirect_count = 0;
+    const MAX_REDIRECTS: u8 = 10;
 
     loop {
         if current_attempt > 1 {
             info!(
                 "Retrying navigation to {} (attempt {}/{})",
-                url, current_attempt, max_attempts
+                current_url, current_attempt, max_attempts
             );
         }
 
-        let response = match client.fetch(url).await {
+        let response = match client.fetch(&current_url).await {
             Ok(res) => res,
             Err(e) => {
                 if let PhantomNetError::RequestFailed(ref _msg) = e {
@@ -97,13 +100,13 @@ pub async fn navigate(
                         continue;
                     } else {
                         return Err(NavigationError::AllAttemptsFailed {
-                            url: url.to_string(),
+                            url: current_url,
                             attempts: max_attempts,
                         });
                     }
                 } else {
                     return Err(NavigationError::Network {
-                        url: url.to_string(),
+                        url: current_url,
                         source: e,
                     });
                 }
@@ -111,17 +114,32 @@ pub async fn navigate(
         };
 
         if response.status >= 300 && response.status < 400 {
-            return Err(NavigationError::RedirectResponse {
-                status: response.status,
-                url: url.to_string(),
-                location: redirect_location(&response.headers),
-            });
+            if let Some(location) = redirect_location(&response.headers) {
+                if redirect_count >= MAX_REDIRECTS {
+                    return Err(NavigationError::RedirectResponse {
+                        status: response.status,
+                        url: current_url,
+                        location: Some(location),
+                    });
+                }
+                info!("Following redirect to {}", location);
+                current_url = location;
+                redirect_count += 1;
+                current_attempt = 1; // Reset retries on successful redirect hop
+                continue;
+            } else {
+                return Err(NavigationError::RedirectResponse {
+                    status: response.status,
+                    url: current_url,
+                    location: None,
+                });
+            }
         }
 
         if response.status >= 400 && response.status < 500 {
             return Err(NavigationError::HttpError {
                 status: response.status,
-                url: url.to_string(),
+                url: current_url,
             });
         }
 
@@ -132,7 +150,7 @@ pub async fn navigate(
                 continue;
             } else {
                 return Err(NavigationError::AllAttemptsFailed {
-                    url: url.to_string(),
+                    url: current_url,
                     attempts: max_attempts,
                 });
             }
@@ -140,7 +158,7 @@ pub async fn navigate(
 
         // Now handling 200..=299
         let html = String::from_utf8(response.body).map_err(|_| NavigationError::Encoding {
-            url: url.to_string(),
+            url: current_url.clone(),
         })?;
 
         let final_url = response.final_url;

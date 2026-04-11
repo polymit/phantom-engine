@@ -14,10 +14,12 @@ use phantom_session::{SessionBroker, SessionState};
 use phantom_storage::SessionStorageManager;
 use std::sync::Once;
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
+use tokio::sync::OnceCell;
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
 static INIT: Once = Once::new();
+static TEST_ADAPTER: OnceCell<&'static EngineAdapter> = OnceCell::const_new();
 const DELTA_REPLAY_CAP: usize = 256;
 
 /// Global V8 platform initialiser. Safe to call multiple times.
@@ -28,14 +30,19 @@ pub fn init_v8() {
 }
 
 /// Returns a shared EngineAdapter instance for testing.
-/// To avoid isolate drop-order issues in tests, we leak each adapter instance.
-/// Each call gets a fresh isolated adapter to prevent cross-test state bleed.
+/// This prevents V8 isolate drop order panics by keeping a single set of
+/// isolates alive for the duration of the test process via Box::leak.
 pub async fn get_test_adapter() -> &'static EngineAdapter {
-    init_v8();
-    // ZERO pre-warming for tests to avoid additional startup and to keep test
-    // fixtures isolated from one another.
-    let adapter = EngineAdapter::new(5, 0, 5, 0).await;
-    Box::leak(Box::new(adapter))
+    TEST_ADAPTER
+        .get_or_init(|| async {
+            init_v8();
+            // ZERO pre-warming for tests to avoid V8 isolate drop order panics across
+            // multiple tests. Isolates will be created on-demand and dropped cleanly
+            // within each test's lifecycle.
+            let adapter = EngineAdapter::new(5, 0, 5, 0).await;
+            Box::leak(Box::new(adapter)) as &'static EngineAdapter
+        })
+        .await
 }
 
 /// Per-session snapshot of a navigated page.
@@ -526,7 +533,7 @@ impl EngineAdapter {
     fn find_latest_snapshot(session_dir: &Path) -> Result<PathBuf, String> {
         let entries = std::fs::read_dir(session_dir).map_err(|e| e.to_string())?;
 
-        let mut snapshots: Vec<(PathBuf, std::time::SystemTime)> = Vec::new();
+        let mut snapshots: Vec<(PathBuf, u128, u128)> = Vec::new();
         for entry in entries.flatten() {
             let path = entry.path();
             if path.extension().and_then(|s| s.to_str()) == Some("zst")
@@ -537,16 +544,40 @@ impl EngineAdapter {
             {
                 if let Ok(meta) = path.metadata() {
                     if let Ok(modified) = meta.modified() {
-                        snapshots.push((path, modified));
+                        let file_name = path
+                            .file_name()
+                            .and_then(|s| s.to_str())
+                            .unwrap_or_default();
+
+                        // Prefer the numeric suffix in snapshot filenames:
+                        // - suspend: snapshot-<secs>.tar.zst
+                        // - clone:   snapshot-<uuid>-<millis>.tar.zst
+                        let file_ts = file_name
+                            .strip_suffix(".tar.zst")
+                            .and_then(|stem| stem.rsplit('-').next())
+                            .and_then(|n| n.parse::<u128>().ok())
+                            .unwrap_or(0);
+
+                        // Fall back to mtime as secondary ordering key.
+                        let mtime_ns = modified
+                            .duration_since(UNIX_EPOCH)
+                            .map(|d| d.as_nanos())
+                            .unwrap_or(0);
+
+                        snapshots.push((path, file_ts, mtime_ns));
                     }
                 }
             }
         }
 
-        snapshots.sort_by_key(|(_, mtime)| *mtime);
+        snapshots.sort_by(|a, b| {
+            a.1.cmp(&b.1)
+                .then(a.2.cmp(&b.2))
+                .then_with(|| a.0.cmp(&b.0))
+        });
         snapshots
             .last()
-            .map(|(p, _)| p.clone())
+            .map(|(p, _, _)| p.clone())
             .ok_or_else(|| "no snapshot found for session".to_string())
     }
 

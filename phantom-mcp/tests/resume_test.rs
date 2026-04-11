@@ -158,33 +158,39 @@ async fn resume_latest_snapshot_is_used() {
         .set_state(session_id, SessionState::Running)
         .unwrap();
 
-    // Add a cookie between suspends
-    {
-        let url = Url::parse("https://example.com").unwrap();
-        let mut store = adapter.cookie_store.lock().await;
-        store
-            .parse(
-                "new_cookie=after_second_suspend; Domain=example.com; Path=/",
-                &url,
-            )
-            .unwrap();
-    }
+    // Add session-scoped localStorage between suspends.
+    let session_id_str = session_id.to_string();
+    let origin = "https://example.com";
+    adapter
+        .storage
+        .local_storage_set(
+            &session_id_str,
+            origin,
+            "resume_marker",
+            "from_second_snapshot",
+        )
+        .unwrap();
 
     // Second suspend — timestamp-named file must sort after the first
     tokio::time::sleep(std::time::Duration::from_secs(1)).await;
     adapter.suspend(session_id).await.unwrap();
 
-    // Wipe cookies and resume
-    adapter.cookie_store.lock().await.clear();
+    // Wipe localStorage DB and resume from latest snapshot.
+    let ls_path = adapter
+        .storage
+        .localstorage_db_path(&session_id_str, origin)
+        .unwrap();
+    std::fs::remove_dir_all(&ls_path).ok();
+
     adapter.resume(session_id).await.unwrap();
 
-    let store = adapter.cookie_store.lock().await;
-    let url2 = Url::parse("https://example.com/").unwrap();
-    assert!(
-        store
-            .matches(&url2)
-            .iter()
-            .any(|c| c.name() == "new_cookie"),
+    let marker = adapter
+        .storage
+        .local_storage_get(&session_id_str, origin, "resume_marker")
+        .unwrap();
+    assert_eq!(
+        marker,
+        Some("from_second_snapshot".to_string()),
         "resume must use the LATEST snapshot file"
     );
 }

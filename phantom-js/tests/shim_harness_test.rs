@@ -35,11 +35,7 @@ async fn shim01_webdriver_not_detectable_by_value() {
     // not enumerable (Object.keys won't show it).
     let val = eval(&s, "String(navigator.webdriver)").await;
     assert_eq!(val, "undefined", "value must be undefined");
-    let enumerable = eval(
-        &s,
-        "String(Object.keys(navigator).includes('webdriver'))",
-    )
-    .await;
+    let enumerable = eval(&s, "String(Object.keys(navigator).includes('webdriver'))").await;
     assert_eq!(
         enumerable, "false",
         "webdriver must not appear in Object.keys(navigator)"
@@ -117,10 +113,7 @@ async fn shim03_first_plugin_is_pdf_viewer() {
 #[tokio::test]
 async fn shim05_outer_width_not_zero() {
     let s = session_with_shims().await;
-    let w: u32 = eval(&s, "String(window.outerWidth)")
-        .await
-        .parse()
-        .unwrap();
+    let w: u32 = eval(&s, "String(window.outerWidth)").await.parse().unwrap();
     assert!(
         w > 0,
         "headless fingerprint: outerWidth is 0 — shim must prevent this"
@@ -211,7 +204,11 @@ async fn shim16_datetime_format_timezone_or_absent() {
     let s = session_with_shims().await;
     // QuickJS may not have Intl.DateTimeFormat — if absent, the shim
     // correctly skips installation. Only check when Intl is available.
-    let has_intl = eval(&s, "String(typeof Intl !== 'undefined' && typeof Intl.DateTimeFormat === 'function')").await;
+    let has_intl = eval(
+        &s,
+        "String(typeof Intl !== 'undefined' && typeof Intl.DateTimeFormat === 'function')",
+    )
+    .await;
     if has_intl == "true" {
         let tz = eval(&s, "new Intl.DateTimeFormat().resolvedOptions().timeZone").await;
         assert!(!tz.is_empty(), "timezone must be set from persona");
@@ -251,10 +248,7 @@ async fn shim17_puppeteer_marker_absent() {
 async fn shim17_webdriver_script_fn_absent() {
     let s = session_with_shims().await;
     let v = eval(&s, "String(window.__webdriver_script_fn)").await;
-    assert_eq!(
-        v, "undefined",
-        "__webdriver_script_fn must be deleted"
-    );
+    assert_eq!(v, "undefined", "__webdriver_script_fn must be deleted");
     s.destroy();
 }
 

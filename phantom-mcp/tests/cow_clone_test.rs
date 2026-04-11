@@ -76,10 +76,7 @@ async fn clone_snapshot_has_new_uuid_in_manifest() {
 
     let clone_id = adapter.clone_session(src).await.unwrap();
 
-    let clone_dir = adapter
-        .storage
-        .session_dir(&clone_id.to_string())
-        .unwrap();
+    let clone_dir = adapter.storage.session_dir(&clone_id.to_string()).unwrap();
 
     let snapshots: Vec<_> = std::fs::read_dir(&clone_dir)
         .unwrap()
@@ -112,10 +109,7 @@ async fn clone_snapshot_hmac_verifies_with_new_uuid() {
 
     let clone_id = adapter.clone_session(src).await.unwrap();
 
-    let clone_dir = adapter
-        .storage
-        .session_dir(&clone_id.to_string())
-        .unwrap();
+    let clone_dir = adapter.storage.session_dir(&clone_id.to_string()).unwrap();
 
     let snapshots: Vec<_> = std::fs::read_dir(&clone_dir)
         .unwrap()

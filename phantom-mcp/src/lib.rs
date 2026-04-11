@@ -213,8 +213,7 @@ impl McpServer {
             }
 
             "browser_session_clone" => {
-                let outcome =
-                    tools::clone_session::handle_session_clone(adapter, req.params).await;
+                let outcome = tools::clone_session::handle_session_clone(adapter, req.params).await;
                 tool_response(req_id, outcome, "session clone failed", "clone_error")
             }
 

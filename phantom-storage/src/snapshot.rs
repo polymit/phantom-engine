@@ -56,6 +56,25 @@ fn hmac_sign(key: &[u8], message: &[u8]) -> String {
     hex::encode(mac)
 }
 
+/// Builds a deterministic signing payload for manifest integrity checks.
+/// Both checksums and sizes are included so tampering either map invalidates HMAC.
+fn manifest_signing_payload(
+    checksums: &HashMap<String, String>,
+    sizes: &HashMap<String, u64>,
+) -> Result<Vec<u8>, String> {
+    let mut sorted_checksums: Vec<_> = checksums
+        .iter()
+        .map(|(k, v)| (k.clone(), v.clone()))
+        .collect();
+    sorted_checksums.sort_by(|a, b| a.0.cmp(&b.0));
+
+    let mut sorted_sizes: Vec<_> = sizes.iter().map(|(k, v)| (k.clone(), *v)).collect();
+    sorted_sizes.sort_by(|a, b| a.0.cmp(&b.0));
+
+    serde_json::to_vec(&(sorted_checksums, sorted_sizes))
+        .map_err(|e| format!("failed to serialize manifest signing payload: {}", e))
+}
+
 /// Serializes, signs, archives (tar), and compresses (zstd) the session snapshot.
 pub fn build_snapshot(data: &SnapshotData) -> Result<Vec<u8>, String> {
     let mut files = Vec::new();
@@ -88,16 +107,10 @@ pub fn build_snapshot(data: &SnapshotData) -> Result<Vec<u8>, String> {
         sizes.insert(name.clone(), bytes.len() as u64);
     }
 
-    // 3. To guarantee stable HMAC output across rebuilds natively,
-    // order the entries deterministically before signing.
-    let mut sorted_pairs: Vec<_> = checksums.iter().collect();
-    sorted_pairs.sort_by_key(|k| k.0);
-
-    let checksums_json = serde_json::to_string(&sorted_pairs)
-        .map_err(|e| format!("failed to serialize checksums map: {}", e))?;
-
+    // 3. Build deterministic signing payload for integrity verification.
+    let signing_payload = manifest_signing_payload(&checksums, &sizes)?;
     let key = hmac_key(&data.session_id);
-    let hmac_sig = hmac_sign(&key, checksums_json.as_bytes());
+    let hmac_sig = hmac_sign(&key, &signing_payload);
 
     let timestamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -159,18 +172,9 @@ pub fn build_snapshot(data: &SnapshotData) -> Result<Vec<u8>, String> {
 /// Verifies whether a `SnapshotManifest` has an intact mathematical HMAC signature
 /// across its declared checksum map. Panics and throws a String error dynamically on fail.
 pub fn verify_manifest(manifest: &SnapshotManifest) -> Result<(), String> {
-    let mut sorted_pairs: Vec<_> = manifest.checksums.iter().collect();
-    sorted_pairs.sort_by_key(|k| k.0);
-
-    let checksums_json = serde_json::to_string(&sorted_pairs).map_err(|e| {
-        format!(
-            "failed to re-serialize checksums list for verification: {}",
-            e
-        )
-    })?;
-
+    let signing_payload = manifest_signing_payload(&manifest.checksums, &manifest.sizes)?;
     let key = hmac_key(&manifest.session_id);
-    let expected_sig = hmac_sign(&key, checksums_json.as_bytes());
+    let expected_sig = hmac_sign(&key, &signing_payload);
 
     if expected_sig != manifest.hmac_sig {
         return Err("HMAC verification failed — snapshot may be tampered".to_string());

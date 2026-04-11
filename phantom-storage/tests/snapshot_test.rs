@@ -148,21 +148,16 @@ fn test_snapshot_build_accepts_empty_data() {
     assert!(manifest.checksums.contains_key("cookies.bin"));
 }
 
-// 11. Manifest verification ignores independent field modification like size
-// (our specific signed blob ONLY signs checksums, verifying scope design constraint).
-// Though size tampering should still be tested to ensure the HMAC does NOT include it.
+// 11. Manifest verification includes size metadata in the signed scope.
 #[test]
-fn test_hmac_scope_excludes_sizes_from_signature() {
+fn test_hmac_scope_includes_sizes_in_signature() {
     let data = mock_snapshot_data();
     let archive = build_snapshot(&data).unwrap();
     let mut manifest = read_manifest_from_snapshot(&archive).unwrap();
 
-    // Since sizes aren't signed (we only sign the checksums JSON map for brevity),
-    // changing size maintains the HMAC but would break extracting logic which uses size.
-    // However, verification should strictly test the HMAC mathematical proof over checksums.
     if let Some(size) = manifest.sizes.get_mut("cookies.bin") {
         *size = 99999;
     }
 
-    assert!(verify_manifest(&manifest).is_ok());
+    assert!(verify_manifest(&manifest).is_err());
 }

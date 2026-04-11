@@ -400,7 +400,7 @@ impl EngineAdapter {
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map_err(|e| e.to_string())?
-            .as_secs();
+            .as_millis();
 
         let storage5 = self.storage.clone();
         let sid5 = session_id_str.clone();
@@ -616,7 +616,7 @@ impl EngineAdapter {
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map_err(|e| e.to_string())?
-            .as_secs();
+            .as_millis();
         let new_snapshot_path =
             new_session_dir.join(format!("snapshot-{}-{}.tar.zst", new_id_str, timestamp));
         tokio::fs::write(&new_snapshot_path, &new_bytes)

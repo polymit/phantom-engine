@@ -1216,14 +1216,20 @@ async fn session_snapshot_creates_file() {
         .expect("snapshot file name must be utf-8");
     assert!(
         file_name.starts_with("snapshot-") && file_name.ends_with(".tar.zst"),
-        "snapshot file name must match snapshot-<digits>.tar.zst: {}",
+        "snapshot file name must match snapshot-[uuid]-[timestamp].tar.zst: {}",
         file_name
     );
-    let tick = &file_name["snapshot-".len()..file_name.len() - ".tar.zst".len()];
+
+    // Filter the timestamp which is after the last '-'
+    let middle = &file_name["snapshot-".len()..file_name.len() - ".tar.zst".len()];
+    let parts: Vec<&str> = middle.split('-').collect();
+    let tick = parts.last().unwrap_or(&"");
+
     assert!(
-        tick.chars().all(|c| c.is_ascii_digit()),
-        "snapshot tick must be numeric, got: {}",
-        tick
+        !tick.is_empty() && tick.chars().all(|c| c.is_ascii_digit()),
+        "snapshot tick must be numeric, got: '{}' in {}",
+        tick,
+        file_name
     );
     println!("snapshot: path={}, size={}b", snapshot_path, size_bytes);
 
@@ -1299,6 +1305,8 @@ async fn multiple_snapshot_calls_produce_multiple_files() {
             .to_string();
         assert!(Path::new(&path).exists(), "snapshot {} must exist", i);
         paths.push(path);
+        // Guarantee distinct timestamps (milliseconds)
+        tokio::time::sleep(std::time::Duration::from_millis(2)).await;
     }
 
     assert_ne!(

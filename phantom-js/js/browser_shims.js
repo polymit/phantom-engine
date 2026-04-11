@@ -256,7 +256,7 @@ const uaData = {
     mobile: false,
     platform: __phantom_persona.ua_platform || "Windows",
     getHighEntropyValues: function(hints) {
-        return Promise.resolve({
+        var result = {
             architecture: __phantom_persona.ua_architecture || "x86",
             bitness: __phantom_persona.ua_bitness || "64",
             brands: this.brands,
@@ -265,7 +265,11 @@ const uaData = {
             platform: this.platform,
             platformVersion: __phantom_persona.platform_version || "15.0.0",
             uaFullVersion: __phantom_persona.ua_full_version || "133.0.6943.98"
-        });
+        };
+        if (hints && hints.includes('wow64')) {
+            result.wow64 = !!(__phantom_persona.ua_wow64);
+        }
+        return Promise.resolve(result);
     }
 };
 Object.defineProperty(navigator, 'userAgentData', {
@@ -350,17 +354,22 @@ if (originalMeasureText) {
     };
 }
 
-// 15. WebRTC RTCPeerConnection override (prevent IP leak)
-if (globalThis.RTCPeerConnection) {
-    globalThis.RTCPeerConnection = class RTCPeerConnection {
-        constructor() {}
-        createOffer() { return Promise.resolve({}); }
-        createAnswer() { return Promise.resolve({}); }
-        setLocalDescription() { return Promise.resolve(); }
-        setRemoteDescription() { return Promise.resolve(); }
-        addIceCandidate() { return Promise.resolve(); }
-        close() {}
+// 15. WebRTC IP leak prevention — reject offers with DOMException NetworkError.
+// Detection systems check the rejection reason. Resolving with {} is an instant flag.
+var _OriginalRTCPeerConnection = globalThis.RTCPeerConnection;
+if (_OriginalRTCPeerConnection) {
+    var _blockedOffer = function() {
+        return Promise.reject(new DOMException('Network error', 'NetworkError'));
     };
+    window.RTCPeerConnection = function PhantomRTC(config) {
+        var pc = new _OriginalRTCPeerConnection(config || {});
+        pc.createOffer  = _blockedOffer;
+        pc.createAnswer = _blockedOffer;
+        return pc;
+    };
+    // Preserve prototype chain for instanceof checks
+    window.RTCPeerConnection.prototype = _OriginalRTCPeerConnection.prototype;
+    Object.defineProperty(window.RTCPeerConnection, 'name', { value: 'RTCPeerConnection' });
 }
 
 // 16. Intl.DateTimeFormat timezone fix
@@ -378,9 +387,23 @@ if (globalThis.Intl && Intl.DateTimeFormat) {
         originalDateTimeFormat.supportedLocalesOf.bind(originalDateTimeFormat);
 }
 
-// 17. Delete window.__playwright, __puppeteer, __webdriver markers
-['__playwright', '__puppeteer', '__webdriver'].forEach(prop => {
-    delete window[prop];
+// 17. Delete automation markers and prevent re-injection after deletion.
+// Three exact markers: __playwright, __puppeteer_evaluation_script__, __webdriver_script_fn
+[
+    '__playwright',
+    '__puppeteer_evaluation_script__',
+    '__webdriver_script_fn',
+].forEach(function(key) {
+    try { delete window[key]; } catch (_) {}
+    try { delete globalThis[key]; } catch (_) {}
+    try {
+        Object.defineProperty(window, key, {
+            get: function() { return undefined; },
+            set: function() {},
+            configurable: false,
+            enumerable: false,
+        });
+    } catch (_) {}
 });
 
 // 18. Event polyfills for Tier 1 (QuickJS)

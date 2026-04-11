@@ -19,9 +19,12 @@ impl BehaviorEngine {
     pub fn new() -> Self {
         Self {
             // EXACT parameters from blueprint — DO NOT CHANGE
-            click_hesitation: LogNormal::new(4.2, 0.9).unwrap(),
-            inter_action: LogNormal::new(5.8, 1.1).unwrap(),
-            char_typing_delay: LogNormal::new(4.8, 0.7).unwrap(),
+            click_hesitation: LogNormal::new(4.2, 0.9)
+                .expect("click_hesitation LogNormal params must stay valid"),
+            inter_action: LogNormal::new(5.8, 1.1)
+                .expect("inter_action LogNormal params must stay valid"),
+            char_typing_delay: LogNormal::new(4.8, 0.7)
+                .expect("char_typing_delay LogNormal params must stay valid"),
         }
     }
 

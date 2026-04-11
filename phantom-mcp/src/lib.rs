@@ -212,6 +212,12 @@ impl McpServer {
                 tool_response(req_id, outcome, "session snapshot failed", "snapshot_error")
             }
 
+            "browser_session_clone" => {
+                let outcome =
+                    tools::clone_session::handle_session_clone(adapter, req.params).await;
+                tool_response(req_id, outcome, "session clone failed", "clone_error")
+            }
+
             _ => JsonRpcResponse {
                 jsonrpc: "2.0".to_string(),
                 id: req_id,

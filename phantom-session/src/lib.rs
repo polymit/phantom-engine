@@ -63,6 +63,27 @@ impl Session {
         }
     }
 
+    /// Create a session with a pre-chosen UUID — used for COW cloning.
+    /// Normal sessions use `new()` which calls `Uuid::new_v4()` internally.
+    pub fn with_uuid(
+        id: Uuid,
+        engine: EngineKind,
+        budget: ResourceBudget,
+        persona_id: impl Into<String>,
+    ) -> Self {
+        let now = Instant::now();
+        Self {
+            id,
+            created_at: now,
+            last_access: now,
+            state: SessionState::Idle,
+            snapshot_id: None,
+            budget,
+            engine,
+            persona_id: persona_id.into(),
+        }
+    }
+
     pub fn touch(&mut self) {
         self.last_access = Instant::now();
     }

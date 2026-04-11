@@ -513,8 +513,7 @@ impl EngineAdapter {
             Ok::<_, String>(())
         })
         .await
-        .map_err(|e| e.to_string())?
-        .map_err(|e| e)?;
+        .map_err(|e| e.to_string())??;
 
         self.broker
             .set_state(session_id, SessionState::Running)
@@ -579,6 +578,147 @@ impl EngineAdapter {
         }
 
         Ok(Vec::new())
+    }
+
+    /// COW clone: suspend source -> rewrite snapshot with new UUID -> resume as new session.
+    /// Source remains Suspended. Clone is fully independent with its own HMAC key.
+    pub async fn clone_session(&self, source_id: Uuid) -> Result<Uuid, String> {
+        let start = Instant::now();
+
+        // Suspend source — serializes all state to a snapshot on disk
+        let snapshot_path_str = self.suspend(source_id).await?;
+        let snapshot_path = PathBuf::from(&snapshot_path_str);
+
+        let new_id = Uuid::new_v4();
+        let new_id_str = new_id.to_string();
+
+        // Create the clone's session directory with restricted perms
+        let storage = self.storage.clone();
+        let sid = new_id_str.clone();
+        let new_session_dir = tokio::task::spawn_blocking(move || storage.create_session_dir(&sid))
+            .await
+            .map_err(|e| e.to_string())?
+            .map_err(|e| e.to_string())?;
+
+        // Read source snapshot and rewrite the session_id + re-sign HMAC
+        let original_bytes = tokio::fs::read(&snapshot_path)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        let sid2 = new_id_str.clone();
+        let new_bytes = tokio::task::spawn_blocking(move || {
+            Self::rewrite_snapshot_session_id(&original_bytes, &sid2)
+        })
+        .await
+        .map_err(|e| e.to_string())??;
+
+        // Write rewritten snapshot to clone's directory
+        let timestamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_err(|e| e.to_string())?
+            .as_secs();
+        let new_snapshot_path =
+            new_session_dir.join(format!("snapshot-{}-{}.tar.zst", new_id_str, timestamp));
+        tokio::fs::write(&new_snapshot_path, &new_bytes)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        // Register as a new session mirroring the source's engine/budget/persona
+        let source_session = self.broker.get(source_id).map_err(|e| e.to_string())?;
+        let new_session = phantom_session::Session::with_uuid(
+            new_id,
+            source_session.engine,
+            source_session.budget.clone(),
+            source_session.persona_id.clone(),
+        );
+        self.broker.register(new_session);
+
+        // Resume the clone — rehydrates cookies, localStorage, IndexedDB from the rewritten snapshot
+        self.resume(new_id).await?;
+
+        let elapsed = start.elapsed();
+        if elapsed.as_millis() >= 200 {
+            tracing::warn!(
+                "clone {} -> {} elapsed: {}ms (minimum: < 200ms)",
+                source_id,
+                new_id,
+                elapsed.as_millis()
+            );
+        }
+        tracing::info!(
+            "clone {} -> {} in {}ms",
+            source_id,
+            new_id,
+            elapsed.as_millis()
+        );
+
+        Ok(new_id)
+    }
+
+    /// Decompresses a snapshot, extracts all files, rebuilds with a new session_id.
+    /// The HMAC is re-signed with the clone's derived key.
+    fn rewrite_snapshot_session_id(
+        compressed: &[u8],
+        new_session_id: &str,
+    ) -> Result<Vec<u8>, String> {
+        let decompressed = zstd::decode_all(Cursor::new(compressed)).map_err(|e| e.to_string())?;
+
+        // Extract every tar entry into a flat list
+        let mut files: Vec<(String, Vec<u8>)> = Vec::new();
+        let mut archive = tar::Archive::new(Cursor::new(&decompressed));
+        for entry in archive.entries().map_err(|e| e.to_string())? {
+            let mut entry = entry.map_err(|e| e.to_string())?;
+            let name = entry
+                .path()
+                .map_err(|e| e.to_string())?
+                .to_string_lossy()
+                .into_owned();
+
+            // Skip the old manifest — build_snapshot generates a fresh one
+            if name == "manifest.json" {
+                continue;
+            }
+
+            let mut buf = Vec::new();
+            entry.read_to_end(&mut buf).map_err(|e| e.to_string())?;
+            files.push((name, buf));
+        }
+
+        // Partition extracted files into SnapshotData fields
+        let mut cookies_json = Vec::new();
+        let mut local_storage = HashMap::new();
+        let mut indexeddb = HashMap::new();
+        let mut cache_blobs = HashMap::new();
+        let mut cache_meta = None;
+
+        for (name, bytes) in files {
+            if name == "cookies.bin" {
+                cookies_json = bytes;
+            } else if let Some(rest) = name.strip_prefix("localstorage/") {
+                if let Some(hash) = rest.strip_suffix(".json") {
+                    local_storage.insert(hash.to_string(), bytes);
+                }
+            } else if let Some(rest) = name.strip_prefix("indexeddb/") {
+                if let Some(hash) = rest.strip_suffix(".sqlite") {
+                    indexeddb.insert(hash.to_string(), bytes);
+                }
+            } else if let Some(blob_key) = name.strip_prefix("blobs/") {
+                cache_blobs.insert(blob_key.to_string(), bytes);
+            } else if name == "cache_meta.sled" {
+                cache_meta = Some(bytes);
+            }
+        }
+
+        let data = phantom_storage::snapshot::SnapshotData {
+            session_id: new_session_id.to_string(),
+            cookies_json,
+            local_storage,
+            indexeddb,
+            cache_blobs,
+            cache_meta,
+        };
+
+        phantom_storage::snapshot::build_snapshot(&data)
     }
 }
 

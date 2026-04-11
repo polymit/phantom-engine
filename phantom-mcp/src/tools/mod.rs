@@ -1,4 +1,5 @@
 pub mod click;
+pub mod clone_session;
 pub mod cookies;
 pub mod evaluate;
 pub mod navigate;

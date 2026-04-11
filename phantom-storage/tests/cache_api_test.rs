@@ -13,7 +13,7 @@ fn mgr() -> (tempfile::TempDir, SessionStorageManager) {
 fn cache_put_get_roundtrip() {
     let (_tmp, mgr) = mgr();
     let body = b"<html>hello</html>";
-    let key = mgr
+    let _key = mgr
         .cache_put(SESSION, "v1", "https://example.com/index.html", body, "{}")
         .unwrap();
     let retrieved = mgr

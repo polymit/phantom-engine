@@ -78,11 +78,22 @@ impl SmartNetworkClient {
             ChromeProfile::Chrome134 => wreq_util::Emulation::Chrome134,
         };
 
-        let client = Client::builder()
+        let client = match Client::builder()
             .emulation(emulation)
             .user_agent(&persona.user_agent)
             .build()
-            .unwrap_or_else(|_| Client::new());
+        {
+            Ok(client) => client,
+            Err(err) => {
+                tracing::warn!(
+                    chrome_profile = ?persona.chrome_version,
+                    user_agent = %persona.user_agent,
+                    error = %err,
+                    "failed to build persona-emulated client; falling back to default client"
+                );
+                Client::new()
+            }
+        };
 
         Self {
             persona_id: format!("{:?}", persona.chrome_version),

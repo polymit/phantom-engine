@@ -1,5 +1,5 @@
 use phantom_storage::snapshot::{
-    build_snapshot, read_manifest_from_snapshot, verify_manifest, SnapshotData, SnapshotManifest,
+    build_snapshot, read_manifest_from_snapshot, verify_manifest, SnapshotData,
 };
 use std::collections::HashMap;
 

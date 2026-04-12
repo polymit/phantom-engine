@@ -57,7 +57,9 @@ async fn test_persona_pool_completeness() {
     let mut has_windows = false;
 
     for i in 0..5 {
-        let p = pool.clone_persona(i);
+        let p = pool
+            .clone_persona(i)
+            .expect("persona index within default pool bounds");
 
         assert!(!p.platform_version.is_empty());
         assert!(!p.ua_full_version.is_empty());

@@ -270,15 +270,8 @@ impl PersonaPool {
         p
     }
 
-    pub fn clone_persona(&self, idx: usize) -> Persona {
-        if idx >= self.personas.len() {
-            panic!(
-                "clone_persona: index {} is out of bounds (len {})",
-                idx,
-                self.personas.len()
-            );
-        }
-        self.personas[idx].clone()
+    pub fn clone_persona(&self, idx: usize) -> Option<Persona> {
+        self.personas.get(idx).cloned()
     }
 }
 

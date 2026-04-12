@@ -1,6 +1,5 @@
 use phantom_anti_detect::{ChromeProfile, GpuProfile, Persona, PersonaPool};
 use std::collections::HashSet;
-use std::panic::catch_unwind;
 
 #[test]
 fn d60_all_fields_present() {
@@ -32,7 +31,9 @@ fn d60_all_fields_present() {
 fn hardware_concurrency_never_one_two_or_extreme() {
     let pool = PersonaPool::default_pool();
     for i in 0..pool.len() {
-        let p = pool.clone_persona(i);
+        let p = pool
+            .clone_persona(i)
+            .expect("persona index within pool bounds");
         assert!(
             matches!(p.hardware_concurrency, 4 | 6 | 8 | 12 | 16),
             "hardware_concurrency {} invalid — D-60 bans 1, 2, 128",
@@ -45,7 +46,9 @@ fn hardware_concurrency_never_one_two_or_extreme() {
 fn device_memory_is_bucketed() {
     let pool = PersonaPool::default_pool();
     for i in 0..pool.len() {
-        let p = pool.clone_persona(i);
+        let p = pool
+            .clone_persona(i)
+            .expect("persona index within pool bounds");
         assert!(
             matches!(p.device_memory, 4 | 8),
             "device_memory {} must be 4 or 8 GB bucket — D-60",
@@ -201,7 +204,9 @@ fn pool_has_both_chrome_versions() {
     let mut count134 = 0;
 
     for i in 0..pool.len() {
-        let p = pool.clone_persona(i);
+        let p = pool
+            .clone_persona(i)
+            .expect("persona index within pool bounds");
         match p.chrome_version {
             ChromeProfile::Chrome133 => count133 += 1,
             ChromeProfile::Chrome134 => count134 += 1,
@@ -218,7 +223,9 @@ fn pool_has_macos_persona() {
     let mut has_macos = false;
 
     for i in 0..pool.len() {
-        let p = pool.clone_persona(i);
+        let p = pool
+            .clone_persona(i)
+            .expect("persona index within pool bounds");
         if p.platform == "MacIntel" {
             has_macos = true;
             break;
@@ -231,7 +238,10 @@ fn pool_has_macos_persona() {
 #[test]
 fn pool_rotation_is_round_robin() {
     let mut pool = PersonaPool::default_pool();
-    let first = pool.clone_persona(0).user_agent; // Since idx starts at 0, first next_persona will get this
+    let first = pool
+        .clone_persona(0)
+        .expect("pool must expose first persona")
+        .user_agent; // Since idx starts at 0, first next_persona will get this
 
     let next_first = pool.next_persona().user_agent;
     assert_eq!(first, next_first);
@@ -252,7 +262,11 @@ fn all_canvas_seeds_are_unique() {
     let mut seeds = Vec::new();
 
     for i in 0..pool.len() {
-        seeds.push(pool.clone_persona(i).canvas_noise_seed);
+        seeds.push(
+            pool.clone_persona(i)
+                .expect("persona index within pool bounds")
+                .canvas_noise_seed,
+        );
     }
 
     let unique: HashSet<&u64> = seeds.iter().collect();
@@ -273,8 +287,7 @@ fn backward_compat_aliases_produce_correct_chrome_version() {
 }
 
 #[test]
-fn clone_persona_panics_on_out_of_bounds() {
+fn clone_persona_returns_none_on_out_of_bounds() {
     let pool = PersonaPool::default_pool();
-    let result = catch_unwind(|| pool.clone_persona(999));
-    assert!(result.is_err(), "out-of-bounds index must panic");
+    assert!(pool.clone_persona(999).is_none());
 }

@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::sync::RwLock;
+use std::time::Instant;
 
 use url::Url;
 use wreq::Client;
@@ -36,13 +37,19 @@ pub struct FetchResponse {
     pub final_url: String,
 }
 
+#[derive(Debug, Clone)]
+struct AltSvcCacheEntry {
+    info: AltSvcInfo,
+    stored_at: Instant,
+}
+
 /// Minimal network transport policy surface for Phase 3 wiring.
 ///
 /// The real client will hold h2/h3 implementations; this type currently
 /// tracks Alt-Svc state and chooses which transport to use per authority.
 pub struct SmartNetworkClient {
     persona_id: String,
-    alt_svc_cache: RwLock<HashMap<String, AltSvcInfo>>,
+    alt_svc_cache: RwLock<HashMap<String, AltSvcCacheEntry>>,
     client: Client,
 }
 
@@ -117,7 +124,13 @@ impl SmartNetworkClient {
     ) -> Result<(), PhantomNetError> {
         let key = normalize_authority(&authority.into())?;
         if let Ok(mut cache) = self.alt_svc_cache.write() {
-            cache.insert(key, info);
+            cache.insert(
+                key,
+                AltSvcCacheEntry {
+                    info,
+                    stored_at: Instant::now(),
+                },
+            );
         }
         Ok(())
     }
@@ -133,17 +146,25 @@ impl SmartNetworkClient {
 
     pub fn select_transport(&self, authority: &str) -> Result<Transport, PhantomNetError> {
         let key = normalize_authority(authority)?;
-        let t = if let Ok(cache) = self.alt_svc_cache.read() {
-            cache
-                .get(&key)
-                .map(|info| {
-                    if info.h3 {
-                        Transport::Http3
-                    } else {
-                        Transport::Http2
-                    }
-                })
-                .unwrap_or(Transport::Http2)
+        let t = if let Ok(mut cache) = self.alt_svc_cache.write() {
+            let expired = cache.get(&key).is_some_and(|entry| {
+                entry.stored_at.elapsed().as_secs() >= entry.info.max_age_secs
+            });
+            if expired {
+                cache.remove(&key);
+                Transport::Http2
+            } else {
+                cache
+                    .get(&key)
+                    .map(|entry| {
+                        if entry.info.h3 {
+                            Transport::Http3
+                        } else {
+                            Transport::Http2
+                        }
+                    })
+                    .unwrap_or(Transport::Http2)
+            }
         } else {
             Transport::Http2
         };
@@ -295,5 +316,25 @@ mod tests {
             client.alt_svc_entries() >= 1,
             "Alt-Svc cache should contain at least one entry after insertion"
         );
+    }
+
+    #[test]
+    fn expired_alt_svc_entry_falls_back_to_h2() {
+        let client = SmartNetworkClient::new("persona_a");
+        client
+            .record_alt_svc(
+                "example.com",
+                AltSvcInfo {
+                    h3: true,
+                    max_age_secs: 0,
+                },
+            )
+            .expect("Alt-Svc insertion should succeed");
+
+        let transport = client
+            .select_transport("example.com")
+            .expect("transport lookup should succeed");
+        assert_eq!(transport, Transport::Http2);
+        assert_eq!(client.alt_svc_entries(), 0);
     }
 }

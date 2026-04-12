@@ -178,4 +178,24 @@ mod tests {
             "element outside viewport must be hidden"
         );
     }
+
+    #[test]
+    fn test_nested_flex_offsets_do_not_hide_visible_child() {
+        let html = r#"
+            <html><body style="display: flex; width: 400px; height: 120px;">
+                <div style="width: 100px; height: 100px;"></div>
+                <div style="display: flex; width: 120px; height: 100px;">
+                    <div style="width: 50px; height: 100px;"></div>
+                    <button id="target" style="width: 20px; height: 20px;">Go</button>
+                </div>
+            </body></html>
+        "#;
+
+        let page = process_html(html, "https://nested-offset.test", 170.0, 120.0).unwrap();
+        let target = page.tree.get_element_by_id("target").unwrap();
+        assert!(
+            page.tree.get(target).is_visible,
+            "nested child in viewport must remain visible"
+        );
+    }
 }

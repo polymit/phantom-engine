@@ -173,10 +173,12 @@ fn apply_layout_visibility_pass(
         let node = tree.get(node_id);
         match &node.data {
             NodeData::Element { .. } => {
-                let mut bounds = layout.get_bounds(node_id);
-                bounds.x += parent_offset.0;
-                bounds.y += parent_offset.1;
-                next_offset = (bounds.x, bounds.y);
+                let local_bounds = layout.get_bounds(node_id);
+                let abs_x = parent_offset.0 + local_bounds.x;
+                let abs_y = parent_offset.1 + local_bounds.y;
+                let bounds =
+                    ViewportBounds::new(abs_x, abs_y, local_bounds.width, local_bounds.height);
+                next_offset = (abs_x, abs_y);
 
                 let c1 = node.computed_display != Display::None;
                 let c2 = node.computed_visibility != Visibility::Hidden;

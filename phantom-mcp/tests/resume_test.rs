@@ -207,7 +207,7 @@ async fn resume_localstorage_survives() {
 }
 
 #[tokio::test]
-async fn resume_latest_snapshot_is_used() {
+async fn resume_latest_snapshot_is_used_even_if_filename_tick_is_older() {
     let adapter = get_test_adapter().await;
     let session_id = adapter
         .broker
@@ -233,9 +233,16 @@ async fn resume_latest_snapshot_is_used() {
         )
         .unwrap();
 
-    // Second suspend — timestamp-named file must sort after the first
+    // Second suspend with fresh state we expect resume to restore.
     tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-    adapter.suspend(session_id).await.unwrap();
+    let second_path = adapter.suspend(session_id).await.unwrap();
+
+    // Simulate clock skew: keep the same file mtime, but rename the newer
+    // snapshot to a much smaller filename tick than the first snapshot.
+    let second_path_buf = std::path::PathBuf::from(&second_path);
+    let skewed_second_path =
+        second_path_buf.with_file_name(format!("snapshot-{}-1.tar.zst", session_id));
+    std::fs::rename(&second_path_buf, &skewed_second_path).unwrap();
 
     // Wipe localStorage DB and resume from latest snapshot.
     let ls_path = adapter

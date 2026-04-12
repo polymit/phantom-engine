@@ -587,7 +587,10 @@ impl EngineAdapter {
     }
 
     /// Scans a session directory for `.tar.zst` snapshots and returns the most
-    /// recently modified one. Sorting by mtime ensures the latest suspend wins.
+    /// recently modified one.
+    ///
+    /// We intentionally sort by filesystem mtime first so clock skew in the
+    /// embedded filename timestamp cannot roll sessions back to stale snapshots.
     fn find_latest_snapshot(session_dir: &Path) -> Result<PathBuf, String> {
         let entries = std::fs::read_dir(session_dir).map_err(|e| e.to_string())?;
 
@@ -607,16 +610,17 @@ impl EngineAdapter {
                             .and_then(|s| s.to_str())
                             .unwrap_or_default();
 
-                        // Prefer the numeric suffix in snapshot filenames:
+                        // Numeric suffix in snapshot filenames:
                         // - suspend: snapshot-<secs>.tar.zst
                         // - clone:   snapshot-<uuid>-<millis>.tar.zst
+                        // Used only as a tie-breaker for equal mtimes.
                         let file_ts = file_name
                             .strip_suffix(".tar.zst")
                             .and_then(|stem| stem.rsplit('-').next())
                             .and_then(|n| n.parse::<u128>().ok())
                             .unwrap_or(0);
 
-                        // Fall back to mtime as secondary ordering key.
+                        // Primary ordering key.
                         let mtime_ns = modified
                             .duration_since(UNIX_EPOCH)
                             .map(|d| d.as_nanos())
@@ -629,8 +633,8 @@ impl EngineAdapter {
         }
 
         snapshots.sort_by(|a, b| {
-            a.1.cmp(&b.1)
-                .then(a.2.cmp(&b.2))
+            a.2.cmp(&b.2)
+                .then(a.1.cmp(&b.1))
                 .then_with(|| a.0.cmp(&b.0))
         });
         snapshots

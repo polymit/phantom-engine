@@ -62,6 +62,15 @@ fn bucket_range(bounds: &ViewportBounds, cell_size: f32) -> Option<(i32, i32, i3
     Some((x0, y0, x1, y1))
 }
 
+fn advance_stamp(stamp: &mut u32, seen: &mut [u32]) {
+    if *stamp == u32::MAX {
+        seen.fill(0);
+        *stamp = 1;
+    } else {
+        *stamp += 1;
+    }
+}
+
 pub fn resolve_zindex(tree: &DomTree, geometry: &GeometryMap) -> ZIndexMap {
     let mut map = ZIndexMap::new();
     const MIN_OCCLUSION_AREA: f32 = 100.0;
@@ -111,11 +120,7 @@ pub fn resolve_zindex(tree: &DomTree, geometry: &GeometryMap) -> ZIndexMap {
         let mut stamp: u32 = 0;
         for (idx, node) in elems.iter().enumerate() {
             let mut is_occluded = false;
-            stamp = stamp.wrapping_add(1);
-            if stamp == 0 {
-                seen.fill(0);
-                stamp = 1;
-            }
+            advance_stamp(&mut stamp, &mut seen);
 
             let Some((x0, y0, x1, y1)) = bucket_range(&node.bounds, BUCKET_SIZE) else {
                 map.inner.insert(node.id, false);
@@ -172,7 +177,7 @@ pub fn resolve_zindex(tree: &DomTree, geometry: &GeometryMap) -> ZIndexMap {
 
 #[cfg(test)]
 mod tests {
-    use super::resolve_zindex;
+    use super::{advance_stamp, resolve_zindex};
     use phantom_core::layout::bounds::ViewportBounds;
     use phantom_core::process_html;
 
@@ -200,5 +205,16 @@ mod tests {
             !z.is_occluded(overlay),
             "top overlay should not be occluded"
         );
+    }
+
+    #[test]
+    fn stamp_wrap_clears_seen_before_next_iteration() {
+        let mut stamp = u32::MAX;
+        let mut seen = vec![9, 4, 2];
+
+        advance_stamp(&mut stamp, &mut seen);
+
+        assert_eq!(stamp, 1);
+        assert_eq!(seen, vec![0, 0, 0]);
     }
 }

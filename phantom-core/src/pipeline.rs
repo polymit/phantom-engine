@@ -132,10 +132,10 @@ fn build_layout_tree(
         };
 
         if let Some(w) = node.computed_width {
-            style.size.width = taffy::Dimension::length(w);
+            style.size.width = w;
         }
         if let Some(h) = node.computed_height {
-            style.size.height = taffy::Dimension::length(h);
+            style.size.height = h;
         }
 
         let taffy_id = layout.add_node(node_id, style)?;

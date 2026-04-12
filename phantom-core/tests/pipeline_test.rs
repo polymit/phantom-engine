@@ -198,4 +198,26 @@ mod tests {
             "nested child in viewport must remain visible"
         );
     }
+
+    #[test]
+    fn test_percent_width_contributes_to_layout_bounds() {
+        let html = r#"
+            <html><body style="width: 400px; height: 120px;">
+                <div id="pct" style="width: 100%; height: 40px;">Wide</div>
+            </body></html>
+        "#;
+
+        let page = process_html(html, "https://percent-size.test", 400.0, 120.0).unwrap();
+        let pct = page.tree.get_element_by_id("pct").unwrap();
+        let bounds = page.layout.get_bounds(pct);
+
+        assert!(
+            bounds.width > 0.0,
+            "percent width should produce non-zero width"
+        );
+        assert!(
+            page.tree.get(pct).is_visible,
+            "percent-sized element in viewport should be visible"
+        );
+    }
 }

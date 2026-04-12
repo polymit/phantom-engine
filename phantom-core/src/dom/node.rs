@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use taffy::Dimension;
 
 #[derive(Debug, Clone)]
 pub enum NodeData {
@@ -72,8 +73,8 @@ pub struct DomNode {
     pub computed_visibility: Visibility,
     pub computed_opacity: f32,
     pub computed_pointer_events: PointerEvents,
-    pub computed_width: Option<f32>,
-    pub computed_height: Option<f32>,
+    pub computed_width: Option<Dimension>,
+    pub computed_height: Option<Dimension>,
     pub z_index: Option<i32>,
     pub event_listeners: Vec<EventListenerType>,
     pub aria_role: Option<AriaRole>,

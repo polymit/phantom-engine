@@ -32,15 +32,17 @@ pub struct SnapshotData {
     pub cache_meta: Option<Vec<u8>>,
 }
 
-/// Derives a deterministic HMAC key for a given session.
-/// Attempts to use `PHANTOM_SNAPSHOT_KEY` if available, otherwise generates
-/// a deterministic fallback key strictly isolated per `session_id`.
-fn hmac_key(session_id: &str) -> Vec<u8> {
-    if let Ok(key) = std::env::var("PHANTOM_SNAPSHOT_KEY") {
-        key.into_bytes()
-    } else {
-        Sha256::digest(format!("{}-phantom-dev", session_id).as_bytes()).to_vec()
+/// Loads the HMAC key used to sign and verify snapshot manifests.
+///
+/// `PHANTOM_SNAPSHOT_KEY` must be set to a non-empty secret. The snapshot
+/// subsystem fails closed when this key is absent.
+fn hmac_key() -> Result<Vec<u8>, String> {
+    let key = std::env::var("PHANTOM_SNAPSHOT_KEY")
+        .map_err(|_| "PHANTOM_SNAPSHOT_KEY is not set".to_string())?;
+    if key.trim().is_empty() {
+        return Err("PHANTOM_SNAPSHOT_KEY is empty".to_string());
     }
+    Ok(key.into_bytes())
 }
 
 /// Creates a hex-encoded SHA-256 string for the given byte slice (64 chars).
@@ -109,7 +111,7 @@ pub fn build_snapshot(data: &SnapshotData) -> Result<Vec<u8>, String> {
 
     // 3. Build deterministic signing payload for integrity verification.
     let signing_payload = manifest_signing_payload(&checksums, &sizes)?;
-    let key = hmac_key(&data.session_id);
+    let key = hmac_key()?;
     let hmac_sig = hmac_sign(&key, &signing_payload);
 
     let timestamp = SystemTime::now()
@@ -173,7 +175,7 @@ pub fn build_snapshot(data: &SnapshotData) -> Result<Vec<u8>, String> {
 /// across its declared checksum map. Panics and throws a String error dynamically on fail.
 pub fn verify_manifest(manifest: &SnapshotManifest) -> Result<(), String> {
     let signing_payload = manifest_signing_payload(&manifest.checksums, &manifest.sizes)?;
-    let key = hmac_key(&manifest.session_id);
+    let key = hmac_key()?;
     let expected_sig = hmac_sign(&key, &signing_payload);
 
     if expected_sig != manifest.hmac_sig {

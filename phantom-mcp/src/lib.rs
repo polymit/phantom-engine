@@ -153,22 +153,65 @@ impl McpServer {
             }
 
             "browser_click" => {
-                let outcome = tools::click::handle_click(adapter, req.params).await;
+                let adapter = adapter.clone();
+                let params = req.params;
+                let rt_handle = tokio::runtime::Handle::current();
+                let outcome = tokio::task::spawn_blocking(move || {
+                    rt_handle
+                        .block_on(async move { tools::click::handle_click(&adapter, params).await })
+                })
+                .await
+                .map_err(|join_err| {
+                    McpError::InvalidRequest(format!("rpc handler task failed: {join_err}"))
+                })?;
                 tool_response(req_id, outcome, "click failed", "click_error")
             }
 
             "browser_evaluate" => {
-                let outcome = tools::evaluate::handle_evaluate(adapter, req.params).await;
+                let adapter = adapter.clone();
+                let params = req.params;
+                let rt_handle = tokio::runtime::Handle::current();
+                let outcome = tokio::task::spawn_blocking(move || {
+                    rt_handle.block_on(async move {
+                        tools::evaluate::handle_evaluate(&adapter, params).await
+                    })
+                })
+                .await
+                .map_err(|join_err| {
+                    McpError::InvalidRequest(format!("rpc handler task failed: {join_err}"))
+                })?;
                 tool_response(req_id, outcome, "evaluate failed", "js_error")
             }
 
             "browser_type" => {
-                let outcome = tools::type_text::handle_type(adapter, req.params).await;
+                let adapter = adapter.clone();
+                let params = req.params;
+                let rt_handle = tokio::runtime::Handle::current();
+                let outcome = tokio::task::spawn_blocking(move || {
+                    rt_handle.block_on(async move {
+                        tools::type_text::handle_type(&adapter, params).await
+                    })
+                })
+                .await
+                .map_err(|join_err| {
+                    McpError::InvalidRequest(format!("rpc handler task failed: {join_err}"))
+                })?;
                 tool_response(req_id, outcome, "type failed", "type_error")
             }
 
             "browser_press_key" => {
-                let outcome = tools::press_key::handle_press_key(adapter, req.params).await;
+                let adapter = adapter.clone();
+                let params = req.params;
+                let rt_handle = tokio::runtime::Handle::current();
+                let outcome = tokio::task::spawn_blocking(move || {
+                    rt_handle.block_on(async move {
+                        tools::press_key::handle_press_key(&adapter, params).await
+                    })
+                })
+                .await
+                .map_err(|join_err| {
+                    McpError::InvalidRequest(format!("rpc handler task failed: {join_err}"))
+                })?;
                 tool_response(req_id, outcome, "press key failed", "press_key_error")
             }
 
@@ -253,33 +296,9 @@ async fn rpc_endpoint(
         }
     };
 
-    let server_for_task = server.clone();
-    let adapter_for_task = server.adapter.clone();
-    let rt_handle = tokio::runtime::Handle::current();
-    let task = tokio::task::spawn_blocking(move || {
-        rt_handle.block_on(async move {
-            server_for_task
-                .handle_request(&adapter_for_task, req, provided_key.as_deref())
-                .await
-        })
-    });
-
-    let handled = match task.await {
-        Ok(result) => result,
-        Err(join_err) => {
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({
-                    "jsonrpc": "2.0",
-                    "id": null,
-                    "error": {
-                        "code": -32603,
-                        "message": format!("rpc handler task failed: {}", join_err)
-                    }
-                })),
-            );
-        }
-    };
+    let handled = server
+        .handle_request(&server.adapter, req, provided_key.as_deref())
+        .await;
 
     match handled {
         Ok(resp) => (

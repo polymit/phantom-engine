@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use taffy::Dimension;
 
 #[derive(Debug, Clone)]
 pub enum NodeData {
@@ -35,6 +34,13 @@ pub enum Visibility {
 pub enum PointerEvents {
     Auto,
     None,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum SizeValue {
+    Length(f32),
+    Percent(f32),
+    Auto,
 }
 
 #[derive(Debug, Clone)]
@@ -73,8 +79,8 @@ pub struct DomNode {
     pub computed_visibility: Visibility,
     pub computed_opacity: f32,
     pub computed_pointer_events: PointerEvents,
-    pub computed_width: Option<Dimension>,
-    pub computed_height: Option<Dimension>,
+    pub computed_width: Option<SizeValue>,
+    pub computed_height: Option<SizeValue>,
     pub z_index: Option<i32>,
     pub event_listeners: Vec<EventListenerType>,
     pub aria_role: Option<AriaRole>,

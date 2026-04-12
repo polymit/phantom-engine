@@ -1,12 +1,11 @@
 use super::properties::{ComputedStyle, Position};
-use crate::dom::node::{Display, PointerEvents, Visibility};
+use crate::dom::node::{Display, PointerEvents, SizeValue, Visibility};
 use cssparser::{Parser, ParserInput, ToCss, Token};
-use taffy::Dimension;
 
 pub struct CssEngine;
 
 impl CssEngine {
-    fn parse_dimension(raw: &str) -> Option<Dimension> {
+    fn parse_dimension(raw: &str) -> Option<SizeValue> {
         let val = raw.trim().to_lowercase();
         if val.is_empty() {
             return None;
@@ -17,34 +16,34 @@ impl CssEngine {
             "auto" | "min-content" | "max-content" | "fit-content" | "fit-content()"
         ) || val.starts_with("calc(")
         {
-            return Some(Dimension::auto());
+            return Some(SizeValue::Auto);
         }
 
         if let Some(num) = val.strip_suffix("px").and_then(|n| n.parse::<f32>().ok()) {
-            return Some(Dimension::length(num));
+            return Some(SizeValue::Length(num));
         }
         if let Some(num) = val.strip_suffix('%').and_then(|n| n.parse::<f32>().ok()) {
-            return Some(Dimension::percent(num / 100.0));
+            return Some(SizeValue::Percent(num / 100.0));
         }
         if let Some(num) = val.strip_suffix("vw").and_then(|n| n.parse::<f32>().ok()) {
-            return Some(Dimension::percent(num / 100.0));
+            return Some(SizeValue::Percent(num / 100.0));
         }
         if let Some(num) = val.strip_suffix("vh").and_then(|n| n.parse::<f32>().ok()) {
-            return Some(Dimension::percent(num / 100.0));
+            return Some(SizeValue::Percent(num / 100.0));
         }
         if let Some(num) = val.strip_suffix("rem").and_then(|n| n.parse::<f32>().ok()) {
-            return Some(Dimension::length(num * 16.0));
+            return Some(SizeValue::Length(num * 16.0));
         }
         if let Some(num) = val.strip_suffix("em").and_then(|n| n.parse::<f32>().ok()) {
-            return Some(Dimension::length(num * 16.0));
+            return Some(SizeValue::Length(num * 16.0));
         }
         if let Some(num) = val.strip_suffix("ch").and_then(|n| n.parse::<f32>().ok()) {
-            return Some(Dimension::length(num * 8.0));
+            return Some(SizeValue::Length(num * 8.0));
         }
         if let Some(num) = val.strip_suffix("fr").and_then(|n| n.parse::<f32>().ok()) {
-            return Some(Dimension::percent(num));
+            return Some(SizeValue::Percent(num));
         }
-        val.parse::<f32>().ok().map(Dimension::length)
+        val.parse::<f32>().ok().map(SizeValue::Length)
     }
 
     pub fn parse_inline_style(style_attr: &str) -> ComputedStyle {
@@ -184,8 +183,7 @@ impl CssEngine {
 #[cfg(test)]
 mod tests {
     use super::CssEngine;
-    use crate::dom::node::{Display, PointerEvents, Visibility};
-    use taffy::Dimension;
+    use crate::dom::node::{Display, PointerEvents, SizeValue, Visibility};
 
     #[test]
     fn parse_inline_style_keeps_last_declaration_without_trailing_semicolon() {
@@ -205,21 +203,21 @@ mod tests {
     #[test]
     fn apply_declaration_does_not_silently_strip_value_semicolons() {
         let mut style = CssEngine::parse_inline_style("width: 10px");
-        assert_eq!(style.width, Some(Dimension::length(10.0)));
+        assert_eq!(style.width, Some(SizeValue::Length(10.0)));
 
         CssEngine::apply_declaration(&mut style, "width", "100px;");
-        assert_eq!(style.width, Some(Dimension::length(10.0)));
+        assert_eq!(style.width, Some(SizeValue::Length(10.0)));
     }
 
     #[test]
     fn parse_percent_and_relative_dimensions() {
         let width = CssEngine::parse_inline_style("width: 100%");
-        assert_eq!(width.width, Some(Dimension::percent(1.0)));
+        assert_eq!(width.width, Some(SizeValue::Percent(1.0)));
 
         let rem = CssEngine::parse_inline_style("width: 2rem");
-        assert_eq!(rem.width, Some(Dimension::length(32.0)));
+        assert_eq!(rem.width, Some(SizeValue::Length(32.0)));
 
         let vh = CssEngine::parse_inline_style("height: 50vh");
-        assert_eq!(vh.height, Some(Dimension::percent(0.5)));
+        assert_eq!(vh.height, Some(SizeValue::Percent(0.5)));
     }
 }

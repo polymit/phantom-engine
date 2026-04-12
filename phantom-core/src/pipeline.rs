@@ -1,5 +1,5 @@
 use crate::css::{ComputedStyle, CssEngine};
-use crate::dom::{Display, DomTree, NodeData, Visibility};
+use crate::dom::{Display, DomTree, NodeData, SizeValue, Visibility};
 use crate::layout::bounds::{LayoutEngine, LayoutError, ViewportBounds};
 use indextree::NodeId;
 use thiserror::Error;
@@ -97,8 +97,8 @@ fn apply_css_pass(tree: &mut DomTree, node_id: NodeId, parent_style: Option<Comp
             node.computed_visibility = computed.visibility.clone();
             node.computed_opacity = computed.opacity;
             node.computed_pointer_events = computed.pointer_events.clone();
-            node.computed_width = computed.width;
-            node.computed_height = computed.height;
+            node.computed_width = computed.width.clone();
+            node.computed_height = computed.height.clone();
             node.z_index = computed.z_index;
 
             node.is_visible = node.computed_display != Display::None
@@ -131,11 +131,19 @@ fn build_layout_tree(
             ..Default::default()
         };
 
-        if let Some(w) = node.computed_width {
-            style.size.width = w;
+        if let Some(w) = &node.computed_width {
+            style.size.width = match w {
+                SizeValue::Length(v) => taffy::Dimension::length(*v),
+                SizeValue::Percent(v) => taffy::Dimension::percent(*v),
+                SizeValue::Auto => taffy::Dimension::auto(),
+            };
         }
-        if let Some(h) = node.computed_height {
-            style.size.height = h;
+        if let Some(h) = &node.computed_height {
+            style.size.height = match h {
+                SizeValue::Length(v) => taffy::Dimension::length(*v),
+                SizeValue::Percent(v) => taffy::Dimension::percent(*v),
+                SizeValue::Auto => taffy::Dimension::auto(),
+            };
         }
 
         let taffy_id = layout.add_node(node_id, style)?;

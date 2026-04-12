@@ -3,7 +3,7 @@ pub mod query;
 pub mod sink;
 
 pub use self::node::{
-    AriaRole, Display, DomNode, EventListenerType, NodeData, PointerEvents, Visibility,
+    AriaRole, Display, DomNode, EventListenerType, NodeData, PointerEvents, SizeValue, Visibility,
 };
 pub use self::sink::DomSink;
 use indextree::{Arena, NodeId};

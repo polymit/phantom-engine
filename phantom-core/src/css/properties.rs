@@ -1,5 +1,4 @@
-use crate::dom::node::{Display, PointerEvents, Visibility};
-use taffy::Dimension;
+use crate::dom::node::{Display, PointerEvents, SizeValue, Visibility};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Position {
@@ -19,8 +18,8 @@ pub struct ComputedStyle {
     pub position: Position,
     pub z_index: Option<i32>,
     pub pointer_events: PointerEvents,
-    pub width: Option<Dimension>,
-    pub height: Option<Dimension>,
+    pub width: Option<SizeValue>,
+    pub height: Option<SizeValue>,
 }
 
 impl Default for ComputedStyle {

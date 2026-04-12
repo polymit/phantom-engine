@@ -2,7 +2,6 @@ use crate::cct_types::{CctEvents, CctState};
 use crate::visibility::VisibilityMap;
 use indextree::NodeId;
 use phantom_core::dom::{AriaRole, DomTree, NodeData};
-use rayon::prelude::*;
 use std::collections::HashMap;
 
 pub struct SemanticInfo {
@@ -42,7 +41,7 @@ pub fn extract_semantics(
     let mut map = SemanticMap::new();
 
     let results: Vec<(NodeId, SemanticInfo)> = visible_node_ids
-        .par_iter()
+        .iter()
         .filter_map(|&node_id| {
             let dom_node = tree.get(node_id);
             if !matches!(dom_node.data, NodeData::Element { .. }) {

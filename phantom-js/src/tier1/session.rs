@@ -266,7 +266,7 @@ impl Tier1Session {
         let handler_deadline = Arc::clone(&eval_deadline_ms);
         runtime
             .set_interrupt_handler(Some(Box::new(move || {
-                let deadline_ms = handler_deadline.load(Ordering::Relaxed);
+                let deadline_ms = handler_deadline.load(Ordering::Acquire);
                 let now_ms = elapsed_ms_u64(interrupt_epoch);
                 if deadline_ms != 0 && now_ms >= deadline_ms {
                     tracing::warn!("Tier1Session: CPU budget exceeded — terminating JS");
@@ -373,7 +373,7 @@ impl Tier1Session {
     pub async fn eval(&self, script: &str) -> Result<String, PhantomJsError> {
         let now_ms = elapsed_ms_u64(self.interrupt_epoch);
         let deadline_ms = deadline_from_now_ms(now_ms);
-        self.eval_deadline_ms.store(deadline_ms, Ordering::Relaxed);
+        self.eval_deadline_ms.store(deadline_ms, Ordering::Release);
 
         let context = self.context.clone();
         let script = script.to_string();
@@ -446,7 +446,7 @@ impl Tier1Session {
             .await;
 
         // Disable interruption between eval calls.
-        self.eval_deadline_ms.store(0, Ordering::Relaxed);
+        self.eval_deadline_ms.store(0, Ordering::Release);
 
         result.map_err(|e| PhantomJsError::JsEvaluation(e.to_string()))
     }

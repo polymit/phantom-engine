@@ -715,6 +715,98 @@ async fn type_input_updates_value_and_persists_for_evaluate() {
 }
 
 #[tokio::test]
+async fn type_updates_original_tab_after_switch() {
+    use phantom_core::dom::NodeData;
+    use phantom_core::process_html;
+    use phantom_mcp::{engine::SessionPage, EngineAdapter, McpServer};
+    use std::time::Duration;
+
+    let adapter = EngineAdapter::new(5, 0, 5, 0).await;
+    let server = McpServer::new_with_adapter(None, adapter.clone());
+
+    let tab_a = adapter
+        .open_tab(Some("https://tab-a.type.test".to_string()))
+        .await;
+    let page_a = process_html(
+        "<html><body style='width:1280px;height:720px;'><input id='email' value=''/></body></html>",
+        "https://tab-a.type.test",
+        1280.0,
+        720.0,
+    )
+    .unwrap();
+    adapter.store_page(SessionPage::new(
+        page_a,
+        "https://tab-a.type.test".to_string(),
+        200,
+    ));
+
+    let tab_b = adapter
+        .open_tab(Some("https://tab-b.type.test".to_string()))
+        .await;
+    let page_b = process_html(
+        "<html><body style='width:1280px;height:720px;'><input id='email' value='tab-b'/></body></html>",
+        "https://tab-b.type.test",
+        1280.0,
+        720.0,
+    )
+    .unwrap();
+    adapter.store_page(SessionPage::new(
+        page_b,
+        "https://tab-b.type.test".to_string(),
+        200,
+    ));
+
+    adapter
+        .switch_tab(tab_a)
+        .await
+        .expect("tab A should be switchable");
+
+    let server_for_type = server.clone();
+    let adapter_for_type = adapter.clone();
+    let type_task = tokio::spawn(async move {
+        let req = McpServer::parse_request(
+            r##"{"jsonrpc":"2.0","id":1,"method":"browser_type","params":{"selector":"#email","text":"abcdef","delay_ms":5}}"##,
+        )
+        .unwrap();
+        server_for_type
+            .handle_request(&adapter_for_type, req, None)
+            .await
+            .unwrap()
+    });
+
+    tokio::time::sleep(Duration::from_millis(20)).await;
+    adapter
+        .switch_tab(tab_b)
+        .await
+        .expect("tab B should be switchable");
+
+    let type_resp = type_task.await.unwrap();
+    assert!(
+        type_resp.error.is_none(),
+        "browser_type must succeed: {:?}",
+        type_resp.error
+    );
+
+    let read_email_value = |page: &SessionPage| -> String {
+        let node_id = page.tree.get_element_by_id("email").unwrap();
+        let node = page.tree.get(node_id).unwrap();
+        match &node.data {
+            NodeData::Element { attributes, .. } => {
+                attributes.get("value").cloned().unwrap_or_else(String::new)
+            }
+            _ => String::new(),
+        }
+    };
+
+    let store = adapter.page_store.lock();
+    let value_a = read_email_value(store.get(&tab_a).expect("tab A page should exist"));
+    let value_b = read_email_value(store.get(&tab_b).expect("tab B page should exist"));
+
+    assert_eq!(value_a, "abcdef", "typed value must stay on original tab");
+    assert_eq!(value_b, "tab-b", "switched tab must not receive typed DOM");
+}
+
+#[tokio::test]
 async fn press_key_requires_non_empty_key() {
     let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
     let server = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());

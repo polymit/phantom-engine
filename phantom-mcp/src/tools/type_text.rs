@@ -3,7 +3,6 @@ use axum::http::StatusCode;
 use phantom_js::BehaviorEngine;
 use phantom_serializer::CctDelta;
 use serde_json::{json, Value};
-use uuid::Uuid;
 
 use super::escape_js_single_quoted;
 
@@ -37,14 +36,21 @@ pub async fn handle_type(
         delay_ms,
     } = p;
 
+    let page_key = adapter.current_page_key();
     let tree = {
-        let page = adapter.get_page().ok_or_else(|| {
+        let store = adapter.page_store.lock();
+        let page = store.get(&page_key).ok_or_else(|| {
             (
                 StatusCode::BAD_REQUEST,
                 json!({ "error": { "code": "no_page_loaded", "message": "no page loaded" } }),
             )
         })?;
-        page.tree.clone()
+        page.to_parsed_page().map(|p| p.tree).ok_or_else(|| {
+            (
+                StatusCode::BAD_REQUEST,
+                json!({ "error": { "code": "no_page_loaded", "message": "no page loaded" } }),
+            )
+        })?
     };
     let delta_node_id = tree.query_selector(&selector).or(tree.document_root);
 
@@ -147,8 +153,7 @@ pub async fn handle_type(
         .as_ref()
         .map(|dom| dom.inner.read().clone())
     {
-        let key = (*adapter.active_page_key.lock()).unwrap_or(Uuid::nil());
-        if let Some(stored_page) = adapter.page_store.lock().get_mut(&key) {
+        if let Some(stored_page) = adapter.page_store.lock().get_mut(&page_key) {
             stored_page.tree = updated_tree;
         }
     }

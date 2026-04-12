@@ -3,8 +3,8 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 
 use html5ever::tendril::StrTendril;
-use html5ever::tree_builder::{ElementFlags, NodeOrText, QuirksMode, TreeSink};
-use markup5ever::{Attribute, ExpandedName, QualName};
+use html5ever::tree_builder::{ElemName, ElementFlags, NodeOrText, QuirksMode, TreeSink};
+use markup5ever::{Attribute, LocalName, Namespace, QualName};
 
 use crate::dom::node::{AriaRole, DomNode, NodeData};
 use crate::dom::DomTree;
@@ -13,6 +13,22 @@ pub struct DomSink {
     pub tree: RefCell<DomTree>,
     errors: RefCell<Vec<String>>,
     names: RefCell<HashMap<indextree::NodeId, QualName>>,
+}
+
+#[derive(Debug)]
+pub struct OwnedElemName {
+    ns: Namespace,
+    local: LocalName,
+}
+
+impl ElemName for OwnedElemName {
+    fn ns(&self) -> &Namespace {
+        &self.ns
+    }
+
+    fn local_name(&self) -> &LocalName {
+        &self.local
+    }
 }
 
 impl DomSink {
@@ -39,7 +55,7 @@ impl TreeSink for DomSink {
     // ElemName is required as per the html5ever 0.38 API change
     type Output = DomTree;
     type Handle = indextree::NodeId;
-    type ElemName<'a> = ExpandedName<'a>;
+    type ElemName<'a> = OwnedElemName;
 
     fn finish(self) -> DomTree {
         self.tree.into_inner()
@@ -58,14 +74,12 @@ impl TreeSink for DomSink {
     }
 
     fn elem_name<'a>(&'a self, target: &'a Self::Handle) -> Self::ElemName<'a> {
-        // SAFETY: `self.names` is only mutated during `create_element`, which cannot
-        // overlap with `elem_name` because html5ever calls them sequentially on `&self`.
-        // The returned `ExpandedName` borrows from the `QualName` stored in the map,
-        // so we need a reference with lifetime `'a` that the `RefCell::borrow()` guard
-        // cannot provide (guard would be dropped at end of this function). The raw
-        // pointer dereference is safe because no mutable borrow is active.
-        let names_ref = unsafe { &*self.names.as_ptr() };
-        names_ref.get(target).expect("Node not found").expanded()
+        let names = self.names.borrow();
+        let name = names.get(target).expect("Node not found");
+        OwnedElemName {
+            ns: name.ns.clone(),
+            local: name.local.clone(),
+        }
     }
 
     fn create_element(

@@ -1150,6 +1150,44 @@ async fn tab_close_keeps_active_page_and_store_in_sync() {
     );
 }
 
+#[tokio::test]
+async fn stale_navigation_key_does_not_reinsert_closed_tab_page() {
+    use phantom_core::process_html;
+    use phantom_mcp::engine::SessionPage;
+
+    let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
+
+    let _tab1 = adapter
+        .open_tab(Some("https://race-tab-1.test".to_string()))
+        .await;
+    let tab2 = adapter
+        .open_tab(Some("https://race-tab-2.test".to_string()))
+        .await;
+
+    let stale_key = adapter.current_page_key();
+    assert_eq!(stale_key, tab2, "active key should match second tab");
+
+    adapter.close_tab(tab2).await;
+
+    let page = process_html(
+        "<html><body style='width:1280px;height:720px;'><h1>Late write</h1></body></html>",
+        "https://race-tab-2.test",
+        1280.0,
+        720.0,
+    )
+    .unwrap();
+    let stored = adapter.store_page_if_current(
+        stale_key,
+        SessionPage::new(page, "https://race-tab-2.test".to_string(), 200),
+    );
+
+    assert!(!stored, "stale tab key must be rejected");
+    assert!(
+        !adapter.page_store.lock().contains_key(&tab2),
+        "closed tab must not be reinserted after close"
+    );
+}
+
 // ── cookie tests ─────────────────────────────────────────
 
 #[tokio::test]

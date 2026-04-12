@@ -228,6 +228,25 @@ impl EngineAdapter {
         self.page_store.lock().insert(key, page);
     }
 
+    /// Snapshot the currently active page key used for navigation writes.
+    pub fn current_page_key(&self) -> Uuid {
+        (*self.active_page_key.lock()).unwrap_or(Uuid::nil())
+    }
+
+    /// Store a page only if the active key still matches the expected key.
+    ///
+    /// Returns false when active context changed while navigation was in flight.
+    pub fn store_page_if_current(&self, expected_key: Uuid, page: SessionPage) -> bool {
+        let active_page_key = self.active_page_key.lock();
+        let mut page_store = self.page_store.lock();
+        let current_key = (*active_page_key).unwrap_or(Uuid::nil());
+        if current_key != expected_key {
+            return false;
+        }
+        page_store.insert(current_key, page);
+        true
+    }
+
     /// Clone the stored ParsedPage for re-serialisation.
     /// Returns None if no page has been navigated to yet.
     pub fn get_page(&self) -> Option<ParsedPage> {

@@ -32,6 +32,7 @@ pub async fn handle_navigate(
     adapter: &EngineAdapter,
     params: Value,
 ) -> Result<Value, (StatusCode, Value)> {
+    let expected_key = adapter.current_page_key();
     let params: NavigateParams = serde_json::from_value(params).map_err(|e| {
         (
             StatusCode::BAD_REQUEST,
@@ -86,13 +87,19 @@ pub async fn handle_navigate(
 
     // Persist the parsed page so browser_get_scene_graph can re-serialise
     // with different scroll/mode parameters without re-fetching.
-    adapter.store_page(SessionPage::with_viewport(
-        result.page,
-        result.url.clone(),
-        result.status,
-        config.viewport_width,
-        config.viewport_height,
-    ));
+    let stored = adapter.store_page_if_current(
+        expected_key,
+        SessionPage::with_viewport(
+            result.page,
+            result.url.clone(),
+            result.status,
+            config.viewport_width,
+            config.viewport_height,
+        ),
+    );
+    if !stored {
+        tracing::debug!("navigate result dropped because active tab changed during navigation");
+    }
     if let Some(node_id) = delta_root {
         adapter.inject_cct_delta(CctDelta::Update {
             node_id,

@@ -39,13 +39,17 @@ pub async fn handle_session_snapshot(
     // Step 1: Collect cookies_json
     let cookies_json = {
         let store = adapter.cookie_store.lock().await;
-        serde_json::to_vec(&*store).map_err(|e| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                json!({ "error": { "code": "cookie_error", "message": format!("failed to serialize cookies: {}", e) } }),
-            )
-        })?
-    };
+        let mut buf = Vec::new();
+        cookie_store::serde::json::save_incl_expired_and_nonpersistent(&store, &mut buf).map_err(
+            |e| {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    json!({ "error": { "code": "cookie_error", "message": format!("failed to serialize cookies: {}", e) } }),
+                )
+            },
+        )?;
+        Ok::<Vec<u8>, (StatusCode, Value)>(buf)
+    }?;
 
     // Step 2: Collect local_storage from session storage dir localstorage/ subdir
     let mut local_storage = HashMap::new();

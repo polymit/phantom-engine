@@ -1302,6 +1302,62 @@ async fn session_snapshot_is_zstd_compressed() {
 }
 
 #[tokio::test]
+async fn session_snapshot_cookies_use_resume_compatible_format() {
+    use std::io::{BufReader, Cursor, Read};
+    use url::Url;
+
+    let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
+    {
+        let mut store = adapter.cookie_store.lock().await;
+        let url = Url::parse("https://cookie-format.test").unwrap();
+        store
+            .parse(
+                "sid=abc123; Domain=cookie-format.test; Path=/; Secure",
+                &url,
+            )
+            .unwrap();
+    }
+
+    let server = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
+    let req = phantom_mcp::McpServer::parse_request(
+        r#"{"jsonrpc":"2.0","id":1,"method":"browser_session_snapshot","params":{}}"#,
+    )
+    .unwrap();
+    let resp = server.handle_request(&adapter, req, None).await.unwrap();
+    let result = resp.result.unwrap();
+    let snapshot_path = result["snapshot_path"].as_str().unwrap();
+
+    let compressed = std::fs::read(snapshot_path).unwrap();
+    let decompressed = zstd::decode_all(Cursor::new(&compressed)).unwrap();
+    let mut archive = tar::Archive::new(Cursor::new(&decompressed));
+
+    let mut cookies_bytes = None;
+    for entry in archive.entries().unwrap() {
+        let mut entry = entry.unwrap();
+        let path = entry.path().unwrap().to_string_lossy().into_owned();
+        if path == "cookies.bin" {
+            let mut buf = Vec::new();
+            entry.read_to_end(&mut buf).unwrap();
+            cookies_bytes = Some(buf);
+            break;
+        }
+    }
+
+    let cookies_bytes = cookies_bytes.expect("cookies.bin must be present in snapshot");
+    let restored = cookie_store::serde::json::load_all(BufReader::new(Cursor::new(cookies_bytes)))
+        .expect("cookies.bin must deserialize with cookie_store::serde::json::load_all");
+
+    let url = Url::parse("https://cookie-format.test/").unwrap();
+    let names: Vec<_> = restored.matches(&url).iter().map(|c| c.name()).collect();
+    assert!(
+        names.contains(&"sid"),
+        "snapshot cookie payload must round-trip through load_all"
+    );
+
+    let _ = std::fs::remove_file(snapshot_path);
+}
+
+#[tokio::test]
 async fn storage_session_id_validates_uuid_format() {
     use phantom_storage::is_valid_session_id;
     // Valid UUIDs must pass

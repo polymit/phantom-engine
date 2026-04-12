@@ -12,6 +12,7 @@ use phantom_net::SmartNetworkClient;
 use phantom_serializer::CctDelta;
 use phantom_session::{SessionBroker, SessionState};
 use phantom_storage::SessionStorageManager;
+use sha2::{Digest, Sha256};
 use std::sync::Once;
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use tokio::sync::OnceCell;
@@ -452,9 +453,14 @@ impl EngineAdapter {
         let manifest = phantom_storage::snapshot::read_manifest_from_snapshot(&compressed)
             .map_err(|e| e.to_string())?;
         phantom_storage::snapshot::verify_manifest(&manifest).map_err(|e| e.to_string())?;
+        let snapshot_files = Self::extract_files_from_snapshot(&compressed)?;
+        Self::verify_snapshot_payload(&manifest, &snapshot_files)?;
 
         // Rehydrate cookies using modern API
-        let cookies_bytes = Self::extract_file_from_snapshot(&compressed, "cookies.bin")?;
+        let cookies_bytes = snapshot_files
+            .get("cookies.bin")
+            .cloned()
+            .ok_or_else(|| "snapshot missing file: cookies.bin".to_string())?;
         if !cookies_bytes.is_empty() {
             let store =
                 cookie_store::serde::json::load_all(BufReader::new(Cursor::new(&cookies_bytes)))
@@ -467,7 +473,7 @@ impl EngineAdapter {
         let storage = self.storage.clone();
         let sid = session_id_str.clone();
         let manifest_clone = manifest.clone();
-        let compressed_clone = compressed.clone();
+        let snapshot_files_clone = snapshot_files.clone();
 
         tokio::task::spawn_blocking(move || {
             let session_dir = storage.session_dir(&sid).map_err(|e| e.to_string())?;
@@ -476,7 +482,10 @@ impl EngineAdapter {
                 // localStorage
                 if let Some(rest) = filename.strip_prefix("localstorage/") {
                     let hash = rest.strip_suffix(".json").ok_or("invalid ls filename")?;
-                    let json_bytes = Self::extract_file_from_snapshot(&compressed_clone, filename)?;
+                    let json_bytes = snapshot_files_clone
+                        .get(filename)
+                        .cloned()
+                        .ok_or_else(|| format!("snapshot missing file: {}", filename))?;
                     if json_bytes.is_empty() {
                         continue;
                     }
@@ -498,8 +507,10 @@ impl EngineAdapter {
                 // IndexedDB
                 else if let Some(rest) = filename.strip_prefix("indexeddb/") {
                     let hash = rest.strip_suffix(".sqlite").ok_or("invalid idb filename")?;
-                    let sqlite_bytes =
-                        Self::extract_file_from_snapshot(&compressed_clone, filename)?;
+                    let sqlite_bytes = snapshot_files_clone
+                        .get(filename)
+                        .cloned()
+                        .ok_or_else(|| format!("snapshot missing file: {}", filename))?;
                     if sqlite_bytes.is_empty() {
                         continue;
                     }
@@ -524,6 +535,34 @@ impl EngineAdapter {
             tracing::warn!("resume elapsed: {}ms (target: < 50ms)", elapsed.as_millis());
         }
         tracing::info!("resume elapsed: {}ms", elapsed.as_millis());
+
+        Ok(())
+    }
+
+    fn verify_snapshot_payload(
+        manifest: &phantom_storage::snapshot::SnapshotManifest,
+        files: &HashMap<String, Vec<u8>>,
+    ) -> Result<(), String> {
+        for (filename, expected_hash) in &manifest.checksums {
+            let file_bytes = files
+                .get(filename)
+                .ok_or_else(|| format!("snapshot missing file: {}", filename))?;
+
+            if let Some(expected_size) = manifest.sizes.get(filename) {
+                if *expected_size != file_bytes.len() as u64 {
+                    return Err(format!("snapshot size mismatch for {}", filename));
+                }
+            } else {
+                return Err(format!("manifest missing size for {}", filename));
+            }
+
+            let mut hasher = Sha256::new();
+            hasher.update(file_bytes);
+            let actual_hash = hex::encode(hasher.finalize());
+            if &actual_hash != expected_hash {
+                return Err(format!("snapshot checksum mismatch for {}", filename));
+            }
+        }
 
         Ok(())
     }
@@ -581,12 +620,13 @@ impl EngineAdapter {
             .ok_or_else(|| "no snapshot found for session".to_string())
     }
 
-    /// Extracts a single file from a zstd-compressed tar archive by exact path match.
-    /// Returns an empty Vec if the file is not present — missing files are optional.
-    fn extract_file_from_snapshot(compressed: &[u8], filename: &str) -> Result<Vec<u8>, String> {
+    /// Extracts all regular files from a zstd-compressed tar archive.
+    fn extract_files_from_snapshot(compressed: &[u8]) -> Result<HashMap<String, Vec<u8>>, String> {
         let decompressed = zstd::decode_all(Cursor::new(compressed)).map_err(|e| e.to_string())?;
 
         let mut archive = tar::Archive::new(Cursor::new(&decompressed));
+        let mut files = HashMap::new();
+
         for entry in archive.entries().map_err(|e| e.to_string())? {
             let mut entry = entry.map_err(|e| e.to_string())?;
             let path_str = entry
@@ -594,14 +634,16 @@ impl EngineAdapter {
                 .map_err(|e| e.to_string())?
                 .to_string_lossy()
                 .into_owned();
-            if path_str == filename {
-                let mut buf = Vec::new();
-                entry.read_to_end(&mut buf).map_err(|e| e.to_string())?;
-                return Ok(buf);
+            if !entry.header().entry_type().is_file() {
+                continue;
             }
+
+            let mut buf = Vec::new();
+            entry.read_to_end(&mut buf).map_err(|e| e.to_string())?;
+            files.insert(path_str, buf);
         }
 
-        Ok(Vec::new())
+        Ok(files)
     }
 
     /// COW clone: suspend source -> rewrite snapshot with new UUID -> resume as new session.

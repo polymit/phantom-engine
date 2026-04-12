@@ -1,7 +1,70 @@
 use phantom_mcp::engine::get_test_adapter;
 use phantom_session::{EngineKind, ResourceBudget, SessionState};
+use std::io::{Cursor, Read};
 use std::time::Instant;
 use url::Url;
+
+fn corrupt_snapshot_file(path: &str, target_file: &str) -> Result<(), String> {
+    let compressed = std::fs::read(path).map_err(|e| e.to_string())?;
+    let decompressed = zstd::decode_all(Cursor::new(&compressed)).map_err(|e| e.to_string())?;
+    let mut archive = tar::Archive::new(Cursor::new(&decompressed));
+
+    let mut files = Vec::new();
+    let mut found_target = false;
+
+    for entry in archive.entries().map_err(|e| e.to_string())? {
+        let mut entry = entry.map_err(|e| e.to_string())?;
+        let path = entry
+            .path()
+            .map_err(|e| e.to_string())?
+            .to_string_lossy()
+            .into_owned();
+        if !entry.header().entry_type().is_file() {
+            continue;
+        }
+
+        let mode = entry.header().mode().unwrap_or(0o644);
+        let mtime = entry.header().mtime().unwrap_or(0);
+
+        let mut bytes = Vec::new();
+        entry.read_to_end(&mut bytes).map_err(|e| e.to_string())?;
+
+        if path == target_file {
+            found_target = true;
+            if bytes.is_empty() {
+                bytes.push(0xFF);
+            } else {
+                bytes[0] ^= 0xFF;
+            }
+        }
+
+        files.push((path, bytes, mode, mtime));
+    }
+
+    if !found_target {
+        return Err(format!("missing target file in snapshot: {}", target_file));
+    }
+
+    let mut tar_buf = Vec::new();
+    {
+        let mut builder = tar::Builder::new(&mut tar_buf);
+        for (path, bytes, mode, mtime) in files {
+            let mut header = tar::Header::new_gnu();
+            header.set_size(bytes.len() as u64);
+            header.set_mode(mode);
+            header.set_mtime(mtime);
+            header.set_cksum();
+            builder
+                .append_data(&mut header, path, Cursor::new(bytes))
+                .map_err(|e| e.to_string())?;
+        }
+        builder.finish().map_err(|e| e.to_string())?;
+    }
+
+    let recompressed = zstd::encode_all(Cursor::new(&tar_buf), 3).map_err(|e| e.to_string())?;
+    std::fs::write(path, recompressed).map_err(|e| e.to_string())?;
+    Ok(())
+}
 
 #[tokio::test]
 async fn resume_state_becomes_running() {
@@ -93,15 +156,14 @@ async fn resume_fails_on_tampered_snapshot() {
 
     let path = adapter.suspend(session_id).await.unwrap();
 
-    // Corrupt archive bytes to trigger either zstd decode or HMAC failure
-    let mut bytes = std::fs::read(&path).unwrap();
-    bytes[50] ^= 0xFF;
-    std::fs::write(&path, &bytes).unwrap();
+    corrupt_snapshot_file(&path, "cookies.bin").unwrap();
 
     let result = adapter.resume(session_id).await;
-    // Corruption may surface as zstd decode error or HMAC mismatch —
-    // either is acceptable as long as corrupted data is never loaded silently.
-    println!("tamper result: {:?}", result);
+    assert!(
+        matches!(result, Err(ref msg) if msg.contains("checksum mismatch")),
+        "tampered payload must be rejected by checksum validation, got {:?}",
+        result
+    );
 }
 
 #[tokio::test]

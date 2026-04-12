@@ -57,7 +57,9 @@ fn process_node_ids(
     child_idx: usize,
     map: &mut StableIdMap,
 ) {
-    let dom_node = tree.get(node_id);
+    let Some(dom_node) = tree.get(node_id) else {
+        return;
+    };
     let mut path = format!("{}/{}", parent_path, child_idx);
 
     let (cct_id, conf) = match &dom_node.data {

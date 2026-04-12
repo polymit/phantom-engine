@@ -32,15 +32,22 @@ impl DomTree {
         }
     }
 
-    pub fn get(&self, id: NodeId) -> &DomNode {
-        self.arena.get(id).expect("NodeId not found in arena").get()
+    pub fn get(&self, id: NodeId) -> Option<&DomNode> {
+        let nz = NonZeroUsize::new(usize::from(id))?;
+        let live_id = self.arena.get_node_id_at(nz)?;
+        if live_id != id {
+            return None;
+        }
+        self.arena.get(live_id).map(|node| node.get())
     }
 
-    pub fn get_mut(&mut self, id: NodeId) -> &mut DomNode {
-        self.arena
-            .get_mut(id)
-            .expect("NodeId not found in arena")
-            .get_mut()
+    pub fn get_mut(&mut self, id: NodeId) -> Option<&mut DomNode> {
+        let nz = NonZeroUsize::new(usize::from(id))?;
+        let live_id = self.arena.get_node_id_at(nz)?;
+        if live_id != id {
+            return None;
+        }
+        self.arena.get_mut(live_id).map(|node| node.get_mut())
     }
 
     pub fn get_text_content(&self, id: NodeId) -> String {
@@ -49,7 +56,9 @@ impl DomTree {
             if descendant_id == id {
                 continue;
             }
-            let node = self.get(descendant_id);
+            let Some(node) = self.get(descendant_id) else {
+                continue;
+            };
             if let NodeData::Text { content } = &node.data {
                 if !text.is_empty() {
                     text.push(' ');
@@ -63,7 +72,9 @@ impl DomTree {
     pub fn get_title(&self) -> String {
         if let Some(root) = self.document_root {
             for descendant_id in root.descendants(&self.arena) {
-                let node = self.get(descendant_id);
+                let Some(node) = self.get(descendant_id) else {
+                    continue;
+                };
                 if let NodeData::Element { tag_name, .. } = &node.data {
                     if tag_name == "title" {
                         return self.get_text_content(descendant_id);
@@ -99,7 +110,9 @@ impl DomTree {
     pub fn get_element_by_id(&self, id: &str) -> Option<NodeId> {
         if let Some(root) = self.document_root {
             for descendant_id in root.descendants(&self.arena) {
-                let node = self.get(descendant_id);
+                let Some(node) = self.get(descendant_id) else {
+                    continue;
+                };
                 if let NodeData::Element { attributes, .. } = &node.data {
                     if let Some(val) = attributes.get("id") {
                         if val == id {
@@ -116,7 +129,9 @@ impl DomTree {
         let mut results = Vec::new();
         if let Some(root) = self.document_root {
             for descendant_id in root.descendants(&self.arena) {
-                let node = self.get(descendant_id);
+                let Some(node) = self.get(descendant_id) else {
+                    continue;
+                };
                 if let NodeData::Element { tag_name, .. } = &node.data {
                     if tag_name.eq_ignore_ascii_case(tag) {
                         results.push(descendant_id);
@@ -136,5 +151,27 @@ impl DomTree {
     pub fn node_id_from_raw(&self, arena_id: u64) -> Option<NodeId> {
         let nz = NonZeroUsize::new(arena_id as usize)?;
         self.arena.get_node_id_at(nz)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{DomNode, DomTree, NodeData};
+
+    #[test]
+    fn get_returns_none_for_removed_node() {
+        let mut tree = DomTree::new();
+        let root = tree.arena.new_node(DomNode::new(NodeData::Document));
+        tree.document_root = Some(root);
+
+        let stale = tree.arena.new_node(DomNode::new(NodeData::Element {
+            tag_name: "div".to_string(),
+            attributes: std::collections::HashMap::new(),
+        }));
+        root.append(stale, &mut tree.arena);
+        stale.remove(&mut tree.arena);
+
+        assert!(tree.get(stale).is_none());
+        assert!(tree.get_mut(stale).is_none());
     }
 }

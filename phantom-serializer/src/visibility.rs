@@ -64,7 +64,13 @@ fn process_node_visibility(
         return;
     }
 
-    let dom_node = tree.get(node_id);
+    let Some(dom_node) = tree.get(node_id) else {
+        map.set(node_id, false);
+        for child in node_id.children(&tree.arena) {
+            process_node_visibility(tree, layout, viewport, child, false, parent_offset, map);
+        }
+        return;
+    };
     let (visible, next_offset) = match &dom_node.data {
         NodeData::Document => (true, parent_offset),
         NodeData::Comment { .. } => (false, parent_offset),

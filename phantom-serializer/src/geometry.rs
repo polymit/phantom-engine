@@ -59,7 +59,9 @@ fn process_node_geometry(
     parent_offset_y: f32,
     map: &mut GeometryMap,
 ) {
-    let dom_node = tree.get(node_id);
+    let Some(dom_node) = tree.get(node_id) else {
+        return;
+    };
     let mut abs_bounds = layout.get_bounds(node_id);
 
     // Transform local coordinates to absolute viewport coordinates

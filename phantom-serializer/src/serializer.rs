@@ -98,12 +98,16 @@ impl HeadlessSerializer {
                     continue;
                 }
 
-                let dom_node = page.tree.get(node_id);
+                let Some(dom_node) = page.tree.get(node_id) else {
+                    continue;
+                };
                 if !matches!(dom_node.data, NodeData::Element { .. }) {
                     continue;
                 }
 
-                let semantic = sem_map.get(node_id).unwrap();
+                let Some(semantic) = sem_map.get(node_id) else {
+                    continue;
+                };
                 let cct_role = CctAriaRole::from_aria_role(&dom_node.aria_role);
                 let is_interactive = semantic.events.click
                     || semantic.events.input
@@ -162,8 +166,12 @@ impl HeadlessSerializer {
 
         for emitted_node in emitted {
             let node_id = emitted_node.node_id;
-            let dom_node = page.tree.get(node_id);
-            let semantic = sem_map.get(node_id).unwrap();
+            let Some(dom_node) = page.tree.get(node_id) else {
+                continue;
+            };
+            let Some(semantic) = sem_map.get(node_id) else {
+                continue;
+            };
             if emitted_node.is_landmark {
                 let landmark_type = if let NodeData::Element { tag_name, .. } = &dom_node.data {
                     LandmarkType::from_tag(tag_name.as_str())

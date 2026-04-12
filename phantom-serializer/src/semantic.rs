@@ -43,7 +43,7 @@ pub fn extract_semantics(
     let results: Vec<(NodeId, SemanticInfo)> = visible_node_ids
         .iter()
         .filter_map(|&node_id| {
-            let dom_node = tree.get(node_id);
+            let dom_node = tree.get(node_id)?;
             if !matches!(dom_node.data, NodeData::Element { .. }) {
                 return None;
             }
@@ -89,7 +89,9 @@ fn truncate_to_100(mut s: String) -> String {
 }
 
 fn get_accessible_name(tree: &DomTree, visible_nodes: &VisibilityMap, node_id: NodeId) -> String {
-    let dom_node = tree.get(node_id);
+    let Some(dom_node) = tree.get(node_id) else {
+        return "-".to_string();
+    };
     if let NodeData::Element {
         tag_name,
         attributes,
@@ -143,7 +145,7 @@ fn get_visible_text(tree: &DomTree, visible_nodes: &VisibilityMap, node_id: Node
         if !visible_nodes.is_visible(descendant) {
             continue;
         }
-        if let NodeData::Text { content } = &tree.get(descendant).data {
+        if let Some(NodeData::Text { content }) = tree.get(descendant).map(|node| &node.data) {
             text.push_str(content);
             text.push(' ');
         }

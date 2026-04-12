@@ -71,7 +71,9 @@ pub fn resolve_zindex(tree: &DomTree, geometry: &GeometryMap) -> ZIndexMap {
         let mut elems = Vec::new();
 
         for (order, node_id) in root.descendants(&tree.arena).enumerate() {
-            let dom_node = tree.get(node_id);
+            let Some(dom_node) = tree.get(node_id) else {
+                continue;
+            };
             if !matches!(dom_node.data, NodeData::Element { .. }) {
                 continue;
             }
@@ -155,7 +157,9 @@ pub fn resolve_zindex(tree: &DomTree, geometry: &GeometryMap) -> ZIndexMap {
 
         // Any element missing a geometry entry is treated as not occluded.
         for node_id in root.descendants(&tree.arena) {
-            let dom_node = tree.get(node_id);
+            let Some(dom_node) = tree.get(node_id) else {
+                continue;
+            };
             if !matches!(dom_node.data, NodeData::Element { .. }) {
                 continue;
             }

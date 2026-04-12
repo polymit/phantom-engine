@@ -41,8 +41,12 @@ unsafe impl<'js> rquickjs::JsLifetime<'js> for PhantomDomHandle {
 
 impl PhantomDomHandle {
     fn set_text_content_for_node(tree: &mut DomTree, node_id: NodeId, text: &str) {
-        if let NodeData::Text { content } = &mut tree.get_mut(node_id).data {
-            *content = text.to_string();
+        if let Some(node) = tree.get_mut(node_id) {
+            if let NodeData::Text { content } = &mut node.data {
+                *content = text.to_string();
+                return;
+            }
+        } else {
             return;
         }
 
@@ -73,7 +77,7 @@ impl PhantomDomHandle {
             Some(id) => id,
             None => return String::new(),
         };
-        if let NodeData::Element { tag_name, .. } = &tree.get(node_id).data {
+        if let Some(NodeData::Element { tag_name, .. }) = tree.get(node_id).map(|node| &node.data) {
             return tag_name.clone();
         }
         String::new()
@@ -100,7 +104,7 @@ impl PhantomDomHandle {
     pub fn get_form_value(&self, arena_id: u64) -> Option<String> {
         let tree = self.inner.read();
         let node_id = tree.node_id_from_raw(arena_id)?;
-        let node = tree.get(node_id);
+        let node = tree.get(node_id)?;
         let NodeData::Element {
             tag_name,
             attributes,
@@ -129,8 +133,8 @@ impl PhantomDomHandle {
             return false;
         };
 
-        let tag_name = match &tree.get(node_id).data {
-            NodeData::Element { tag_name, .. } => tag_name.clone(),
+        let tag_name = match tree.get(node_id).map(|node| &node.data) {
+            Some(NodeData::Element { tag_name, .. }) => tag_name.clone(),
             _ => return false,
         };
 
@@ -143,7 +147,9 @@ impl PhantomDomHandle {
             || tag_name.eq_ignore_ascii_case("select")
             || tag_name.eq_ignore_ascii_case("option")
         {
-            if let NodeData::Element { attributes, .. } = &mut tree.get_mut(node_id).data {
+            if let Some(NodeData::Element { attributes, .. }) =
+                tree.get_mut(node_id).map(|node| &mut node.data)
+            {
                 attributes.insert("value".to_string(), value.to_string());
                 return true;
             }
@@ -158,7 +164,8 @@ impl PhantomDomHandle {
             return false;
         };
 
-        let NodeData::Element { attributes, .. } = &tree.get(node_id).data else {
+        let Some(NodeData::Element { attributes, .. }) = tree.get(node_id).map(|node| &node.data)
+        else {
             return false;
         };
 
@@ -186,7 +193,8 @@ impl PhantomDomHandle {
     pub fn get_attribute(&self, arena_id: u64, name: &str) -> Option<String> {
         let tree = self.inner.read();
         let node_id = tree.node_id_from_raw(arena_id)?;
-        if let NodeData::Element { attributes, .. } = &tree.get(node_id).data {
+        if let Some(NodeData::Element { attributes, .. }) = tree.get(node_id).map(|node| &node.data)
+        {
             attributes.get(name).cloned()
         } else {
             None

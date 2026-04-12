@@ -57,25 +57,40 @@ mod tests {
 
         let hidden_display = page.tree.get_element_by_id("hidden-display").unwrap();
         assert!(
-            !page.tree.get(hidden_display).is_visible,
+            !page
+                .tree
+                .get(hidden_display)
+                .expect("hidden-display node should exist")
+                .is_visible,
             "display:none must be invisible"
         );
 
         let hidden_vis = page.tree.get_element_by_id("hidden-vis").unwrap();
         assert!(
-            !page.tree.get(hidden_vis).is_visible,
+            !page
+                .tree
+                .get(hidden_vis)
+                .expect("hidden-vis node should exist")
+                .is_visible,
             "visibility:hidden must be invisible"
         );
 
         let hidden_opacity = page.tree.get_element_by_id("hidden-opacity").unwrap();
         assert!(
-            !page.tree.get(hidden_opacity).is_visible,
+            !page
+                .tree
+                .get(hidden_opacity)
+                .expect("hidden-opacity node should exist")
+                .is_visible,
             "opacity:0 must be invisible"
         );
 
         let visible = page.tree.get_element_by_id("visible").unwrap();
         assert!(
-            page.tree.get(visible).is_visible,
+            page.tree
+                .get(visible)
+                .expect("visible node should exist")
+                .is_visible,
             "normal div must be visible"
         );
     }
@@ -137,11 +152,18 @@ mod tests {
         let child_id = page.tree.get_element_by_id("child").unwrap();
 
         assert!(
-            !page.tree.get(parent_id).is_visible,
+            !page
+                .tree
+                .get(parent_id)
+                .expect("parent node should exist")
+                .is_visible,
             "parent visibility:hidden must stay hidden"
         );
         assert!(
-            page.tree.get(child_id).is_visible,
+            page.tree
+                .get(child_id)
+                .expect("child node should exist")
+                .is_visible,
             "child visibility:visible should override inherited hidden visibility"
         );
     }
@@ -157,7 +179,11 @@ mod tests {
         let page = process_html(html, "https://zero-size.test", 1280.0, 720.0).unwrap();
         let zero_id = page.tree.get_element_by_id("zero").unwrap();
         assert!(
-            !page.tree.get(zero_id).is_visible,
+            !page
+                .tree
+                .get(zero_id)
+                .expect("zero node should exist")
+                .is_visible,
             "zero-sized element must be hidden"
         );
     }
@@ -174,7 +200,11 @@ mod tests {
         let page = process_html(html, "https://offscreen.test", 1280.0, 720.0).unwrap();
         let below_fold_id = page.tree.get_element_by_id("below-fold").unwrap();
         assert!(
-            !page.tree.get(below_fold_id).is_visible,
+            !page
+                .tree
+                .get(below_fold_id)
+                .expect("below-fold node should exist")
+                .is_visible,
             "element outside viewport must be hidden"
         );
     }
@@ -194,7 +224,10 @@ mod tests {
         let page = process_html(html, "https://nested-offset.test", 170.0, 120.0).unwrap();
         let target = page.tree.get_element_by_id("target").unwrap();
         assert!(
-            page.tree.get(target).is_visible,
+            page.tree
+                .get(target)
+                .expect("target node should exist")
+                .is_visible,
             "nested child in viewport must remain visible"
         );
     }
@@ -216,7 +249,10 @@ mod tests {
             "percent width should produce non-zero width"
         );
         assert!(
-            page.tree.get(pct).is_visible,
+            page.tree
+                .get(pct)
+                .expect("pct node should exist")
+                .is_visible,
             "percent-sized element in viewport should be visible"
         );
     }

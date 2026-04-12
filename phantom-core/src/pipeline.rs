@@ -55,9 +55,10 @@ pub fn rebuild_page_from_tree(
         build_layout_tree(&mut layout, &tree, doc_root)?;
 
         // Document is never added to Taffy; locate the <html> element as the real root.
-        let html_node = doc_root
-            .children(&tree.arena)
-            .find(|&child| matches!(tree.get(child).data, NodeData::Element { .. }));
+        let html_node = doc_root.children(&tree.arena).find(|&child| {
+            tree.get(child)
+                .is_some_and(|node| matches!(node.data, NodeData::Element { .. }))
+        });
         if let Some(html_id) = html_node {
             if let Some(taffy_root) = layout.get_taffy_id(html_id) {
                 layout.compute(taffy_root, viewport_width, viewport_height)?;
@@ -79,19 +80,17 @@ pub fn rebuild_page_from_tree(
 }
 
 fn apply_css_pass(tree: &mut DomTree, node_id: NodeId, parent_style: Option<ComputedStyle>) {
-    let inline_style_val = {
-        let node = tree.get(node_id);
+    let inline_style_val = tree.get(node_id).and_then(|node| {
         if let NodeData::Element { ref attributes, .. } = node.data {
             attributes.get("style").cloned()
         } else {
             None
         }
-    };
+    });
 
     let computed = CssEngine::compute(inline_style_val.as_deref(), parent_style.as_ref());
 
-    {
-        let node = tree.get_mut(node_id);
+    if let Some(node) = tree.get_mut(node_id) {
         if matches!(node.data, NodeData::Element { .. }) {
             node.computed_display = computed.display.clone();
             node.computed_visibility = computed.visibility.clone();
@@ -118,7 +117,9 @@ fn build_layout_tree(
     tree: &DomTree,
     node_id: NodeId,
 ) -> Result<Option<taffy::NodeId>, CoreError> {
-    let node = tree.get(node_id);
+    let Some(node) = tree.get(node_id) else {
+        return Ok(None);
+    };
 
     if matches!(node.data, NodeData::Element { .. }) {
         let mut style = taffy::Style {
@@ -178,7 +179,9 @@ fn apply_layout_visibility_pass(
 ) {
     let mut next_offset = parent_offset;
     let element_visibility = {
-        let node = tree.get(node_id);
+        let Some(node) = tree.get(node_id) else {
+            return;
+        };
         match &node.data {
             NodeData::Element { .. } => {
                 let local_bounds = layout.get_bounds(node_id);
@@ -200,7 +203,9 @@ fn apply_layout_visibility_pass(
         }
     };
     if let Some(visible) = element_visibility {
-        tree.get_mut(node_id).is_visible = visible;
+        if let Some(node) = tree.get_mut(node_id) {
+            node.is_visible = visible;
+        }
     }
     let children: Vec<NodeId> = node_id.children(&tree.arena).collect();
     for child in children {

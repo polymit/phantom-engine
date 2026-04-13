@@ -20,13 +20,6 @@ parking_lot = "0.12.5"
 crossbeam = "0.8"
 serde_json = "1"
 
-# BANNED CRATES — never add these under any circumstances:
-# reqwest       → uses rustls, produces detectable TLS
-# rquest        → missing JA4H controls, replaced by wreq
-# rusty_v8      → old unmaintained crate name, use v8
-# openssl-sys   → symbol conflicts with boring-sys
-# native-tls    → system TLS, detectable fingerprint
-
 [dev-dependencies]
 phantom-serializer = { path = "../phantom-serializer" }
 deno_core = "=0.311.0"

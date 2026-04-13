@@ -21,10 +21,3 @@ hmac-sha256 = "1"
 
 [dev-dependencies]
 tempfile = "3"
-
-# BANNED CRATES — never add these under any circumstances:
-# reqwest       → uses rustls, produces detectable TLS
-# rquest        → missing JA4H controls, replaced by wreq
-# rusty_v8      → old unmaintained crate name, use v8
-# openssl-sys   → symbol conflicts with boring-sys
-# native-tls    → system TLS, detectable fingerprin

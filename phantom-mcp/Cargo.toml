@@ -33,10 +33,3 @@ hex = "0.4"
 [dev-dependencies]
 tower = { version = "0.5", features = ["util"] }
 tempfile = "3"
-
-# BANNED CRATES :
-# reqwest       → uses rustls, produces detectable TLS
-# rquest        → missing JA4H controls, replaced by wreq
-# rusty_v8      → old unmaintained crate name, use v8
-# openssl-sys   → symbol conflicts with boring-sys
-# native-tls    → system TLS, detectable fingerprint

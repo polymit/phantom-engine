@@ -25,9 +25,3 @@ indextree = "=4.8.0"
 # tokio-quiche = "=0.16.1"
 # quiche       = { version = "=0.24.6", features = ["boringssl-boring-crate"] }
 # boring       = "^4.3"
-
-# BANNED — never add these
-# reqwest     → rustls, detectable TLS
-# rquest      → missing JA4H controls
-# openssl-sys → conflicts with boring-sys
-# native-tls  → system TLS fingerprint

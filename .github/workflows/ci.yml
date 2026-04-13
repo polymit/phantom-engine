@@ -1,0 +1,272 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "feature/**", "fix/**"]
+  pull_request:
+    branches: [main]
+  merge_group:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+  RUSTFLAGS: "-D warnings"
+  CARGO_INCREMENTAL: "0"
+  SCCACHE_GHA_ENABLED: "true"
+  PHANTOM_SNAPSHOT_KEY: "ci-test-snapshot-key"
+
+jobs:
+  fmt:
+    name: Format Check
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - name: cargo fmt check
+        run: cargo fmt --all -- --check
+
+  clippy:
+    name: Clippy (Zero Warnings)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: mozilla-actions/sccache-action@v0.0.9
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+      - name: cargo clippy
+        run: |
+          cargo clippy --workspace --all-targets --all-features \
+            -- -D warnings -D clippy::unwrap_used -D clippy::expect_used \
+               -A clippy::module_inception
+
+  check:
+    name: Cargo Check + Banned Crate Scan
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: mozilla-actions/sccache-action@v0.0.9
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: cargo check
+        run: cargo check --workspace --all-targets
+      - name: Verify anyhow is not used
+        run: |
+          if grep -rn "anyhow" --include="*.rs" --include="*.toml" .; then
+            echo "error: anyhow usage detected"; exit 1
+          fi
+          echo "ok: anyhow not found"
+      - name: Verify banned crates absent
+        run: |
+          for BANNED in "reqwest" "rquest" "native-tls" "openssl-sys" "rusty_v8"; do
+            if grep -rn "\"$BANNED\"" --include="*.toml" .; then
+              echo "error: banned crate found: $BANNED"; exit 1
+            fi
+          done
+          echo "ok: banned crate scan clean"
+      - name: Verify all versions pinned
+        run: |
+          if grep -rn 'version = "\*"' --include="*.toml" .; then
+            echo "error: wildcard version found"; exit 1
+          fi
+
+  test:
+    name: Test Suite
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: mozilla-actions/sccache-action@v0.0.9
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target/
+          key: ${{ runner.os }}-test-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-test-
+      - name: Unit tests
+        run: cargo test --workspace --lib -- --test-threads=1
+      - name: Integration tests
+        run: cargo test --workspace --test '*' -- --test-threads=1
+      - name: Doc tests
+        run: cargo test --workspace --doc
+
+  deny:
+    name: Cargo Deny (Bans + Licenses + Advisories)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check all
+
+  audit:
+    name: Security Audit
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/audit@v1
+        with:
+          denyWarnings: true
+
+  lock-verify:
+    name: Cargo.lock Integrity
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Verify locked
+        run: cargo fetch --locked
+      - name: Verify exact pinned versions in Cargo.lock
+        run: |
+          LOCK=$(cat Cargo.lock)
+          fail=0
+          check_ver() {
+            local CRATE=$1 VER=$2
+            if echo "$LOCK" | grep -q "name = \"$CRATE\""; then
+              if ! echo "$LOCK" | grep -A2 "name = \"$CRATE\"" | grep -q "version = \"$VER\""; then
+                echo "FAIL: $CRATE must be $VER"; fail=1
+              else
+                echo "OK: $CRATE = $VER"
+              fi
+            fi
+          }
+          check_ver wreq "6.0.0-rc.21"
+          check_ver rquickjs "0.11.0"
+          check_ver v8 "147.0.0"
+          check_ver deno_core "0.311.0"
+          check_ver tokio-quiche "0.16.1"
+          check_ver quiche "0.24.6"
+          check_ver rusqlite "0.31.0"
+          check_ver prometheus "0.14.0"
+          [ $fail -eq 0 ] || exit 1
+
+  msrv:
+    name: MSRV (Rust 1.75)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.75
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-msrv-${{ hashFiles('**/Cargo.lock') }}
+      - name: check on MSRV
+        run: cargo check --workspace
+
+  doc:
+    name: Documentation Build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build docs
+        env:
+          RUSTDOCFLAGS: "-D warnings"
+        run: cargo doc --workspace --no-deps --document-private-items
+
+  performance-gate:
+    name: Performance Gate
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: mozilla-actions/sccache-action@v0.0.9
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            target/
+          key: ${{ runner.os }}-perf-${{ hashFiles('**/Cargo.lock') }}
+      - name: Performance gate tests
+        run: |
+          cargo test --package phantom-mcp --test performance_gate_test \
+            -- --nocapture --test-threads=1
+      - name: CCT serialisation gate
+        run: |
+          cargo test --package phantom-serializer --test perf_gate \
+            -- --nocapture
+      - name: Session startup gate
+        run: |
+          cargo test --package phantom-session --test startup_gate \
+            -- --nocapture
+
+  scale-smoke:
+    name: Scale Smoke (100 Sessions)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: mozilla-actions/sccache-action@v0.0.9
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            target/
+          key: ${{ runner.os }}-scale-${{ hashFiles('**/Cargo.lock') }}
+      - name: Scale smoke test
+        run: |
+          cargo test --package phantom-mcp --test scale_test scale_smoke_test \
+            -- --nocapture --test-threads=1
+
+  security-isolation:
+    name: Security Tests
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: mozilla-actions/sccache-action@v0.0.9
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            target/
+          key: ${{ runner.os }}-sec-${{ hashFiles('**/Cargo.lock') }}
+      - name: Security audit tests
+        run: |
+          cargo test --package phantom-mcp --test security_audit_test \
+            -- --nocapture --test-threads=1
+
+  ci-pass:
+    name: CI Pass (Required Gate)
+    if: always()
+    needs:
+      - fmt
+      - clippy
+      - check
+      - test
+      - deny
+      - audit
+      - lock-verify
+      - msrv
+      - doc
+      - performance-gate
+      - scale-smoke
+      - security-isolation
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check all jobs passed
+        run: |
+          results='${{ toJSON(needs) }}'
+          echo "$results" | python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)
+          failed = [k for k, v in data.items() if v['result'] != 'success']
+          if failed:
+              print(f'Failed jobs: {failed}')
+              sys.exit(1)
+          print('All jobs passed')
+          "

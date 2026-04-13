@@ -218,7 +218,10 @@ impl<'a> selectors::Element for DomElement<'a> {
     }
 
     fn has_local_name(&self, local_name: &CssString) -> bool {
-        match &self.arena.get(self.node_id).unwrap().get().data {
+        let Some(node) = self.arena.get(self.node_id) else {
+            return false;
+        };
+        match &node.get().data {
             NodeData::Element { tag_name, .. } => tag_name.eq_ignore_ascii_case(&local_name.0),
             _ => false,
         }
@@ -230,8 +233,12 @@ impl<'a> selectors::Element for DomElement<'a> {
 
     fn is_same_type(&self, other: &Self) -> bool {
         // Two elements are the same type if they have the same tag name.
-        let a = self.arena.get(self.node_id).unwrap().get();
-        let b = other.arena.get(other.node_id).unwrap().get();
+        let Some(a) = self.arena.get(self.node_id).map(|n| n.get()) else {
+            return false;
+        };
+        let Some(b) = other.arena.get(other.node_id).map(|n| n.get()) else {
+            return false;
+        };
         match (&a.data, &b.data) {
             (NodeData::Element { tag_name: t1, .. }, NodeData::Element { tag_name: t2, .. }) => {
                 t1.eq_ignore_ascii_case(t2)
@@ -246,7 +253,9 @@ impl<'a> selectors::Element for DomElement<'a> {
         local_name: &CssString,
         operation: &AttrSelectorOperation<&CssString>,
     ) -> bool {
-        let node = self.arena.get(self.node_id).unwrap().get();
+        let Some(node) = self.arena.get(self.node_id).map(|n| n.get()) else {
+            return false;
+        };
         let NodeData::Element { attributes, .. } = &node.data else {
             return false;
         };
@@ -303,7 +312,10 @@ impl<'a> selectors::Element for DomElement<'a> {
     fn apply_selector_flags(&self, _flags: ElementSelectorFlags) {}
 
     fn is_link(&self) -> bool {
-        match &self.arena.get(self.node_id).unwrap().get().data {
+        let Some(node) = self.arena.get(self.node_id) else {
+            return false;
+        };
+        match &node.get().data {
             NodeData::Element {
                 tag_name,
                 attributes,
@@ -318,7 +330,9 @@ impl<'a> selectors::Element for DomElement<'a> {
     }
 
     fn has_id(&self, id: &CssString, case_sensitivity: CaseSensitivity) -> bool {
-        let node = self.arena.get(self.node_id).unwrap().get();
+        let Some(node) = self.arena.get(self.node_id).map(|n| n.get()) else {
+            return false;
+        };
         let NodeData::Element { attributes, .. } = &node.data else {
             return false;
         };
@@ -328,7 +342,9 @@ impl<'a> selectors::Element for DomElement<'a> {
     }
 
     fn has_class(&self, name: &CssString, case_sensitivity: CaseSensitivity) -> bool {
-        let node = self.arena.get(self.node_id).unwrap().get();
+        let Some(node) = self.arena.get(self.node_id).map(|n| n.get()) else {
+            return false;
+        };
         let NodeData::Element { attributes, .. } = &node.data else {
             return false;
         };
@@ -349,15 +365,17 @@ impl<'a> selectors::Element for DomElement<'a> {
 
     fn is_empty(&self) -> bool {
         !self.node_id.children(self.arena).any(|child_id| {
-            matches!(
-                self.arena.get(child_id).unwrap().get().data,
-                NodeData::Element { .. } | NodeData::Text { .. }
-            )
+            self.arena
+                .get(child_id)
+                .is_some_and(|node| matches!(node.get().data, NodeData::Element { .. } | NodeData::Text { .. }))
         })
     }
 
     fn is_root(&self) -> bool {
-        match &self.arena.get(self.node_id).unwrap().get().data {
+        let Some(node) = self.arena.get(self.node_id) else {
+            return false;
+        };
+        match &node.get().data {
             NodeData::Element { tag_name, .. } => tag_name.eq_ignore_ascii_case("html"),
             _ => false,
         }
@@ -473,7 +491,9 @@ pub fn query_node_with_selectors(
             continue;
         }
 
-        let node = arena.get(descendant_id).unwrap().get();
+        let Some(node) = arena.get(descendant_id).map(|n| n.get()) else {
+            continue;
+        };
         if !matches!(node.data, NodeData::Element { .. }) {
             continue;
         }

@@ -62,7 +62,13 @@ impl TreeSink for DomSink {
     }
 
     fn get_document(&self) -> Self::Handle {
-        self.tree.borrow().document_root.unwrap()
+        if let Some(root) = self.tree.borrow().document_root {
+            return root;
+        }
+        let mut tree = self.tree.borrow_mut();
+        let root = tree.arena.new_node(DomNode::new(NodeData::Document));
+        tree.document_root = Some(root);
+        root
     }
 
     fn get_template_contents(&self, target: &Self::Handle) -> Self::Handle {
@@ -75,7 +81,10 @@ impl TreeSink for DomSink {
 
     fn elem_name<'a>(&'a self, target: &'a Self::Handle) -> Self::ElemName<'a> {
         let names = self.names.borrow();
-        let name = names.get(target).expect("Node not found");
+        let name = names
+            .get(target)
+            .cloned()
+            .unwrap_or_else(|| QualName::new(None, Namespace::from(""), LocalName::from("")));
         OwnedElemName {
             ns: name.ns.clone(),
             local: name.local.clone(),
@@ -198,9 +207,7 @@ impl TreeSink for DomSink {
             .borrow()
             .arena
             .get(*element)
-            .unwrap()
-            .parent()
-            .is_some();
+            .is_some_and(|node| node.parent().is_some());
         if has_parent {
             self.append_before_sibling(element, child);
         } else {

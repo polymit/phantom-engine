@@ -7,9 +7,9 @@ all-features = false
 
 [advisories]
 vulnerability = "deny"
-unmaintained = "warn"
-unsound = "deny"
-yanked = "deny"
+unmaintained = "all"
+unsound = "all"
+yanked = "all"
 ignore = []
 
 [licenses]

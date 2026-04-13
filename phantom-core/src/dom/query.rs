@@ -365,9 +365,12 @@ impl<'a> selectors::Element for DomElement<'a> {
 
     fn is_empty(&self) -> bool {
         !self.node_id.children(self.arena).any(|child_id| {
-            self.arena
-                .get(child_id)
-                .is_some_and(|node| matches!(node.get().data, NodeData::Element { .. } | NodeData::Text { .. }))
+            self.arena.get(child_id).is_some_and(|node| {
+                matches!(
+                    node.get().data,
+                    NodeData::Element { .. } | NodeData::Text { .. }
+                )
+            })
         })
     }
 

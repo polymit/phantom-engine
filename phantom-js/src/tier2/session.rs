@@ -19,21 +19,29 @@ impl Tier2Session {
         use deno_core::{JsRuntime, RuntimeOptions};
         use rand::RngCore;
 
-        let mut runtime = JsRuntime::new(RuntimeOptions {
+        let mut runtime = JsRuntime::try_new(RuntimeOptions {
             startup_snapshot: Some(PHANTOM_BASE_SNAPSHOT),
             ..Default::default()
-        });
+        }).map_err(|e| crate::error::PhantomJsError::Internal(e.to_string()))?;
+
+        // SAFETY: Entering the isolate is required to ensure that any handle operations
+        // (including those inside JsRuntime::execute_script) are associated with THIS
+        // isolate in V8's thread-local state.
+        unsafe { runtime.v8_isolate().enter(); }
+
         let mut rng = rand::rngs::OsRng;
         let seed = rng.next_u64();
-        runtime
-            .execute_script(
-                "<phantom_canvas_seed>",
-                format!(
-                    "globalThis.__phantom_persona = Object.assign(globalThis.__phantom_persona || {{}}, {{ canvas_noise_seed: {}n }});",
-                    seed
-                ),
-            )
-            .map_err(|e| crate::error::PhantomJsError::Internal(e.to_string()))?;
+        let init_res = runtime.execute_script(
+            "<phantom_canvas_seed>",
+            format!(
+                "globalThis.__phantom_persona = Object.assign(globalThis.__phantom_persona || {{}}, {{ canvas_noise_seed: {}n }});",
+                seed
+            ),
+        );
+
+        unsafe { runtime.v8_isolate().exit(); }
+
+        init_res.map_err(|e| crate::error::PhantomJsError::Internal(e.to_string()))?;
 
         Ok(Self { runtime })
     }
@@ -43,21 +51,32 @@ impl Tier2Session {
     pub fn eval(&mut self, script: &str) -> Result<String, crate::error::PhantomJsError> {
         use deno_core::v8;
 
-        let script_str = script.to_string();
-        let result = self
-            .runtime
-            .execute_script("<phantom_eval>", script_str)
-            .map_err(|e| crate::error::PhantomJsError::JsEvaluation(e.to_string()))?;
+        // SAFETY: See new(). We must ensure THIS isolate is current for any handle
+        // allocations or clones performed by deno_core::scope!.
+        unsafe { self.runtime.v8_isolate().enter(); }
 
-        // Convert the v8 Value to a string
-        let scope = &mut self.runtime.handle_scope();
-        let local = v8::Local::new(scope, result);
-        let str_val = local
-            .to_string(scope)
-            .map(|s| s.to_rust_string_lossy(scope))
-            .unwrap_or_else(|| "undefined".to_string());
+        let res = (|| {
+            deno_core::scope!(scope, self.runtime);
 
-        Ok(str_val)
+            let source = v8::String::new(scope, script).ok_or_else(|| {
+                crate::error::PhantomJsError::Internal("Failed to allocate V8 string for eval".into())
+            })?;
+
+            v8::tc_scope!(let tc_scope, scope);
+
+            let script = v8::Script::compile(tc_scope, source, None).ok_or_else(|| {
+                crate::error::PhantomJsError::JsEvaluation("Script compilation failed".into())
+            })?;
+
+            let result = script.run(tc_scope).ok_or_else(|| {
+                crate::error::PhantomJsError::JsEvaluation("Script execution failed".into())
+            })?;
+
+            Ok(result.to_rust_string_lossy(tc_scope))
+        })();
+
+        unsafe { self.runtime.v8_isolate().exit(); }
+        res
     }
 
     /// Update the session persona.

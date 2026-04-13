@@ -1,11 +1,11 @@
 [package]
 name = "phantom-js"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 rquickjs = { version = "=0.11.0", default-features = false, features = ["std", "futures", "loader", "macro", "classes", "disable-assertions"] }
-deno_core = "=0.311.0"
+deno_core = "=0.397.0"
 
 tokio = { version = "1", features = ["full"] }
 selectors = "0.25"
@@ -22,7 +22,7 @@ serde_json = "1"
 
 [dev-dependencies]
 phantom-serializer = { path = "../phantom-serializer" }
-deno_core = "=0.311.0"
+deno_core = "=0.397.0"
 
 [build-dependencies]
-deno_core = "=0.311.0"
+deno_core = "=0.397.0"

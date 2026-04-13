@@ -44,7 +44,7 @@ impl BehaviorEngine {
         let cy2 = from.1 + (to.1 - from.1) * 0.90 + self.jitter(&mut rng, 30.0);
 
         // 20–40 sampled points along the curve
-        let n = 20 + (rng.gen::<u8>() % 20) as usize;
+        let n = 20 + (rng.r#gen::<u8>() % 20) as usize;
 
         (0..=n)
             .map(|i| {
@@ -86,7 +86,7 @@ impl BehaviorEngine {
     }
 
     fn jitter(&self, rng: &mut impl Rng, scale: f64) -> f64 {
-        (rng.gen::<f64>() - 0.5) * scale
+        (rng.r#gen::<f64>() - 0.5) * scale
     }
 }
 

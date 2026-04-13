@@ -143,16 +143,14 @@ impl PhantomDomHandle {
             return true;
         }
 
-        if tag_name.eq_ignore_ascii_case("input")
+        if (tag_name.eq_ignore_ascii_case("input")
             || tag_name.eq_ignore_ascii_case("select")
-            || tag_name.eq_ignore_ascii_case("option")
-        {
-            if let Some(NodeData::Element { attributes, .. }) =
+            || tag_name.eq_ignore_ascii_case("option"))
+            && let Some(NodeData::Element { attributes, .. }) =
                 tree.get_mut(node_id).map(|node| &mut node.data)
-            {
-                attributes.insert("value".to_string(), value.to_string());
-                return true;
-            }
+        {
+            attributes.insert("value".to_string(), value.to_string());
+            return true;
         }
 
         false

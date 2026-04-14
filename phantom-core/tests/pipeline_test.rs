@@ -311,4 +311,31 @@ mod tests {
             "child under display:none must be hidden"
         );
     }
+
+    #[test]
+    fn test_text_nodes_contribute_to_parent_size() {
+        let html = r#"
+            <html><body>
+                <div id="wrapper" style="display: flex;">
+                    Hello World
+                </div>
+            </body></html>
+        "#;
+
+        let page = process_html(html, "https://text-layout.test", 1280.0, 720.0).unwrap();
+        let wrapper = page.tree.get_element_by_id("wrapper").unwrap();
+        let bounds = page.layout.get_bounds(wrapper);
+
+        // "Hello World" is 11 chars. With our heuristic of 8px/char, it's 88px.
+        assert!(
+            bounds.width >= 88.0,
+            "wrapper width should be at least 88.0, got {}",
+            bounds.width
+        );
+        assert_eq!(
+            bounds.height, 20.0,
+            "wrapper height should be 20.0, got {}",
+            bounds.height
+        );
+    }
 }

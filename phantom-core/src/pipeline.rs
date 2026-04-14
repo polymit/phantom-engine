@@ -168,8 +168,25 @@ fn build_layout_tree(
 
         layout.set_children(taffy_id, &child_taffy_ids)?;
         Ok(Some(taffy_id))
+    } else if let NodeData::Text { ref content } = node.data {
+        let trimmed = content.trim();
+        if trimmed.is_empty() {
+            return Ok(None);
+        }
+
+        let char_count = trimmed.chars().count() as f32;
+        let style = taffy::Style {
+            size: taffy::Size {
+                width: taffy::Dimension::length(char_count * 8.0),
+                height: taffy::Dimension::length(20.0),
+            },
+            ..Default::default()
+        };
+
+        let taffy_id = layout.add_node(node_id, style)?;
+        Ok(Some(taffy_id))
     } else {
-        // Document / Text / Comment — not a layout node, but recurse so element
+        // Document / Comment — not a layout node, but recurse so element
         // descendants still get registered in the Taffy tree.
         let children: Vec<NodeId> = node_id.children(&tree.arena).collect();
         for child in children {

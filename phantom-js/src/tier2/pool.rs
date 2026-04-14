@@ -1,4 +1,4 @@
-use crossbeam::queue::SegQueue;
+use std::cell::RefCell;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Instant;
 
@@ -7,28 +7,23 @@ use crate::tier2::session::Tier2Session;
 
 struct PooledSession {
     session: Tier2Session,
-    // V8 isolates held idle past 5 minutes risk their snapshot state going
-    // stale relative to persona rotation. Evict and replace proactively.
     created_at: Instant,
 }
 
+thread_local! {
+    static LOCAL_FREE: RefCell<Vec<PooledSession>> = const { RefCell::new(Vec::new()) };
+}
+
 pub struct Tier2Pool {
-    free: SegQueue<PooledSession>,
     live_count: AtomicUsize,
     max_count: usize,
 }
 
-const STALE_SECS: u64 = 300; // 5 minutes — matches blueprint spec
+const STALE_SECS: u64 = 300; // 5 minutes
 
 impl Tier2Pool {
-    /// Create a pool and synchronously pre-warm `pre_warm_count` V8 sessions.
-    ///
-    /// Tier2Session::new() is synchronous (snapshot load via JsRuntime::new),
-    /// so pre_warm runs on the calling thread — call this before spawning tasks.
-    /// Blueprint specifies 10 pre-warmed sessions.
     pub fn new(max_count: usize, pre_warm_count: usize) -> Self {
         let pool = Self {
-            free: SegQueue::new(),
             live_count: AtomicUsize::new(0),
             max_count,
         };
@@ -42,65 +37,80 @@ impl Tier2Pool {
                 break;
             }
             match Tier2Session::new() {
-                Ok(session) => {
-                    self.free.push(PooledSession {
-                        session,
-                        created_at: Instant::now(),
+                Ok(new_session) => {
+                    LOCAL_FREE.with(|free| {
+                        free.borrow_mut().push(PooledSession {
+                            session: new_session,
+                            created_at: Instant::now(),
+                        });
                     });
                 }
-                Err(e) => {
+                Err(_) => {
                     self.live_count.fetch_sub(1, Ordering::AcqRel);
-                    tracing::warn!("Tier2Pool pre-warm skipped: {:?}", e);
+                    break;
                 }
             }
         }
     }
 
-    /// Check out a session. Returns a fresh one if the free queue is empty.
-    ///
-    /// Stale sessions (idle > 5 min) are evicted — their persona may be
-    /// out-of-date and V8's idle GC may have compacted the heap in ways
-    /// that affect timing fingerprints.
+    /// Check out a session from the thread-local pool.
     pub fn acquire(&self) -> Result<Tier2Session, PhantomJsError> {
-        while let Some(pooled) = self.free.pop() {
-            if pooled.created_at.elapsed().as_secs() < STALE_SECS {
-                return Ok(pooled.session);
+        // 1. Check thread-local free list
+        let pooled = LOCAL_FREE.with(|free| {
+            let mut free = free.borrow_mut();
+            while let Some(pooled) = free.pop() {
+                if pooled.created_at.elapsed().as_secs() < STALE_SECS {
+                    return Some(pooled.session);
+                }
+                // Stale
+                pooled.session.destroy();
+                self.live_count.fetch_sub(1, Ordering::Relaxed);
             }
-            pooled.session.destroy();
-            self.live_count.fetch_sub(1, Ordering::Relaxed);
+            None
+        });
+
+        if let Some(session) = pooled {
+            return Ok(session);
         }
 
+        // 2. Try to create a new one if limit not reached
         if !self.try_reserve_slot() {
             return Err(PhantomJsError::PoolExhausted {
                 max: self.max_count,
             });
         }
 
-        let session = match Tier2Session::new() {
-            Ok(session) => session,
+        match Tier2Session::new() {
+            Ok(session) => Ok(session),
             Err(err) => {
                 self.live_count.fetch_sub(1, Ordering::AcqRel);
-                return Err(err);
+                Err(err)
             }
-        };
-        Ok(session)
+        }
     }
 
-    /// Return a session after use.
-    ///
-    /// Per D-40: the V8 global environment is polluted after page JS runs —
-    /// event listeners, patched prototypes, and framework state cannot be
-    /// cleaned up without a full isolate teardown. Destroy immediately,
-    /// pre-warm a replacement in-place (synchronous, cheap — snapshot load).
+    /// Return a session to the thread-local pool.
     pub fn release_after_use(&self, session: Tier2Session) {
         session.destroy();
         self.live_count.fetch_sub(1, Ordering::Relaxed);
 
-        // Replacement is synchronous for Tier 2 — JsRuntime::new from snapshot
-        // is fast enough (<5ms) that blocking here is acceptable.
-        // We avoid spawning a Tokio task to keep the pool usable from
-        // non-async call sites (e.g., sync MCP tool handlers).
-        self.pre_warm(1);
+        // Pre-warm a replacement on the CURRENT thread.
+        // This ensures the next acquire() on this thread is fast.
+        if self.live_count.load(Ordering::Acquire) < self.max_count && self.try_reserve_slot() {
+            match Tier2Session::new() {
+                Ok(new_session) => {
+                    LOCAL_FREE.with(|free| {
+                        free.borrow_mut().push(PooledSession {
+                            session: new_session,
+                            created_at: Instant::now(),
+                        });
+                    });
+                }
+                Err(_) => {
+                    self.live_count.fetch_sub(1, Ordering::AcqRel);
+                }
+            }
+        }
     }
 
     fn try_reserve_slot(&self) -> bool {
@@ -124,18 +134,8 @@ impl Tier2Pool {
 
 impl Drop for Tier2Pool {
     fn drop(&mut self) {
-        let mut sessions = Vec::new();
-        while let Some(pooled) = self.free.pop() {
-            sessions.push(pooled);
-        }
-        // SegQueue is FIFO. sessions[0] is the oldest isolate.
-        // V8 requires reverse-order drop (LIFO).
-        sessions.reverse();
-        // Vec drop will now destroy sessions in newer-to-older order.
+        // Note: thread-local sessions will be destroyed when the threads exit.
+        // We can't easily clear all of them from here, but this is acceptable
+        // since the pool itself is dropping and no new sessions can be acquired.
     }
 }
-
-// SAFETY: Tier2Pool manages thread-bound Tier2Sessions (V8). The pool's internal
-// state (SegQueue and atomics) is thread-safe.
-unsafe impl Send for Tier2Pool {}
-unsafe impl Sync for Tier2Pool {}

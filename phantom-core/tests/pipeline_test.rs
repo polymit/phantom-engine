@@ -280,4 +280,35 @@ mod tests {
             "child of display:none parent must be hidden despite having display:block"
         );
     }
+
+    #[test]
+    fn test_visibility_display_none_nested_inheritance() {
+        let html = r#"
+            <html><body>
+                <div id="grandparent" style="display: none; width: 100px; height: 100px;">
+                    <div id="parent" style="display: block; width: 100px; height: 100px;">
+                        <button id="child" style="display: block; width: 100px; height: 100px;">Go</button>
+                    </div>
+                </div>
+            </body></html>
+        "#;
+
+        let page = process_html(html, "https://nested.test", 1280.0, 720.0).unwrap();
+        let gp = page.tree.get_element_by_id("grandparent").unwrap();
+        let p = page.tree.get_element_by_id("parent").unwrap();
+        let c = page.tree.get_element_by_id("child").unwrap();
+
+        assert!(
+            !page.tree.get(gp).unwrap().is_visible,
+            "grandparent display:none must be hidden"
+        );
+        assert!(
+            !page.tree.get(p).unwrap().is_visible,
+            "parent under display:none must be hidden"
+        );
+        assert!(
+            !page.tree.get(c).unwrap().is_visible,
+            "child under display:none must be hidden"
+        );
+    }
 }

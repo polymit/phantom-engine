@@ -134,11 +134,11 @@ impl LayoutEngine {
         map: &mut LayoutMap,
     ) {
         let mut bounds = self.get_bounds(node_id);
-        
+
         // Transform local to absolute
         bounds.x += parent_abs_x;
         bounds.y += parent_abs_y;
-        
+
         // We store the absolute bounds for every node.
         // Serializers will decide whether to include them based on visibility.
         map.insert(node_id, bounds.clone());

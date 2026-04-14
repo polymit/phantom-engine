@@ -266,7 +266,8 @@ fn decode_body(res: &FetchResponse) -> Result<String, String> {
         })
         .unwrap_or("utf-8");
 
-    let encoding = encoding_rs::Encoding::for_label(charset.as_bytes()).unwrap_or(encoding_rs::UTF_8);
+    let encoding =
+        encoding_rs::Encoding::for_label(charset.as_bytes()).unwrap_or(encoding_rs::UTF_8);
 
     let (decoded, _, malformed) = encoding.decode(&res.body);
     if malformed && charset.to_lowercase() == "utf-8" {

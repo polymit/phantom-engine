@@ -16,12 +16,11 @@ impl Tier2Session {
     /// NEVER call this before init_v8_platform() has been called.
     /// init_v8_platform() must be called in main() before Tokio starts.
     pub fn new(max_heap_bytes: Option<usize>) -> Result<Self, crate::error::PhantomJsError> {
-        use deno_core::{v8, JsRuntime, RuntimeOptions};
+        use deno_core::{JsRuntime, RuntimeOptions, v8};
         use rand::RngCore;
 
-        let create_params = max_heap_bytes.map(|limit| {
-            v8::CreateParams::default().set_max_old_generation_size_in_bytes(limit)
-        });
+        let create_params = max_heap_bytes
+            .map(|limit| v8::CreateParams::default().set_max_old_generation_size_in_bytes(limit));
 
         let mut runtime = JsRuntime::try_new(RuntimeOptions {
             startup_snapshot: Some(PHANTOM_BASE_SNAPSHOT),

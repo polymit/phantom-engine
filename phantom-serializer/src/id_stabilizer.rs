@@ -64,10 +64,7 @@ fn process_node_ids(
     let path = format!("{}/{}[{}]", parent_path, tag, tag_idx);
 
     let (cct_id, conf) = match &dom_node.data {
-        NodeData::Element {
-            attributes,
-            ..
-        } => {
+        NodeData::Element { attributes, .. } => {
             let cct_role = CctAriaRole::from_aria_role(&dom_node.aria_role);
             let role_code = cct_role.to_cct_code();
 

@@ -159,8 +159,9 @@ impl McpServer {
                             result: None,
                             error: Some(JsonRpcError {
                                 code: -32002,
-                                message: "Session busy: another task is currently holding the lock."
-                                    .to_string(),
+                                message:
+                                    "Session busy: another task is currently holding the lock."
+                                        .to_string(),
                             }),
                         });
                     }

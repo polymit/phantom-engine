@@ -1,6 +1,6 @@
 use crate::css::{ComputedStyle, CssEngine};
 use crate::dom::{Display, DomTree, NodeData, SizeValue, Visibility};
-use crate::layout::bounds::{LayoutEngine, LayoutError, ViewportBounds, LayoutMap};
+use crate::layout::bounds::{LayoutEngine, LayoutError, LayoutMap, ViewportBounds};
 use indextree::NodeId;
 use thiserror::Error;
 

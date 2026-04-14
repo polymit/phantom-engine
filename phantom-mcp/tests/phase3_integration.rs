@@ -38,7 +38,8 @@ const INTEGRATION_HTML: &str = r#"<!DOCTYPE html>
 </html>"#;
 
 async fn setup_with_page() -> (Arc<EngineAdapter>, McpServer) {
-    let adapter = Arc::new(EngineAdapter::new(5, 0, 5, 0, phantom_session::ResourceBudget::default()).await);
+    let adapter =
+        Arc::new(EngineAdapter::new(5, 0, 5, 0, phantom_session::ResourceBudget::default()).await);
     let page = process_html(INTEGRATION_HTML, "https://local.test/login", 1280.0, 720.0).unwrap();
     adapter.store_page(SessionPage::new(
         page.tree,
@@ -249,7 +250,8 @@ async fn phase3_snapshot_and_verify() {
 
 #[tokio::test]
 async fn phase3_tab_full_lifecycle() {
-    let adapter = Arc::new(EngineAdapter::new(5, 0, 5, 0, phantom_session::ResourceBudget::default()).await);
+    let adapter =
+        Arc::new(EngineAdapter::new(5, 0, 5, 0, phantom_session::ResourceBudget::default()).await);
     let server = McpServer::new_with_adapter(None, adapter.clone());
 
     // new_tab
@@ -361,7 +363,8 @@ async fn phase3_sse_subscribes_and_receives_delta() {
 
 #[tokio::test]
 async fn phase3_selective_mode_on_large_page() {
-    let adapter = Arc::new(EngineAdapter::new(5, 0, 5, 0, phantom_session::ResourceBudget::default()).await);
+    let adapter =
+        Arc::new(EngineAdapter::new(5, 0, 5, 0, phantom_session::ResourceBudget::default()).await);
     let mut html = String::from("<html><body style='width:1280px;height:720px;'>");
     for i in 0..600 {
         html.push_str(&format!(
@@ -401,7 +404,8 @@ async fn phase3_selective_mode_on_large_page() {
 
 #[tokio::test]
 async fn phase3_all_mcp_tools_are_registered() {
-    let adapter = Arc::new(EngineAdapter::new(5, 0, 5, 0, phantom_session::ResourceBudget::default()).await);
+    let adapter =
+        Arc::new(EngineAdapter::new(5, 0, 5, 0, phantom_session::ResourceBudget::default()).await);
     let server = McpServer::new_with_adapter(None, adapter.clone());
     let tools = vec![
         "browser_navigate",
@@ -434,7 +438,8 @@ async fn phase3_all_mcp_tools_are_registered() {
 
 #[tokio::test]
 async fn phase3_real_page_navigation() {
-    let adapter = Arc::new(EngineAdapter::new(5, 0, 5, 0, phantom_session::ResourceBudget::default()).await);
+    let adapter =
+        Arc::new(EngineAdapter::new(5, 0, 5, 0, phantom_session::ResourceBudget::default()).await);
     let server = McpServer::new_with_adapter(None, adapter.clone());
 
     let start = Instant::now();

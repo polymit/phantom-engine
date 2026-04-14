@@ -270,7 +270,11 @@ async fn test_authenticated_session_lifecycle() {
         720.0,
     )
     .expect("parse dashboard HTML");
-    adapter.store_page(SessionPage::new(page.tree, format!("{}/dashboard", origin), 200));
+    adapter.store_page(SessionPage::new(
+        page.tree,
+        format!("{}/dashboard", origin),
+        200,
+    ));
 
     // SUSPEND
     let suspend_start = Instant::now();

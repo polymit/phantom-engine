@@ -150,8 +150,8 @@ impl Drop for Tier2Pool {
     fn drop(&mut self) {
         // Clear sessions for the current thread
         self.shutdown();
-        
-        // Note: thread-local sessions on OTHER threads will be destroyed 
+
+        // Note: thread-local sessions on OTHER threads will be destroyed
         // when those threads exit. We can't easily clear them from here
         // without a global registry, but this prevents leaks on the
         // main/worker threads that explicitly shut down.

@@ -253,7 +253,10 @@ async fn test_fetch_stub_exists() {
     session.eval("").await.unwrap();
 
     let text = session.eval("globalThis.__fetch_text").await.unwrap();
-    assert_eq!(text, "", "fetch() Response.text() must resolve to empty string");
+    assert_eq!(
+        text, "",
+        "fetch() Response.text() must resolve to empty string"
+    );
 
     session.destroy();
 }

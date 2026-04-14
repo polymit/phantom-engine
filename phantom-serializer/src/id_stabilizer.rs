@@ -45,7 +45,7 @@ impl Default for StableIdMap {
 pub fn stabilise_ids(tree: &DomTree, _visible_nodes: &VisibilityMap) -> StableIdMap {
     let mut map = StableIdMap::new();
     if let Some(root) = tree.document_root {
-        process_node_ids(tree, root, "", 0, &mut map);
+        process_node_ids(tree, root, "", "root", 0, &mut map);
     }
     map
 }
@@ -54,52 +54,53 @@ fn process_node_ids(
     tree: &DomTree,
     node_id: NodeId,
     parent_path: &str,
-    child_idx: usize,
+    tag: &str,
+    tag_idx: usize,
     map: &mut StableIdMap,
 ) {
     let Some(dom_node) = tree.get(node_id) else {
         return;
     };
-    let mut path = format!("{}/{}", parent_path, child_idx);
+    let path = format!("{}/{}[{}]", parent_path, tag, tag_idx);
 
     let (cct_id, conf) = match &dom_node.data {
         NodeData::Element {
-            tag_name,
             attributes,
             ..
         } => {
-            path = format!("{}/{}[{}]", parent_path, tag_name, child_idx);
-
             let cct_role = CctAriaRole::from_aria_role(&dom_node.aria_role);
             let role_code = cct_role.to_cct_code();
 
-            // Priority 1
+            // Priority 1: Semantic Override
             if let Some(id) = attributes.get("data-agent-id") {
                 (id.clone(), IdConfidence::High)
             }
-            // Priority 2
+            // Priority 2: Testing ID
             else if let Some(id) = attributes.get("data-testid") {
                 (id.clone(), IdConfidence::High)
             }
-            // Priority 3
+            // Priority 3: Accessible Label
             else if let Some(label) = attributes.get("aria-label").or(attributes.get("alt")) {
                 let mut hasher = rustc_hash::FxHasher::default();
                 label.hash(&mut hasher);
                 role_code.hash(&mut hasher);
                 (format!("n_{:x}", hasher.finish()), IdConfidence::High)
             }
-            // Priority 4
+            // Priority 4: DOM ID (filtered if auto-generated)
             else if let Some(id) = attributes.get("id").filter(|s| !is_framework_auto_id(s)) {
                 (id.clone(), IdConfidence::Medium)
             } else {
                 let text = tree.get_text_content(node_id);
+                // Priority 5: Visible Text Anchor
                 if !text.is_empty() {
                     let mut hasher = rustc_hash::FxHasher::default();
-                    text.hash(&mut hasher);
+                    // Limit text hash to first 64 chars to avoid volatility on long blocks
+                    let anchor_text = if text.len() > 64 { &text[..64] } else { &text };
+                    anchor_text.hash(&mut hasher);
                     role_code.hash(&mut hasher);
                     (format!("n_{:x}", hasher.finish()), IdConfidence::Medium)
                 }
-                // Priority 6: structural path hash
+                // Priority 6: Structural stability path hash
                 else {
                     let mut hasher = rustc_hash::FxHasher::default();
                     path.hash(&mut hasher);
@@ -110,7 +111,13 @@ fn process_node_ids(
         NodeData::Text { content } => {
             let mut hasher = rustc_hash::FxHasher::default();
             path.hash(&mut hasher);
-            content.hash(&mut hasher);
+            // Text nodes are anchored by path + content hash for extreme stability
+            let anchor_text = if content.len() > 64 {
+                &content[..64]
+            } else {
+                content
+            };
+            anchor_text.hash(&mut hasher);
             (format!("n_{:x}", hasher.finish()), IdConfidence::Low)
         }
         NodeData::Document | NodeData::Comment { .. } => {
@@ -130,8 +137,20 @@ fn process_node_ids(
     map.used_ids.insert(final_id.clone());
     map.inner.insert(node_id, (final_id, conf));
 
-    for (idx, child) in node_id.children(&tree.arena).enumerate() {
-        process_node_ids(tree, child, &path, idx, map);
+    // Stable child traversal with tag-relative indices
+    let mut tag_indices: HashMap<String, usize> = HashMap::new();
+    for child in node_id.children(&tree.arena) {
+        let child_node = tree.get(child).unwrap();
+        let child_tag = match &child_node.data {
+            NodeData::Element { tag_name, .. } => tag_name.clone(),
+            NodeData::Text { .. } => "#text".to_string(),
+            NodeData::Comment { .. } => "#comment".to_string(),
+            NodeData::Document => "#document".to_string(),
+        };
+
+        let current_idx = *tag_indices.get(&child_tag).unwrap_or(&0);
+        process_node_ids(tree, child, &path, &child_tag, current_idx, map);
+        tag_indices.insert(child_tag, current_idx + 1);
     }
 }
 
@@ -172,7 +191,7 @@ mod tests {
         let actual = ids.get_id(text).expect("text node id should exist");
 
         let mut hasher = rustc_hash::FxHasher::default();
-        "/0/div[0]/0".hash(&mut hasher);
+        "/root[0]/div[0]/#text[0]".hash(&mut hasher);
         text_content.hash(&mut hasher);
         let expected = format!("n_{:x}", hasher.finish());
 

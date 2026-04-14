@@ -69,7 +69,7 @@ pub fn rebuild_page_from_tree(
     // Pass 3: Final visibility state using CSS + layout bounds.
     if let Some(root) = tree.document_root {
         let viewport = ViewportBounds::new(0.0, 0.0, viewport_width, viewport_height);
-        apply_layout_visibility_pass(&mut tree, &layout, &viewport, root, (0.0, 0.0));
+        apply_layout_visibility_pass(&mut tree, &layout, &viewport, root, (0.0, 0.0), false);
     }
 
     Ok(ParsedPage {
@@ -176,9 +176,10 @@ fn apply_layout_visibility_pass(
     viewport: &ViewportBounds,
     node_id: NodeId,
     parent_offset: (f32, f32),
+    ancestor_hidden: bool,
 ) {
     let mut next_offset = parent_offset;
-    let element_visibility = {
+    let (element_visibility, currently_hidden) = {
         let Some(node) = tree.get(node_id) else {
             return;
         };
@@ -191,15 +192,18 @@ fn apply_layout_visibility_pass(
                     ViewportBounds::new(abs_x, abs_y, local_bounds.width, local_bounds.height);
                 next_offset = (abs_x, abs_y);
 
-                let c1 = node.computed_display != Display::None;
+                let is_display_none = node.computed_display == Display::None;
+                let is_hidden = ancestor_hidden || is_display_none;
+
+                let c1 = !is_hidden;
                 let c2 = node.computed_visibility != Visibility::Hidden;
                 let c3 = node.computed_opacity > 0.0;
                 let c4 = bounds.width > 0.0;
                 let c5 = bounds.height > 0.0;
                 let c6 = bounds.intersects(viewport);
-                Some(c1 && c2 && c3 && c4 && c5 && c6)
+                (Some(c1 && c2 && c3 && c4 && c5 && c6), is_hidden)
             }
-            _ => None,
+            _ => (None, ancestor_hidden),
         }
     };
     if let Some(visible) = element_visibility {
@@ -209,6 +213,6 @@ fn apply_layout_visibility_pass(
     }
     let children: Vec<NodeId> = node_id.children(&tree.arena).collect();
     for child in children {
-        apply_layout_visibility_pass(tree, layout, viewport, child, next_offset);
+        apply_layout_visibility_pass(tree, layout, viewport, child, next_offset, currently_hidden);
     }
 }

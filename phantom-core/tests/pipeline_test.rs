@@ -256,4 +256,28 @@ mod tests {
             "percent-sized element in viewport should be visible"
         );
     }
+
+    #[test]
+    fn test_visibility_display_none_inherited() {
+        let html = r#"
+            <html><body style="width: 1280px; height: 720px;">
+                <div id="parent" style="display: none; width: 200px; height: 100px;">
+                    <button id="child" style="display: block; visibility: visible; width: 120px; height: 40px;">Go</button>
+                </div>
+            </body></html>
+        "#;
+
+        let page = process_html(html, "https://display.test", 1280.0, 720.0).unwrap();
+        let parent_id = page.tree.get_element_by_id("parent").unwrap();
+        let child_id = page.tree.get_element_by_id("child").unwrap();
+
+        assert!(
+            !page.tree.get(parent_id).unwrap().is_visible,
+            "parent display:none must be hidden"
+        );
+        assert!(
+            !page.tree.get(child_id).unwrap().is_visible,
+            "child of display:none parent must be hidden despite having display:block"
+        );
+    }
 }

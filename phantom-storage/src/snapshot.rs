@@ -4,6 +4,8 @@ use std::collections::HashMap;
 use std::io::{Cursor, Read};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+const MAX_SNAPSHOT_DECOMPRESSED_SIZE: u64 = 256 * 1024 * 1024; // 256MB
+
 /// Manifest stored at the root of a snapshot archive. Contains cryptographic
 /// proofs of non-tampering and checksums for all individual artifacts.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -185,11 +187,26 @@ pub fn verify_manifest(manifest: &SnapshotManifest) -> Result<(), String> {
     Ok(())
 }
 
+/// Decompresses a byte slice with a safety limit to prevent OOM/Decompression Bombs.
+pub fn safe_decompress(bytes: &[u8]) -> Result<Vec<u8>, String> {
+    let decoder = zstd::stream::read::Decoder::new(Cursor::new(bytes))
+        .map_err(|e| format!("failed to initialize zstd decoder: {}", e))?;
+
+    let mut buf = Vec::new();
+    // Wrap decoder in a Take reader to enforce the size limit
+    let mut limited = decoder.take(MAX_SNAPSHOT_DECOMPRESSED_SIZE);
+
+    limited
+        .read_to_end(&mut buf)
+        .map_err(|e| format!("decompression failed or reached limit: {}", e))?;
+
+    Ok(buf)
+}
+
 /// Fast-paths extraction of just the `manifest.json` file inside a snapshot archive without
 /// necessarily persisting or writing uncompressed file payloads to disk natively.
 pub fn read_manifest_from_snapshot(bytes: &[u8]) -> Result<SnapshotManifest, String> {
-    let decompressed = zstd::decode_all(Cursor::new(bytes))
-        .map_err(|e| format!("failed to un-zstd bytes payload chunk: {}", e))?;
+    let decompressed = safe_decompress(bytes)?;
 
     let mut archive = tar::Archive::new(Cursor::new(&decompressed));
 

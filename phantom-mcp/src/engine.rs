@@ -58,19 +58,19 @@ pub struct SessionPage {
 }
 
 impl SessionPage {
-    pub fn new(page: ParsedPage, url: String, status: u16) -> Self {
-        Self::with_viewport(page, url, status, 1280.0, 720.0)
+    pub fn new(tree: DomTree, url: String, status: u16) -> Self {
+        Self::with_viewport(tree, url, status, 1280.0, 720.0)
     }
 
     pub fn with_viewport(
-        page: ParsedPage,
+        tree: DomTree,
         url: String,
         status: u16,
         viewport_width: f32,
         viewport_height: f32,
     ) -> Self {
         Self {
-            tree: page.tree,
+            tree,
             url,
             status,
             viewport_width,
@@ -142,6 +142,8 @@ pub struct EngineAdapter {
     /// Replay buffer for late SSE subscribers.
     /// Keeps the most recent deltas when no receiver is attached.
     pub delta_replay: Arc<Mutex<VecDeque<String>>>,
+    /// Semaphore to serialize tool execution and prevent session state contention.
+    pub session_lock: Arc<tokio::sync::Semaphore>,
 }
 
 impl EngineAdapter {
@@ -178,6 +180,7 @@ impl EngineAdapter {
             cookie_store: Arc::new(tokio::sync::Mutex::new(cookie_store::CookieStore::default())),
             delta_tx,
             delta_replay: Arc::new(Mutex::new(VecDeque::with_capacity(DELTA_REPLAY_CAP))),
+            session_lock: Arc::new(tokio::sync::Semaphore::new(1)),
         }
     }
 
@@ -750,7 +753,8 @@ impl EngineAdapter {
         compressed: &[u8],
         new_session_id: &str,
     ) -> Result<Vec<u8>, String> {
-        let decompressed = zstd::decode_all(Cursor::new(compressed)).map_err(|e| e.to_string())?;
+        let decompressed =
+            phantom_storage::snapshot::safe_decompress(compressed).map_err(|e| e.to_string())?;
 
         // Extract every tar entry into a flat list
         let mut files: Vec<(String, Vec<u8>)> = Vec::new();

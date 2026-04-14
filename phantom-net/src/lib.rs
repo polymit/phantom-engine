@@ -51,6 +51,7 @@ pub struct SmartNetworkClient {
     persona_id: String,
     alt_svc_cache: RwLock<HashMap<String, AltSvcCacheEntry>>,
     client: Client,
+    pub max_network_bytes: Option<usize>,
 }
 
 impl std::fmt::Debug for SmartNetworkClient {
@@ -74,6 +75,7 @@ impl SmartNetworkClient {
             persona_id: persona_id.into(),
             alt_svc_cache: RwLock::new(HashMap::new()),
             client: Client::new(),
+            max_network_bytes: None,
         }
     }
 
@@ -106,6 +108,7 @@ impl SmartNetworkClient {
             persona_id: format!("{:?}", persona.chrome_version),
             alt_svc_cache: RwLock::new(HashMap::new()),
             client,
+            max_network_bytes: None,
         }
     }
 
@@ -179,7 +182,12 @@ impl SmartNetworkClient {
         }
     }
 
-    pub async fn fetch(&self, url: &str) -> Result<FetchResponse, PhantomNetError> {
+    pub async fn fetch(
+        &self,
+        url: &str,
+        max_bytes: Option<usize>,
+    ) -> Result<FetchResponse, PhantomNetError> {
+        let limit = max_bytes.or(self.max_network_bytes);
         let parsed_url = Url::parse(url).map_err(|e| PhantomNetError::InvalidUrl(e.to_string()))?;
 
         let res = self
@@ -223,6 +231,16 @@ impl SmartNetworkClient {
             .await
             .map_err(|e| PhantomNetError::RequestFailed(e.to_string()))?
             .to_vec();
+
+        if let Some(limit) = limit {
+            if body.len() > limit {
+                return Err(PhantomNetError::RequestFailed(format!(
+                    "response body size {} exceeds limit of {} bytes",
+                    body.len(),
+                    limit
+                )));
+            }
+        }
 
         Ok(FetchResponse {
             status,
@@ -281,7 +299,7 @@ mod tests {
         let persona = Persona::chrome_133(OsRng.next_u64());
         let client = SmartNetworkClient::with_persona(&persona);
 
-        let err = match client.fetch("not-a-url").await {
+        let err = match client.fetch("not-a-url", None).await {
             Ok(_) => panic!("invalid URL must not be accepted by fetch"),
             Err(err) => err,
         };

@@ -1,6 +1,6 @@
 use indextree::NodeId;
 use phantom_core::dom::{DomTree, NodeData};
-use phantom_core::layout::bounds::{LayoutEngine, ViewportBounds};
+use phantom_core::layout::bounds::{LayoutMap, ViewportBounds};
 use std::collections::HashMap;
 
 pub struct GeometryMap {
@@ -34,76 +34,33 @@ impl Default for GeometryMap {
 
 pub fn extract_geometry(
     tree: &DomTree,
-    layout: &LayoutEngine,
+    layout_map: &LayoutMap,
     viewport: &ViewportBounds,
 ) -> GeometryMap {
     let mut map = GeometryMap::new();
 
     if let Some(root) = tree.document_root {
-        process_node_geometry(tree, layout, viewport, root, 0.0, 0.0, &mut map);
+        for node_id in root.descendants(&tree.arena) {
+            let Some(dom_node) = tree.get(node_id) else {
+                continue;
+            };
+
+            if matches!(dom_node.data, NodeData::Element { .. }) {
+                if let Some(abs_bounds) = layout_map.get(&node_id) {
+                    let node_bounds = if abs_bounds.intersects(viewport) {
+                        abs_bounds.clone()
+                    } else {
+                        ViewportBounds::zero()
+                    };
+                    map.inner.insert(node_id, node_bounds);
+                }
+            } else {
+                map.inner.insert(node_id, ViewportBounds::zero());
+            }
+        }
     }
 
     map
-}
-
-pub fn is_in_viewport(bounds: &ViewportBounds, viewport: &ViewportBounds) -> bool {
-    bounds.intersects(viewport)
-}
-
-fn process_node_geometry(
-    tree: &DomTree,
-    layout: &LayoutEngine,
-    viewport: &ViewportBounds,
-    node_id: NodeId,
-    parent_offset_x: f32,
-    parent_offset_y: f32,
-    map: &mut GeometryMap,
-) {
-    let Some(dom_node) = tree.get(node_id) else {
-        return;
-    };
-    let mut abs_bounds = layout.get_bounds(node_id);
-
-    // Transform local coordinates to absolute viewport coordinates
-    abs_bounds.x += parent_offset_x;
-    abs_bounds.y += parent_offset_y;
-
-    if matches!(dom_node.data, NodeData::Element { .. }) {
-        let node_bounds = if is_in_viewport(&abs_bounds, viewport) {
-            abs_bounds.clone()
-        } else {
-            ViewportBounds::zero()
-        };
-        map.inner.insert(node_id, node_bounds);
-
-        // Keep walking with the element's absolute coordinates even when this
-        // element itself is outside the viewport and stored as zero.
-        for child in node_id.children(&tree.arena) {
-            process_node_geometry(
-                tree,
-                layout,
-                viewport,
-                child,
-                abs_bounds.x,
-                abs_bounds.y,
-                map,
-            );
-        }
-    } else {
-        // Document, Comment, Text have no layout bounds themselves
-        map.inner.insert(node_id, ViewportBounds::zero());
-        for child in node_id.children(&tree.arena) {
-            process_node_geometry(
-                tree,
-                layout,
-                viewport,
-                child,
-                parent_offset_x,
-                parent_offset_y,
-                map,
-            );
-        }
-    }
 }
 
 #[cfg(test)]
@@ -124,7 +81,7 @@ mod tests {
         "#;
         let page = process_html(html, "https://geometry.test", 1280.0, 720.0).unwrap();
         let viewport = ViewportBounds::new(0.0, 1100.0, 1280.0, 200.0);
-        let map = extract_geometry(&page.tree, &page.layout, &viewport);
+        let map = extract_geometry(&page.tree, &page.layout_map, &viewport);
 
         let parent_id = page.tree.get_element_by_id("parent").unwrap();
         let child_id = page.tree.get_element_by_id("child").unwrap();

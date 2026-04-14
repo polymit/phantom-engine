@@ -1,6 +1,6 @@
 use crate::css::{ComputedStyle, CssEngine};
 use crate::dom::{Display, DomTree, NodeData, SizeValue, Visibility};
-use crate::layout::bounds::{LayoutEngine, LayoutError, ViewportBounds};
+use crate::layout::bounds::{LayoutEngine, LayoutError, ViewportBounds, LayoutMap};
 use indextree::NodeId;
 use thiserror::Error;
 
@@ -15,7 +15,7 @@ pub enum CoreError {
 #[derive(Clone)]
 pub struct ParsedPage {
     pub tree: DomTree,
-    pub layout: LayoutEngine,
+    pub layout_map: LayoutMap,
     pub url: String,
 }
 
@@ -72,9 +72,13 @@ pub fn rebuild_page_from_tree(
         apply_layout_visibility_pass(&mut tree, &layout, &viewport, root, (0.0, 0.0), false);
     }
 
+    // Pass 4: Convert live Taffy tree to static absolute map for Serialization.
+    // This allows ParsedPage to be Send + Sync and moved across threads.
+    let layout_map = layout.compute_absolute_map(&tree);
+
     Ok(ParsedPage {
         tree,
-        layout,
+        layout_map,
         url: url.to_string(),
     })
 }
@@ -177,8 +181,9 @@ fn build_layout_tree(
         let char_count = trimmed.chars().count() as f32;
         let style = taffy::Style {
             size: taffy::Size {
-                width: taffy::Dimension::length(char_count * 8.0),
-                height: taffy::Dimension::length(20.0),
+                // Heuristic: ~8.5px avg width, 18px line height
+                width: taffy::Dimension::length(char_count * 8.5),
+                height: taffy::Dimension::length(18.0),
             },
             ..Default::default()
         };

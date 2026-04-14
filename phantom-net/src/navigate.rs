@@ -12,6 +12,7 @@ pub struct NavigationConfig {
     pub viewport_height: f32,
     pub max_retries: u8,
     pub task_hint: Option<String>,
+    pub max_network_bytes: Option<usize>,
 }
 
 impl Default for NavigationConfig {
@@ -21,6 +22,7 @@ impl Default for NavigationConfig {
             viewport_height: 720.0,
             max_retries: 2,
             task_hint: None,
+            max_network_bytes: Some(64 * 1024 * 1024), // 64MB default
         }
     }
 }
@@ -91,7 +93,7 @@ pub async fn navigate(
             );
         }
 
-        let response = match client.fetch(&current_url).await {
+        let response = match client.fetch(&current_url, config.max_network_bytes).await {
             Ok(res) => res,
             Err(e) => {
                 if let PhantomNetError::RequestFailed(ref _msg) = e {

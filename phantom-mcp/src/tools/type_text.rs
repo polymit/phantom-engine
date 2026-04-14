@@ -38,19 +38,13 @@ pub async fn handle_type(
 
     let page_key = adapter.current_page_key();
     let tree = {
-        let store = adapter.page_store.lock();
-        let page = store.get(&page_key).ok_or_else(|| {
+        let page = adapter.get_page().await.ok_or_else(|| {
             (
                 StatusCode::BAD_REQUEST,
                 json!({ "error": { "code": "no_page_loaded", "message": "no page loaded" } }),
             )
         })?;
-        page.to_parsed_page().map(|p| p.tree).ok_or_else(|| {
-            (
-                StatusCode::BAD_REQUEST,
-                json!({ "error": { "code": "no_page_loaded", "message": "no page loaded" } }),
-            )
-        })?
+        page.tree.clone()
     };
     let delta_node_id = tree.query_selector(&selector).or(tree.document_root);
 

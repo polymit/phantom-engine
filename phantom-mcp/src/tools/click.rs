@@ -1,4 +1,5 @@
 use axum::http::StatusCode;
+use phantom_core::layout::bounds::ViewportBounds;
 use phantom_js::BehaviorEngine;
 use phantom_serializer::CctDelta;
 use serde_json::{json, Value};
@@ -32,7 +33,7 @@ pub async fn handle_click(
     let selector = click_params.selector;
 
     let (tree, default_x, default_y, target_node_id) = {
-        let page = adapter.get_page().ok_or_else(|| {
+        let page = adapter.get_page().await.ok_or_else(|| {
             (
                 StatusCode::BAD_REQUEST,
                 json!({
@@ -55,7 +56,7 @@ pub async fn handle_click(
                 }),
             )
         })?;
-        let target_bounds = page.layout.get_bounds(target_node_id);
+        let target_bounds = page.layout_map.get(&target_node_id).cloned().unwrap_or_else(ViewportBounds::zero);
         let default_x = if target_bounds.width > 0.0 {
             target_bounds.x as f64 + (target_bounds.width as f64 / 2.0)
         } else {

@@ -1,6 +1,6 @@
 use super::element::JsHTMLElement;
 use crate::tier1::session::PhantomDomHandle;
-use rquickjs::{class::Trace, Ctx, Result};
+use rquickjs::{Ctx, Result, class::Trace};
 
 #[derive(Trace, Clone, rquickjs::JsLifetime)]
 #[rquickjs::class(rename = "Document")]

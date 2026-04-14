@@ -30,7 +30,7 @@ pub async fn handle_get_scene_graph(
     })?;
 
     let (page, url, viewport_width, viewport_height) =
-        adapter.get_page_with_viewport().ok_or_else(|| {
+        adapter.get_page_with_viewport().await.ok_or_else(|| {
             (
                 StatusCode::CONFLICT,
                 json!({ "error": {

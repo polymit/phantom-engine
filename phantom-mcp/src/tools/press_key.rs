@@ -29,7 +29,7 @@ pub async fn handle_press_key(
     }
 
     let tree = {
-        let page = adapter.get_page().ok_or_else(|| {
+        let page = adapter.get_page().await.ok_or_else(|| {
             (
                 StatusCode::BAD_REQUEST,
                 json!({ "error": { "code": "no_page_loaded", "message": "no page loaded" } }),

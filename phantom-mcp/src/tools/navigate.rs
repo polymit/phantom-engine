@@ -40,10 +40,17 @@ pub async fn handle_navigate(
         )
     })?;
 
+    let budget = adapter
+        .broker
+        .get(expected_key)
+        .map(|s| s.budget)
+        .unwrap_or_default();
+
     let config = NavigationConfig {
         viewport_width: params.viewport_width.unwrap_or(1280.0),
         viewport_height: params.viewport_height.unwrap_or(720.0),
         task_hint: params.task_hint,
+        max_network_bytes: Some(budget.max_network_bytes),
         ..Default::default()
     };
 
@@ -83,14 +90,14 @@ pub async fn handle_navigate(
     let response_status = result.status;
     let response_cct = result.cct.clone();
     let response_node_count = result.node_count;
-    let delta_root = result.page.tree.document_root;
+    let delta_root = result.tree.document_root;
 
     // Persist the parsed page so browser_get_scene_graph can re-serialise
     // with different scroll/mode parameters without re-fetching.
     let stored = adapter.store_page_if_current(
         expected_key,
         SessionPage::with_viewport(
-            result.page,
+            result.tree,
             result.url.clone(),
             result.status,
             config.viewport_width,

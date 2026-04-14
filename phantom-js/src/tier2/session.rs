@@ -15,19 +15,27 @@ impl Tier2Session {
     ///
     /// NEVER call this before init_v8_platform() has been called.
     /// init_v8_platform() must be called in main() before Tokio starts.
-    pub fn new() -> Result<Self, crate::error::PhantomJsError> {
-        use deno_core::{JsRuntime, RuntimeOptions};
+    pub fn new(max_heap_bytes: Option<usize>) -> Result<Self, crate::error::PhantomJsError> {
+        use deno_core::{v8, JsRuntime, RuntimeOptions};
         use rand::RngCore;
+
+        let create_params = max_heap_bytes.map(|limit| {
+            v8::CreateParams::default().set_max_old_generation_size_in_bytes(limit)
+        });
 
         let mut runtime = JsRuntime::try_new(RuntimeOptions {
             startup_snapshot: Some(PHANTOM_BASE_SNAPSHOT),
+            create_params,
             ..Default::default()
-        }).map_err(|e| crate::error::PhantomJsError::Internal(e.to_string()))?;
+        })
+        .map_err(|e| crate::error::PhantomJsError::Internal(e.to_string()))?;
 
         // SAFETY: Entering the isolate is required to ensure that any handle operations
         // (including those inside JsRuntime::execute_script) are associated with THIS
         // isolate in V8's thread-local state.
-        unsafe { runtime.v8_isolate().enter(); }
+        unsafe {
+            runtime.v8_isolate().enter();
+        }
 
         let mut rng = rand::rngs::OsRng;
         let seed = rng.next_u64();
@@ -39,7 +47,9 @@ impl Tier2Session {
             ),
         );
 
-        unsafe { runtime.v8_isolate().exit(); }
+        unsafe {
+            runtime.v8_isolate().exit();
+        }
 
         init_res.map_err(|e| crate::error::PhantomJsError::Internal(e.to_string()))?;
 
@@ -53,13 +63,17 @@ impl Tier2Session {
 
         // SAFETY: See new(). We must ensure THIS isolate is current for any handle
         // allocations or clones performed by deno_core::scope!.
-        unsafe { self.runtime.v8_isolate().enter(); }
+        unsafe {
+            self.runtime.v8_isolate().enter();
+        }
 
         let res = (|| {
             deno_core::scope!(scope, self.runtime);
 
             let source = v8::String::new(scope, script).ok_or_else(|| {
-                crate::error::PhantomJsError::Internal("Failed to allocate V8 string for eval".into())
+                crate::error::PhantomJsError::Internal(
+                    "Failed to allocate V8 string for eval".into(),
+                )
             })?;
 
             v8::tc_scope!(let tc_scope, scope);
@@ -75,7 +89,9 @@ impl Tier2Session {
             Ok(result.to_rust_string_lossy(tc_scope))
         })();
 
-        unsafe { self.runtime.v8_isolate().exit(); }
+        unsafe {
+            self.runtime.v8_isolate().exit();
+        }
         res
     }
 

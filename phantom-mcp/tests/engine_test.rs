@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use phantom_mcp::engine::{get_test_adapter, init_v8};
 use phantom_mcp::{EngineAdapter, McpServer};
 
@@ -95,7 +96,7 @@ fn api_key_enforcement_still_works() {
 #[tokio::test]
 async fn inject_delta_is_retained_without_subscribers() {
     init_v8();
-    let adapter = EngineAdapter::new(2, 0, 2, 0).await;
+    let adapter = Arc::new(EngineAdapter::new(2, 0, 2, 0, phantom_session::ResourceBudget::default()).await);
     assert!(
         adapter.delta_replay_snapshot().is_empty(),
         "new adapter should start with empty replay buffer"
@@ -155,12 +156,12 @@ async fn scene_graph_after_store_returns_valid_cct() {
     .expect("process_html must not fail");
 
     adapter.store_page(SessionPage::new(
-        page,
+        page.tree,
         "https://test.local".to_string(),
         200,
     ));
 
-    let retrieved = adapter.get_page();
+    let retrieved = adapter.get_page().await;
     assert!(
         retrieved.is_some(),
         "get_page must return Some after store_page"
@@ -208,7 +209,7 @@ async fn scene_graph_selective_mode_accepted() {
     )
     .unwrap();
     adapter.store_page(SessionPage::new(
-        page,
+        page.tree,
         "https://login.test".to_string(),
         200,
     ));
@@ -257,7 +258,7 @@ async fn scene_graph_scroll_params_accepted() {
     )
     .unwrap();
     adapter.store_page(SessionPage::new(
-        page,
+        page.tree,
         "https://scroll.test".to_string(),
         200,
     ));
@@ -308,7 +309,7 @@ async fn scene_graph_cct_header_contains_correct_url() {
     use phantom_serializer::{HeadlessSerializer, SerialiserConfig};
 
     init_v8();
-    let adapter = EngineAdapter::new(2, 0, 2, 0).await;
+    let adapter = Arc::new(EngineAdapter::new(2, 0, 2, 0, phantom_session::ResourceBudget::default()).await);
 
     let page = process_html(
         "<html><body style='width:1280px;height:720px;'>
@@ -320,12 +321,12 @@ async fn scene_graph_cct_header_contains_correct_url() {
     )
     .unwrap();
     adapter.store_page(SessionPage::new(
-        page,
+        page.tree,
         "https://specific-url.test/path".to_string(),
         200,
     ));
 
-    let page_clone = adapter.get_page().unwrap();
+    let page_clone = adapter.get_page().await.unwrap();
     let config = SerialiserConfig {
         url: adapter.get_page_url().unwrap(),
         ..Default::default()
@@ -359,7 +360,7 @@ async fn scene_graph_uses_stored_viewport_dimensions() {
     )
     .unwrap();
     adapter.store_page(SessionPage::with_viewport(
-        page,
+        page.tree,
         "https://viewport.test".to_string(),
         200,
         1000.0,
@@ -421,7 +422,7 @@ async fn click_nonexistent_selector_returns_element_not_found() {
     use phantom_core::process_html;
     use phantom_mcp::{engine::SessionPage, EngineAdapter, McpServer};
 
-    let adapter = EngineAdapter::new(5, 0, 5, 0).await;
+    let adapter = Arc::new(EngineAdapter::new(5, 0, 5, 0, phantom_session::ResourceBudget::default()).await);
     let server = McpServer::new_with_adapter(None, adapter.clone());
 
     // Store a page with NO button
@@ -435,7 +436,7 @@ async fn click_nonexistent_selector_returns_element_not_found() {
     )
     .unwrap();
     adapter.store_page(SessionPage::new(
-        page,
+        page.tree,
         "https://click.test".to_string(),
         200,
     ));
@@ -464,7 +465,7 @@ async fn click_existing_button_returns_success() {
     use phantom_core::process_html;
     use phantom_mcp::{engine::SessionPage, EngineAdapter, McpServer};
 
-    let adapter = EngineAdapter::new(5, 0, 5, 0).await;
+    let adapter = Arc::new(EngineAdapter::new(5, 0, 5, 0, phantom_session::ResourceBudget::default()).await);
     let server = McpServer::new_with_adapter(None, adapter.clone());
 
     let page = process_html(
@@ -479,7 +480,7 @@ async fn click_existing_button_returns_success() {
     )
     .unwrap();
     adapter.store_page(SessionPage::new(
-        page,
+        page.tree,
         "https://click.test".to_string(),
         200,
     ));
@@ -535,7 +536,7 @@ async fn click_defaults_to_element_center() {
     use phantom_core::process_html;
     use phantom_mcp::{engine::SessionPage, EngineAdapter, McpServer};
 
-    let adapter = EngineAdapter::new(5, 0, 5, 0).await;
+    let adapter = Arc::new(EngineAdapter::new(5, 0, 5, 0, phantom_session::ResourceBudget::default()).await);
     let server = McpServer::new_with_adapter(None, adapter.clone());
 
     let page = process_html(
@@ -548,7 +549,7 @@ async fn click_defaults_to_element_center() {
     )
     .unwrap();
     adapter.store_page(SessionPage::new(
-        page,
+        page.tree,
         "https://click.test".to_string(),
         200,
     ));
@@ -570,7 +571,7 @@ async fn click_missing_selector_param_returns_error() {
     use phantom_core::process_html;
     use phantom_mcp::{engine::SessionPage, EngineAdapter, McpServer};
 
-    let adapter = EngineAdapter::new(5, 0, 5, 0).await;
+    let adapter = Arc::new(EngineAdapter::new(5, 0, 5, 0, phantom_session::ResourceBudget::default()).await);
     let server = McpServer::new_with_adapter(None, adapter.clone());
 
     let page = process_html(
@@ -581,7 +582,7 @@ async fn click_missing_selector_param_returns_error() {
     )
     .unwrap();
     adapter.store_page(SessionPage::new(
-        page,
+        page.tree,
         "https://click.test".to_string(),
         200,
     ));
@@ -600,7 +601,7 @@ async fn click_selector_with_single_quote_does_not_panic() {
     use phantom_core::process_html;
     use phantom_mcp::{engine::SessionPage, EngineAdapter, McpServer};
 
-    let adapter = EngineAdapter::new(5, 0, 5, 0).await;
+    let adapter = Arc::new(EngineAdapter::new(5, 0, 5, 0, phantom_session::ResourceBudget::default()).await);
     let server = McpServer::new_with_adapter(None, adapter.clone());
 
     let page = process_html(
@@ -611,7 +612,7 @@ async fn click_selector_with_single_quote_does_not_panic() {
     )
     .unwrap();
     adapter.store_page(SessionPage::new(
-        page,
+        page.tree,
         "https://click.test".to_string(),
         200,
     ));
@@ -635,7 +636,7 @@ async fn type_nonexistent_selector_returns_element_not_found() {
     use phantom_core::process_html;
     use phantom_mcp::{engine::SessionPage, EngineAdapter, McpServer};
 
-    let adapter = EngineAdapter::new(5, 0, 5, 0).await;
+    let adapter = Arc::new(EngineAdapter::new(5, 0, 5, 0, phantom_session::ResourceBudget::default()).await);
     let server = McpServer::new_with_adapter(None, adapter.clone());
     let page = process_html(
         "<html><body style='width:1280px;height:720px;'><input id='present'/></body></html>",
@@ -644,7 +645,7 @@ async fn type_nonexistent_selector_returns_element_not_found() {
         720.0,
     )
     .unwrap();
-    adapter.store_page(SessionPage::new(page, "https://type.test".to_string(), 200));
+    adapter.store_page(SessionPage::new(page.tree, "https://type.test".to_string(), 200));
 
     let req = McpServer::parse_request(
         r##"{"jsonrpc":"2.0","id":1,"method":"browser_type","params":{"selector":"#missing","text":"abc"}}"##,
@@ -665,7 +666,7 @@ async fn type_input_updates_value_and_persists_for_evaluate() {
     use phantom_core::process_html;
     use phantom_mcp::{engine::SessionPage, EngineAdapter, McpServer};
 
-    let adapter = EngineAdapter::new(5, 0, 5, 0).await;
+    let adapter = Arc::new(EngineAdapter::new(5, 0, 5, 0, phantom_session::ResourceBudget::default()).await);
     let server = McpServer::new_with_adapter(None, adapter.clone());
     let page = process_html(
         "<html><body style='width:1280px;height:720px;'><input id='email' value=''/></body></html>",
@@ -674,7 +675,7 @@ async fn type_input_updates_value_and_persists_for_evaluate() {
         720.0,
     )
     .unwrap();
-    adapter.store_page(SessionPage::new(page, "https://type.test".to_string(), 200));
+    adapter.store_page(SessionPage::new(page.tree, "https://type.test".to_string(), 200));
 
     let type_req = McpServer::parse_request(
         r##"{"jsonrpc":"2.0","id":1,"method":"browser_type","params":{"selector":"#email","text":"abc","delay_ms":0}}"##,
@@ -721,7 +722,7 @@ async fn type_updates_original_tab_after_switch() {
     use phantom_mcp::{engine::SessionPage, EngineAdapter, McpServer};
     use std::time::Duration;
 
-    let adapter = EngineAdapter::new(5, 0, 5, 0).await;
+    let adapter = Arc::new(EngineAdapter::new(5, 0, 5, 0, phantom_session::ResourceBudget::default()).await);
     let server = McpServer::new_with_adapter(None, adapter.clone());
 
     let tab_a = adapter
@@ -735,7 +736,7 @@ async fn type_updates_original_tab_after_switch() {
     )
     .unwrap();
     adapter.store_page(SessionPage::new(
-        page_a,
+        page_a.tree,
         "https://tab-a.type.test".to_string(),
         200,
     ));
@@ -751,7 +752,7 @@ async fn type_updates_original_tab_after_switch() {
     )
     .unwrap();
     adapter.store_page(SessionPage::new(
-        page_b,
+        page_b.tree,
         "https://tab-b.type.test".to_string(),
         200,
     ));
@@ -808,7 +809,7 @@ async fn type_updates_original_tab_after_switch() {
 
 #[tokio::test]
 async fn press_key_requires_non_empty_key() {
-    let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
+    let adapter = Arc::new(EngineAdapter::new(5, 0, 5, 0, phantom_session::ResourceBudget::default()).await);
     let server = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
     let req = phantom_mcp::McpServer::parse_request(
         r#"{"jsonrpc":"2.0","id":1,"method":"browser_press_key","params":{"key":""}}"#,
@@ -832,7 +833,7 @@ async fn evaluate_arithmetic_returns_number() {
     use phantom_mcp::engine::SessionPage;
     use phantom_mcp::{EngineAdapter, McpServer};
 
-    let adapter = EngineAdapter::new(5, 0, 5, 0).await;
+    let adapter = Arc::new(EngineAdapter::new(5, 0, 5, 0, phantom_session::ResourceBudget::default()).await);
     let server = McpServer::new_with_adapter(None, adapter.clone());
 
     let page = process_html(
@@ -842,7 +843,7 @@ async fn evaluate_arithmetic_returns_number() {
         720.0,
     )
     .unwrap();
-    adapter.store_page(SessionPage::new(page, "https://eval.test".to_string(), 200));
+    adapter.store_page(SessionPage::new(page.tree, "https://eval.test".to_string(), 200));
 
     let req = McpServer::parse_request(
         r#"{"jsonrpc":"2.0","id":1,"method":"browser_evaluate","params":{"script":"1 + 1"}}"#,
@@ -873,7 +874,7 @@ async fn evaluate_string_result_has_string_type() {
     use phantom_mcp::engine::SessionPage;
     use phantom_mcp::{EngineAdapter, McpServer};
 
-    let adapter = EngineAdapter::new(5, 0, 5, 0).await;
+    let adapter = Arc::new(EngineAdapter::new(5, 0, 5, 0, phantom_session::ResourceBudget::default()).await);
     let server = McpServer::new_with_adapter(None, adapter.clone());
 
     let page = process_html(
@@ -883,7 +884,7 @@ async fn evaluate_string_result_has_string_type() {
         720.0,
     )
     .unwrap();
-    adapter.store_page(SessionPage::new(page, "https://eval.test".to_string(), 200));
+    adapter.store_page(SessionPage::new(page.tree, "https://eval.test".to_string(), 200));
 
     let req = McpServer::parse_request(
         r#"{"jsonrpc":"2.0","id":1,"method":"browser_evaluate","params":{"script":"'hello world'"}}"#
@@ -910,7 +911,7 @@ async fn evaluate_object_result_returns_json_object() {
     use phantom_mcp::engine::SessionPage;
     use phantom_mcp::{EngineAdapter, McpServer};
 
-    let adapter = EngineAdapter::new(5, 0, 5, 0).await;
+    let adapter = Arc::new(EngineAdapter::new(5, 0, 5, 0, phantom_session::ResourceBudget::default()).await);
     let server = McpServer::new_with_adapter(None, adapter.clone());
 
     let page = process_html(
@@ -920,7 +921,7 @@ async fn evaluate_object_result_returns_json_object() {
         720.0,
     )
     .unwrap();
-    adapter.store_page(SessionPage::new(page, "https://eval.test".to_string(), 200));
+    adapter.store_page(SessionPage::new(page.tree, "https://eval.test".to_string(), 200));
 
     let req = McpServer::parse_request(
         r#"{"jsonrpc":"2.0","id":1,"method":"browser_evaluate","params":{"script":"({ok:true,count:2})"}}"#,
@@ -936,7 +937,7 @@ async fn evaluate_object_result_returns_json_object() {
 
 #[tokio::test]
 async fn evaluate_without_page_returns_no_page_error() {
-    let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
+    let adapter = Arc::new(EngineAdapter::new(5, 0, 5, 0, phantom_session::ResourceBudget::default()).await);
     let server = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
 
     // Ensure the store is empty for this isolated adapter.
@@ -963,7 +964,7 @@ async fn evaluate_without_page_returns_no_page_error() {
 
 #[tokio::test]
 async fn tab_new_tab_creates_tab_with_id() {
-    let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
+    let adapter = Arc::new(EngineAdapter::new(5, 0, 5, 0, phantom_session::ResourceBudget::default()).await);
     let server = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
 
     let req = phantom_mcp::McpServer::parse_request(
@@ -990,7 +991,7 @@ async fn tab_new_tab_creates_tab_with_id() {
 
 #[tokio::test]
 async fn tab_list_tabs_returns_created_tabs() {
-    let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
+    let adapter = Arc::new(EngineAdapter::new(5, 0, 5, 0, phantom_session::ResourceBudget::default()).await);
     let server = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
 
     for url in &["https://tab1.com", "https://tab2.com"] {
@@ -1030,7 +1031,7 @@ async fn tab_switch_changes_scene_graph_context() {
     use phantom_core::process_html;
     use phantom_mcp::engine::SessionPage;
 
-    let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
+    let adapter = Arc::new(EngineAdapter::new(5, 0, 5, 0, phantom_session::ResourceBudget::default()).await);
     let server = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
 
     let req1 = phantom_mcp::McpServer::parse_request(
@@ -1051,7 +1052,7 @@ async fn tab_switch_changes_scene_graph_context() {
     )
     .unwrap();
     adapter.store_page(SessionPage::new(
-        page1,
+        page1.tree,
         "https://tab1.test".to_string(),
         200,
     ));
@@ -1070,7 +1071,7 @@ async fn tab_switch_changes_scene_graph_context() {
     )
     .unwrap();
     adapter.store_page(SessionPage::new(
-        page2,
+        page2.tree,
         "https://tab2.test".to_string(),
         200,
     ));
@@ -1102,7 +1103,7 @@ async fn tab_switch_changes_scene_graph_context() {
 
 #[tokio::test]
 async fn tab_switch_to_nonexistent_tab_returns_error() {
-    let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
+    let adapter = Arc::new(EngineAdapter::new(5, 0, 5, 0, phantom_session::ResourceBudget::default()).await);
     let server = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
 
     let req = phantom_mcp::McpServer::parse_request(
@@ -1127,7 +1128,7 @@ async fn tab_switch_to_nonexistent_tab_returns_error() {
 
 #[tokio::test]
 async fn tab_close_removes_tab_from_list() {
-    let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
+    let adapter = Arc::new(EngineAdapter::new(5, 0, 5, 0, phantom_session::ResourceBudget::default()).await);
     let server = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
 
     // Create the tab.
@@ -1189,7 +1190,7 @@ async fn tab_close_keeps_active_page_and_store_in_sync() {
     use phantom_core::process_html;
     use phantom_mcp::engine::SessionPage;
 
-    let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
+    let adapter = Arc::new(EngineAdapter::new(5, 0, 5, 0, phantom_session::ResourceBudget::default()).await);
 
     let tab1 = adapter
         .open_tab(Some("https://sync-tab-1.test".to_string()))
@@ -1202,7 +1203,7 @@ async fn tab_close_keeps_active_page_and_store_in_sync() {
     )
     .unwrap();
     adapter.store_page(SessionPage::new(
-        page1,
+        page1.tree,
         "https://sync-tab-1.test".to_string(),
         200,
     ));
@@ -1218,7 +1219,7 @@ async fn tab_close_keeps_active_page_and_store_in_sync() {
     )
     .unwrap();
     adapter.store_page(SessionPage::new(
-        page2,
+        page2.tree,
         "https://sync-tab-2.test".to_string(),
         200,
     ));
@@ -1247,7 +1248,7 @@ async fn stale_navigation_key_does_not_reinsert_closed_tab_page() {
     use phantom_core::process_html;
     use phantom_mcp::engine::SessionPage;
 
-    let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
+    let adapter = Arc::new(EngineAdapter::new(5, 0, 5, 0, phantom_session::ResourceBudget::default()).await);
 
     let _tab1 = adapter
         .open_tab(Some("https://race-tab-1.test".to_string()))
@@ -1270,7 +1271,7 @@ async fn stale_navigation_key_does_not_reinsert_closed_tab_page() {
     .unwrap();
     let stored = adapter.store_page_if_current(
         stale_key,
-        SessionPage::new(page, "https://race-tab-2.test".to_string(), 200),
+        SessionPage::new(page.tree, "https://race-tab-2.test".to_string(), 200),
     );
 
     assert!(!stored, "stale tab key must be rejected");
@@ -1284,7 +1285,7 @@ async fn stale_navigation_key_does_not_reinsert_closed_tab_page() {
 
 #[tokio::test]
 async fn cookies_initially_empty() {
-    let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
+    let adapter = Arc::new(EngineAdapter::new(5, 0, 5, 0, phantom_session::ResourceBudget::default()).await);
     let server = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
     let req = phantom_mcp::McpServer::parse_request(
         r#"{"jsonrpc":"2.0","id":1,"method":"browser_get_cookies","params":{}}"#,
@@ -1300,7 +1301,7 @@ async fn cookies_initially_empty() {
 
 #[tokio::test]
 async fn clear_cookies_returns_cleared_true() {
-    let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
+    let adapter = Arc::new(EngineAdapter::new(5, 0, 5, 0, phantom_session::ResourceBudget::default()).await);
     let server = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
     let req = phantom_mcp::McpServer::parse_request(
         r#"{"jsonrpc":"2.0","id":1,"method":"browser_clear_cookies","params":{}}"#,
@@ -1315,7 +1316,7 @@ async fn clear_cookies_returns_cleared_true() {
 #[tokio::test]
 async fn session_snapshot_creates_file() {
     use std::path::Path;
-    let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
+    let adapter = Arc::new(EngineAdapter::new(5, 0, 5, 0, phantom_session::ResourceBudget::default()).await);
     let server = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
     let req = phantom_mcp::McpServer::parse_request(
         r#"{"jsonrpc":"2.0","id":1,"method":"browser_session_snapshot","params":{}}"#,
@@ -1369,7 +1370,7 @@ async fn session_snapshot_creates_file() {
 
 #[tokio::test]
 async fn session_snapshot_is_zstd_compressed() {
-    let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
+    let adapter = Arc::new(EngineAdapter::new(5, 0, 5, 0, phantom_session::ResourceBudget::default()).await);
     let server = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
     let req = phantom_mcp::McpServer::parse_request(
         r#"{"jsonrpc":"2.0","id":1,"method":"browser_session_snapshot","params":{}}"#,
@@ -1398,7 +1399,7 @@ async fn session_snapshot_cookies_use_resume_compatible_format() {
     use std::io::{BufReader, Cursor, Read};
     use url::Url;
 
-    let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
+    let adapter = Arc::new(EngineAdapter::new(5, 0, 5, 0, phantom_session::ResourceBudget::default()).await);
     {
         let mut store = adapter.cookie_store.lock().await;
         let url = Url::parse("https://cookie-format.test").unwrap();
@@ -1475,7 +1476,7 @@ async fn storage_session_id_validates_uuid_format() {
 #[tokio::test]
 async fn multiple_snapshot_calls_produce_multiple_files() {
     use std::path::Path;
-    let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
+    let adapter = Arc::new(EngineAdapter::new(5, 0, 5, 0, phantom_session::ResourceBudget::default()).await);
     let server = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
 
     let mut paths = Vec::new();
@@ -1511,7 +1512,7 @@ async fn multiple_snapshot_calls_produce_multiple_files() {
 
 #[tokio::test]
 async fn inject_delta_with_no_subscribers_returns_zero() {
-    let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
+    let adapter = Arc::new(EngineAdapter::new(5, 0, 5, 0, phantom_session::ResourceBudget::default()).await);
     // No subscribers — send returns RecvError or 0 receivers
     let receivers = adapter.inject_delta("## SCROLL 0,100".to_string());
     assert_eq!(
@@ -1526,7 +1527,7 @@ async fn inject_delta_with_one_subscriber_delivers_message() {
     use std::time::Duration;
     use tokio::time::timeout;
 
-    let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
+    let adapter = Arc::new(EngineAdapter::new(5, 0, 5, 0, phantom_session::ResourceBudget::default()).await);
     let mut rx = adapter.delta_tx.subscribe();
 
     let delta = "## SCROLL 0,200".to_string();
@@ -1548,7 +1549,7 @@ async fn sse_endpoint_exists_and_returns_text_event_stream() {
     use axum::http::{Request, StatusCode};
     use tower::ServiceExt;
 
-    let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
+    let adapter = Arc::new(EngineAdapter::new(5, 0, 5, 0, phantom_session::ResourceBudget::default()).await);
     let server = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
     let app = server.router();
 
@@ -1585,7 +1586,7 @@ async fn rpc_endpoint_still_works_after_sse_route_added() {
     use axum::http::{header, Request, StatusCode};
     use tower::ServiceExt;
 
-    let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
+    let adapter = Arc::new(EngineAdapter::new(5, 0, 5, 0, phantom_session::ResourceBudget::default()).await);
     let server = phantom_mcp::McpServer::new_with_adapter(None, adapter.clone());
     let app = server.router();
 
@@ -1616,7 +1617,7 @@ async fn rpc_endpoint_still_works_after_sse_route_added() {
 #[tokio::test]
 async fn broadcast_channel_capacity_is_128() {
     // Verify that 128 deltas can be queued without dropping.
-    let adapter = phantom_mcp::EngineAdapter::new(5, 0, 5, 0).await;
+    let adapter = Arc::new(EngineAdapter::new(5, 0, 5, 0, phantom_session::ResourceBudget::default()).await);
     let mut rx = adapter.delta_tx.subscribe();
 
     // Subscribe then send 128 messages before reading

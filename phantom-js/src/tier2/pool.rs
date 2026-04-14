@@ -17,15 +17,17 @@ thread_local! {
 pub struct Tier2Pool {
     live_count: AtomicUsize,
     max_count: usize,
+    max_heap_bytes: Option<usize>,
 }
 
 const STALE_SECS: u64 = 300; // 5 minutes
 
 impl Tier2Pool {
-    pub fn new(max_count: usize, pre_warm_count: usize) -> Self {
+    pub fn new(max_count: usize, pre_warm_count: usize, max_heap_bytes: Option<usize>) -> Self {
         let pool = Self {
             live_count: AtomicUsize::new(0),
             max_count,
+            max_heap_bytes,
         };
         pool.pre_warm(pre_warm_count);
         pool
@@ -36,7 +38,7 @@ impl Tier2Pool {
             if !self.try_reserve_slot() {
                 break;
             }
-            match Tier2Session::new() {
+            match Tier2Session::new(self.max_heap_bytes) {
                 Ok(new_session) => {
                     LOCAL_FREE.with(|free| {
                         free.borrow_mut().push(PooledSession {
@@ -80,7 +82,7 @@ impl Tier2Pool {
             });
         }
 
-        match Tier2Session::new() {
+        match Tier2Session::new(self.max_heap_bytes) {
             Ok(session) => Ok(session),
             Err(err) => {
                 self.live_count.fetch_sub(1, Ordering::AcqRel);
@@ -97,7 +99,7 @@ impl Tier2Pool {
         // Pre-warm a replacement on the CURRENT thread.
         // This ensures the next acquire() on this thread is fast.
         if self.live_count.load(Ordering::Acquire) < self.max_count && self.try_reserve_slot() {
-            match Tier2Session::new() {
+            match Tier2Session::new(self.max_heap_bytes) {
                 Ok(new_session) => {
                     LOCAL_FREE.with(|free| {
                         free.borrow_mut().push(PooledSession {
@@ -130,12 +132,28 @@ impl Tier2Pool {
             }
         }
     }
+
+    /// Shut down the pool for the current thread and destroy all free sessions.
+    pub fn shutdown(&self) {
+        LOCAL_FREE.with(|free| {
+            let mut free = free.borrow_mut();
+            for pooled in free.drain(..) {
+                pooled.session.destroy();
+                self.live_count.fetch_sub(1, Ordering::Relaxed);
+            }
+        });
+        tracing::debug!("Tier2Pool: shutdown on current thread completed");
+    }
 }
 
 impl Drop for Tier2Pool {
     fn drop(&mut self) {
-        // Note: thread-local sessions will be destroyed when the threads exit.
-        // We can't easily clear all of them from here, but this is acceptable
-        // since the pool itself is dropping and no new sessions can be acquired.
+        // Clear sessions for the current thread
+        self.shutdown();
+        
+        // Note: thread-local sessions on OTHER threads will be destroyed 
+        // when those threads exit. We can't easily clear them from here
+        // without a global registry, but this prevents leaks on the
+        // main/worker threads that explicitly shut down.
     }
 }

@@ -4,7 +4,7 @@ fn test_tier2_snapshot_loads() {
     // 1. build.rs ran successfully (snapshot exists)
     // 2. JsRuntime loads from snapshot without panic
     // 3. Basic JS evaluates correctly
-    let mut session = phantom_js::tier2::session::Tier2Session::new()
+    let mut session = phantom_js::tier2::session::Tier2Session::new(None)
         .expect("Tier2Session::new() must not fail — snapshot must exist");
 
     let result = session.eval("1 + 1").expect("eval must not fail");
@@ -19,7 +19,7 @@ fn test_tier2_snapshot_loads() {
 #[test]
 fn test_tier2_shims_in_snapshot() {
     // Verify browser shims are pre-applied in the snapshot
-    let mut session = phantom_js::tier2::session::Tier2Session::new().unwrap();
+    let mut session = phantom_js::tier2::session::Tier2Session::new(None).unwrap();
 
     // navigator.webdriver must be undefined (shim applied)
     let webdriver = session.eval("String(navigator.webdriver)").unwrap();
@@ -54,7 +54,7 @@ fn test_tier2_shims_in_snapshot() {
 
 #[test]
 fn test_tier2_datetimeformat_supported_locales_of_is_preserved() {
-    let mut session = phantom_js::tier2::session::Tier2Session::new().unwrap();
+    let mut session = phantom_js::tier2::session::Tier2Session::new(None).unwrap();
 
     let has_method = session
         .eval("typeof Intl.DateTimeFormat.supportedLocalesOf")
@@ -74,7 +74,7 @@ fn test_tier2_datetimeformat_supported_locales_of_is_preserved() {
 
 #[test]
 fn test_tier2_html_element_inherits_event_target_when_present() {
-    let mut session = phantom_js::tier2::session::Tier2Session::new().unwrap();
+    let mut session = phantom_js::tier2::session::Tier2Session::new(None).unwrap();
     let has_event_methods = session
         .eval(
             "String(typeof HTMLElement === 'undefined' || typeof HTMLElement.prototype.addEventListener === 'function')",
@@ -90,8 +90,8 @@ fn test_tier2_html_element_inherits_event_target_when_present() {
 #[test]
 fn test_tier2_session_isolation() {
     // Two Tier2 sessions must not share globals — D-40
-    let mut s1 = phantom_js::tier2::session::Tier2Session::new().unwrap();
-    let mut s2 = phantom_js::tier2::session::Tier2Session::new().unwrap();
+    let mut s1 = phantom_js::tier2::session::Tier2Session::new(None).unwrap();
+    let mut s2 = phantom_js::tier2::session::Tier2Session::new(None).unwrap();
 
     s1.eval("globalThis.__tier2_marker = 'session_one'")
         .unwrap();
@@ -110,12 +110,12 @@ fn test_tier2_session_isolation() {
 fn test_tier2_startup_time() {
     use std::time::Instant;
     // Warm up — first load is slower due to OS file caching
-    let s = phantom_js::tier2::session::Tier2Session::new().unwrap();
+    let s = phantom_js::tier2::session::Tier2Session::new(None).unwrap();
     s.destroy();
 
     // Measure hot path
     let start = Instant::now();
-    let s = phantom_js::tier2::session::Tier2Session::new().unwrap();
+    let s = phantom_js::tier2::session::Tier2Session::new(None).unwrap();
     let elapsed = start.elapsed();
     println!("Tier2Session startup (hot): {:?}", elapsed);
     // Target: <50ms (minimum from blueprint)
@@ -131,7 +131,7 @@ fn test_tier2_pool_hard_cap_under_contention() {
     use phantom_js::error::PhantomJsError;
     use phantom_js::tier2::pool::Tier2Pool;
 
-    let pool = Tier2Pool::new(2, 0);
+    let pool = Tier2Pool::new(2, 0, None);
     let s1 = pool.acquire().expect("first acquire must succeed");
     let s2 = pool.acquire().expect("second acquire must succeed");
     let third = pool.acquire();
@@ -150,7 +150,7 @@ fn test_tier2_pool_hard_cap_under_contention() {
 fn test_tier2_set_persona_rejects_invalid_json() {
     use phantom_js::error::PhantomJsError;
 
-    let mut session = phantom_js::tier2::session::Tier2Session::new().unwrap();
+    let mut session = phantom_js::tier2::session::Tier2Session::new(None).unwrap();
     let err = session
         .set_persona("{not_json")
         .expect_err("invalid persona JSON must fail");
@@ -165,7 +165,7 @@ fn test_tier2_set_persona_rejects_invalid_json() {
 
 #[test]
 fn test_tier2_set_persona_does_not_execute_payload() {
-    let mut session = phantom_js::tier2::session::Tier2Session::new().unwrap();
+    let mut session = phantom_js::tier2::session::Tier2Session::new(None).unwrap();
 
     session.eval("globalThis.__persona_pwned = false").unwrap();
     let payload = r#"{"language":"en-US\"; globalThis.__persona_pwned = true; //"}"#;

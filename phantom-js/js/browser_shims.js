@@ -595,11 +595,21 @@ if (typeof MouseEvent === 'undefined') {
     ].forEach(name => {
         const ctor = globalThis[name];
         if (ctor) {
+            // Constructor toString
             Object.defineProperty(ctor, 'toString', {
                 value: function() { return `function ${name}() { [native code] }`; },
                 configurable: true,
                 writable: true
             });
+            // Prototype toString - should return "[object EventName]"
+            if (ctor.prototype) {
+                Object.defineProperty(ctor.prototype, Symbol.toStringTag, {
+                    value: name,
+                    configurable: true,
+                    writable: false,
+                    enumerable: false
+                });
+            }
         }
     });
 }

@@ -65,8 +65,8 @@ impl HeadlessSerializer {
             config.viewport_height,
         );
 
-        let vis_map = compute_visibility(&page.tree, &page.layout, &viewport);
-        let geo_map = extract_geometry(&page.tree, &page.layout, &viewport);
+        let vis_map = compute_visibility(&page.tree, &page.layout_map, &viewport);
+        let geo_map = extract_geometry(&page.tree, &page.layout_map, &viewport);
         let z_map = resolve_zindex(&page.tree, &geo_map);
 
         let mut visible_ids = Vec::new();

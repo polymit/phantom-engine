@@ -34,11 +34,12 @@ impl ViewportBounds {
     }
 }
 
-#[derive(Clone)]
 pub struct LayoutEngine {
     taffy: taffy::TaffyTree,
     node_map: HashMap<indextree::NodeId, taffy::NodeId>,
 }
+
+pub type LayoutMap = HashMap<indextree::NodeId, ViewportBounds>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum LayoutError {
@@ -113,5 +114,37 @@ impl LayoutEngine {
 
     pub fn get_taffy_id(&self, dom_id: indextree::NodeId) -> Option<taffy::NodeId> {
         self.node_map.get(&dom_id).copied()
+    }
+
+    /// Walk the tree and extract absolute bounds for all nodes.
+    pub fn compute_absolute_map(&self, tree: &crate::dom::DomTree) -> LayoutMap {
+        let mut map = LayoutMap::new();
+        if let Some(root) = tree.document_root {
+            self.process_node_recursive(tree, root, 0.0, 0.0, &mut map);
+        }
+        map
+    }
+
+    fn process_node_recursive(
+        &self,
+        tree: &crate::dom::DomTree,
+        node_id: indextree::NodeId,
+        parent_abs_x: f32,
+        parent_abs_y: f32,
+        map: &mut LayoutMap,
+    ) {
+        let mut bounds = self.get_bounds(node_id);
+        
+        // Transform local to absolute
+        bounds.x += parent_abs_x;
+        bounds.y += parent_abs_y;
+        
+        // We store the absolute bounds for every node.
+        // Serializers will decide whether to include them based on visibility.
+        map.insert(node_id, bounds.clone());
+
+        for child in node_id.children(&tree.arena) {
+            self.process_node_recursive(tree, child, bounds.x, bounds.y, map);
+        }
     }
 }

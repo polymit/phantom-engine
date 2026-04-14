@@ -1,5 +1,5 @@
 use crate::tier1::session::PhantomDomHandle;
-use rquickjs::{class::Trace, Ctx, Result};
+use rquickjs::{Ctx, Result, class::Trace};
 
 /// JS-facing HTMLElement class.
 /// Stores only arena_id: u64 — per D-09, NEVER a Rust reference.

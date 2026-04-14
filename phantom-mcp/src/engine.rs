@@ -10,45 +10,50 @@ use phantom_js::tier1::pool::Tier1Pool;
 use phantom_js::tier2::pool::Tier2Pool;
 use phantom_net::SmartNetworkClient;
 use phantom_serializer::CctDelta;
-use phantom_session::{SessionBroker, SessionState};
+use phantom_session::{ResourceBudget, SessionBroker, SessionState};
 use phantom_storage::SessionStorageManager;
 use sha2::{Digest, Sha256};
 use std::sync::Once;
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use tokio::sync::OnceCell;
 use tokio::sync::RwLock;
+use tokio::task::spawn_blocking;
 use uuid::Uuid;
 
 static INIT: Once = Once::new();
-static TEST_ADAPTER: OnceCell<&'static EngineAdapter> = OnceCell::const_new();
+static TEST_ADAPTER: OnceCell<Arc<EngineAdapter>> = OnceCell::const_new();
 const DELTA_REPLAY_CAP: usize = 256;
+const MAX_BLOCKING_THREADS: usize = 32;
 
 /// Global V8 platform initialiser. Safe to call multiple times.
 pub fn init_v8() {
     INIT.call_once(|| {
+        if std::env::var("PHANTOM_SNAPSHOT_KEY").is_err() {
+            std::env::set_var(
+                "PHANTOM_SNAPSHOT_KEY",
+                "test-secret-key-do-not-use-in-production",
+            );
+        }
         phantom_js::init_v8_platform();
     });
 }
 
 /// Returns a shared EngineAdapter instance for testing.
-/// This prevents V8 isolate drop order panics by keeping a single set of
-/// isolates alive for the duration of the test process via Box::leak.
-pub async fn get_test_adapter() -> &'static EngineAdapter {
+/// This uses an Arc to allow clean teardown when the test process ends.
+pub async fn get_test_adapter() -> Arc<EngineAdapter> {
     TEST_ADAPTER
         .get_or_init(|| async {
             init_v8();
-            // ZERO pre-warming for tests to avoid V8 isolate drop order panics across
-            // multiple tests. Isolates will be created on-demand and dropped cleanly
-            // within each test's lifecycle.
-            let adapter = EngineAdapter::new(5, 0, 5, 0).await;
-            Box::leak(Box::new(adapter)) as &'static EngineAdapter
+            Arc::new(EngineAdapter::new(5, 0, 5, 0, ResourceBudget::default()).await)
         })
         .await
+        .clone()
 }
 
 /// Per-session snapshot of a navigated page.
 /// Stored after each successful navigation so `browser_get_scene_graph`
 /// can re-serialise the DOM with different viewport/scroll parameters.
+#[derive(Clone)]
 pub struct SessionPage {
     pub tree: DomTree,
     pub url: String,
@@ -144,6 +149,8 @@ pub struct EngineAdapter {
     pub delta_replay: Arc<Mutex<VecDeque<String>>>,
     /// Semaphore to serialize tool execution and prevent session state contention.
     pub session_lock: Arc<tokio::sync::Semaphore>,
+    /// Global semaphore to prevent OS thread exhaustion from blocking tasks.
+    pub blocking_limit: Arc<tokio::sync::Semaphore>,
 }
 
 impl EngineAdapter {
@@ -151,10 +158,17 @@ impl EngineAdapter {
     ///
     /// Must be called after `v8::Platform` is initialised and after the Tokio
     /// runtime is started. `Tier1Pool::new()` is async; `Tier2Pool::new()` is sync.
-    pub async fn new(t1_max: usize, t1_pre: usize, t2_max: usize, t2_pre: usize) -> Self {
+    pub async fn new(
+        t1_max: usize,
+        t1_pre: usize,
+        t2_max: usize,
+        t2_pre: usize,
+        budget: ResourceBudget,
+    ) -> Self {
         let mut persona_pool = PersonaPool::default_pool();
         let first_persona = persona_pool.next_persona();
-        let network = SmartNetworkClient::with_persona(&first_persona);
+        let mut network = SmartNetworkClient::with_persona(&first_persona);
+        network.max_network_bytes = Some(budget.max_network_bytes);
 
         let broker = SessionBroker::new();
 
@@ -162,7 +176,7 @@ impl EngineAdapter {
         let tier1 = Tier1Pool::new(t1_max, t1_pre).await;
 
         // Tier2Pool::new() returns Self — we wrap it ourselves.
-        let tier2 = Arc::new(Tier2Pool::new(t2_max, t2_pre));
+        let tier2 = Arc::new(Tier2Pool::new(t2_max, t2_pre, Some(budget.max_heap_bytes)));
 
         let (delta_tx, _) = tokio::sync::broadcast::channel(128);
 
@@ -181,13 +195,14 @@ impl EngineAdapter {
             delta_tx,
             delta_replay: Arc::new(Mutex::new(VecDeque::with_capacity(DELTA_REPLAY_CAP))),
             session_lock: Arc::new(tokio::sync::Semaphore::new(1)),
+            blocking_limit: Arc::new(tokio::sync::Semaphore::new(MAX_BLOCKING_THREADS)),
         }
     }
 
     /// Convenience constructor used by blueprint tests that call `EngineAdapter::new().await`.
     /// Delegates to the 4-arg form with sensible defaults.
     pub async fn new_default() -> Self {
-        Self::new(5, 0, 5, 0).await
+        Self::new(5, 0, 5, 0, ResourceBudget::default()).await
     }
 
     pub fn inject_delta(&self, delta: String) -> usize {
@@ -252,34 +267,45 @@ impl EngineAdapter {
 
     /// Clone the stored ParsedPage for re-serialisation.
     /// Returns None if no page has been navigated to yet.
-    pub fn get_page(&self) -> Option<ParsedPage> {
+    pub async fn get_page(&self) -> Option<ParsedPage> {
         let key = *self.active_page_key.lock();
         let store = self.page_store.lock();
-        match key {
-            Some(tab_id) => store.get(&tab_id).and_then(SessionPage::to_parsed_page),
-            None => store
-                .get(&Uuid::nil())
-                .and_then(SessionPage::to_parsed_page),
-        }
+        let page = match key {
+            Some(tab_id) => store.get(&tab_id).cloned(),
+            None => store.get(&Uuid::nil()).cloned(),
+        }?;
+
+        let limit = self.blocking_limit.clone();
+        spawn_blocking(move || {
+            let _permit = limit.try_acquire().ok();
+            page.to_parsed_page()
+        })
+        .await
+        .ok()
+        .flatten()
     }
 
     /// Clone the stored ParsedPage and its viewport metadata.
     /// Returns None if no page has been navigated to yet.
-    pub fn get_page_with_viewport(&self) -> Option<(ParsedPage, String, f32, f32)> {
+    pub async fn get_page_with_viewport(&self) -> Option<(ParsedPage, String, f32, f32)> {
         let key = *self.active_page_key.lock();
         let store = self.page_store.lock();
         let page = match key {
-            Some(tab_id) => store.get(&tab_id),
-            None => store.get(&Uuid::nil()),
+            Some(tab_id) => store.get(&tab_id).cloned(),
+            None => store.get(&Uuid::nil()).cloned(),
         }?;
 
-        let parsed = page.to_parsed_page()?;
-        Some((
-            parsed,
-            page.url.clone(),
-            page.viewport_width,
-            page.viewport_height,
-        ))
+        let limit = self.blocking_limit.clone();
+        let page_cloned = page.clone();
+        let parsed = spawn_blocking(move || {
+            let _permit = limit.try_acquire().ok();
+            page_cloned.to_parsed_page()
+        })
+        .await
+        .ok()
+        .flatten()?;
+
+        Some((parsed, page.url, page.viewport_width, page.viewport_height))
     }
 
     /// Get the URL of the currently stored page.
@@ -392,17 +418,24 @@ impl EngineAdapter {
         // STEP 2 — Collect localStorage from disk
         let storage2 = self.storage.clone();
         let sid2 = session_id_str.clone();
-        let local_storage =
-            tokio::task::spawn_blocking(move || collect_localstorage(&sid2, &storage2))
-                .await
-                .map_err(|e| e.to_string())?;
+        let limit2 = self.blocking_limit.clone();
+        let local_storage = tokio::task::spawn_blocking(move || {
+            let _permit = limit2.try_acquire().ok();
+            collect_localstorage(&sid2, &storage2)
+        })
+        .await
+        .map_err(|e| e.to_string())?;
 
         // STEP 3 — Collect IndexedDB bytes
         let storage3 = self.storage.clone();
         let sid3 = session_id_str.clone();
-        let indexeddb = tokio::task::spawn_blocking(move || collect_indexeddb(&sid3, &storage3))
-            .await
-            .map_err(|e| e.to_string())?;
+        let limit3 = self.blocking_limit.clone();
+        let indexeddb = tokio::task::spawn_blocking(move || {
+            let _permit = limit3.try_acquire().ok();
+            collect_indexeddb(&sid3, &storage3)
+        })
+        .await
+        .map_err(|e| e.to_string())?;
 
         // STEP 4 — Build snapshot
         let data = phantom_storage::snapshot::SnapshotData {
@@ -413,11 +446,14 @@ impl EngineAdapter {
             cache_blobs: HashMap::new(), // cache blobs handled in future prompt
             cache_meta: None,
         };
-        let compressed =
-            tokio::task::spawn_blocking(move || phantom_storage::snapshot::build_snapshot(&data))
-                .await
-                .map_err(|e| e.to_string())?
-                .map_err(|e| e.to_string())?;
+        let limit4 = self.blocking_limit.clone();
+        let compressed = tokio::task::spawn_blocking(move || {
+            let _permit = limit4.try_acquire().ok();
+            phantom_storage::snapshot::build_snapshot(&data)
+        })
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|e| e.to_string())?;
 
         // STEP 5 — Write to disk
         let timestamp = SystemTime::now()
@@ -427,10 +463,14 @@ impl EngineAdapter {
 
         let storage5 = self.storage.clone();
         let sid5 = session_id_str.clone();
-        let session_dir = tokio::task::spawn_blocking(move || storage5.create_session_dir(&sid5))
-            .await
-            .map_err(|e| e.to_string())?
-            .map_err(|e| e.to_string())?;
+        let limit5 = self.blocking_limit.clone();
+        let session_dir = tokio::task::spawn_blocking(move || {
+            let _permit = limit5.try_acquire().ok();
+            storage5.create_session_dir(&sid5)
+        })
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|e| e.to_string())?;
 
         let path = session_dir.join(format!("snapshot-{}-{}.tar.zst", session_id_str, timestamp));
         tokio::fs::write(&path, &compressed)
@@ -496,8 +536,10 @@ impl EngineAdapter {
         let sid = session_id_str.clone();
         let manifest_clone = manifest.clone();
         let snapshot_files_clone = snapshot_files.clone();
+        let limit_resume = self.blocking_limit.clone();
 
         tokio::task::spawn_blocking(move || {
+            let _permit = limit_resume.try_acquire().ok();
             let session_dir = storage.session_dir(&sid).map_err(|e| e.to_string())?;
 
             for filename in manifest_clone.checksums.keys() {
@@ -648,9 +690,13 @@ impl EngineAdapter {
 
     /// Extracts all regular files from a zstd-compressed tar archive.
     fn extract_files_from_snapshot(compressed: &[u8]) -> Result<HashMap<String, Vec<u8>>, String> {
-        let decompressed = zstd::decode_all(Cursor::new(compressed)).map_err(|e| e.to_string())?;
+        let decoder = zstd::stream::read::Decoder::new(Cursor::new(compressed))
+            .map_err(|e| format!("zstd init: {}", e))?;
 
-        let mut archive = tar::Archive::new(Cursor::new(&decompressed));
+        // Enforce 256MB limit on the decompressed stream
+        let mut limited = decoder.take(256 * 1024 * 1024);
+
+        let mut archive = tar::Archive::new(&mut limited);
         let mut files = HashMap::new();
 
         for entry in archive.entries().map_err(|e| e.to_string())? {
@@ -753,12 +799,14 @@ impl EngineAdapter {
         compressed: &[u8],
         new_session_id: &str,
     ) -> Result<Vec<u8>, String> {
-        let decompressed =
-            phantom_storage::snapshot::safe_decompress(compressed).map_err(|e| e.to_string())?;
+        let decoder = zstd::stream::read::Decoder::new(Cursor::new(compressed))
+            .map_err(|e| format!("zstd init: {}", e))?;
+        // Enforce 256MB limit
+        let mut limited = decoder.take(256 * 1024 * 1024);
 
         // Extract every tar entry into a flat list
         let mut files: Vec<(String, Vec<u8>)> = Vec::new();
-        let mut archive = tar::Archive::new(Cursor::new(&decompressed));
+        let mut archive = tar::Archive::new(&mut limited);
         for entry in archive.entries().map_err(|e| e.to_string())? {
             let mut entry = entry.map_err(|e| e.to_string())?;
             let name = entry

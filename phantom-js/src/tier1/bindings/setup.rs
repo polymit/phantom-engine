@@ -1,7 +1,7 @@
 use super::document::JsDocument;
 use super::element::JsHTMLElement;
 use crate::tier1::session::PhantomDomHandle;
-use std::sync::{atomic::AtomicBool, Arc};
+use std::sync::{Arc, atomic::AtomicBool};
 
 pub async fn setup_dom_environment(
     context: &rquickjs::AsyncContext,
@@ -9,8 +9,8 @@ pub async fn setup_dom_environment(
     session_id: u64,
     timer_cancelled: Arc<AtomicBool>,
 ) -> Result<(), crate::error::PhantomJsError> {
-    use rquickjs::async_with;
     use rquickjs::Class;
+    use rquickjs::async_with;
 
     async_with!(context => |ctx| {
         // Inject DOM handle — all class methods access DOM via this

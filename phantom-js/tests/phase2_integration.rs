@@ -187,7 +187,7 @@ async fn phase2_full_pipeline_tier1() {
 #[test]
 fn phase2_tier2_snapshot_in_pipeline() {
     // Verify Tier 2 session loads correctly and shims are pre-applied
-    let mut session = phantom_js::tier2::session::Tier2Session::new()
+    let mut session = phantom_js::tier2::session::Tier2Session::new(None)
         .expect("Tier2Session must load from snapshot");
 
     // Shims must be pre-applied from snapshot

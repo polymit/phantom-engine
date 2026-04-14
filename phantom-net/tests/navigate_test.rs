@@ -25,6 +25,7 @@ fn navigation_config_defaults_are_correct() {
     assert_eq!(config.viewport_height, 720.0);
     assert_eq!(config.max_retries, 2);
     assert!(config.task_hint.is_none());
+    assert_eq!(config.max_network_bytes, Some(64 * 1024 * 1024));
 }
 
 #[tokio::test]
@@ -38,7 +39,7 @@ async fn navigate_real_page_returns_cct() {
             assert!(result.cct.starts_with("##PAGE"));
             assert!(result.cct.contains("httpbin.org"));
             assert!(!result.url.is_empty());
-            assert!(result.page.tree.document_root.is_some());
+            assert!(result.tree.document_root.is_some());
 
             let header = result.cct.lines().next().unwrap_or("");
             let header_count = header
@@ -170,8 +171,8 @@ async fn navigate_result_page_is_queryable() {
 
     match navigate(&client, "https://httpbin.org/html", &config).await {
         Ok(result) => {
-            assert!(result.page.tree.document_root.is_some());
-            let html_nodes = result.page.tree.get_elements_by_tag_name("html");
+            assert!(result.tree.document_root.is_some());
+            let html_nodes = result.tree.get_elements_by_tag_name("html");
             assert!(!html_nodes.is_empty());
         }
         Err(err) => assert_network_unavailable(&err),

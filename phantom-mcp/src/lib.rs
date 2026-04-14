@@ -2,6 +2,7 @@ pub mod engine;
 pub mod tools;
 
 pub use engine::EngineAdapter;
+use std::sync::Arc;
 
 use axum::extract::State;
 use axum::http::{HeaderMap, StatusCode};
@@ -46,11 +47,11 @@ pub enum McpError {
 #[derive(Clone)]
 pub struct McpServer {
     api_key: Option<String>,
-    pub adapter: EngineAdapter,
+    pub adapter: Arc<EngineAdapter>,
 }
 
 impl McpServer {
-    pub fn new_with_adapter(api_key: Option<String>, adapter: EngineAdapter) -> Self {
+    pub fn new_with_adapter(api_key: Option<String>, adapter: Arc<EngineAdapter>) -> Self {
         Self { api_key, adapter }
     }
 
@@ -142,133 +143,281 @@ impl McpServer {
                 error: None,
             },
 
-            "browser_navigate" => {
-                let outcome = tools::navigate::handle_navigate(adapter, req.params).await;
-                tool_response(req_id, outcome, "navigation failed", "navigation_error")
-            }
-
-            "browser_get_scene_graph" => {
-                let outcome = tools::scene_graph::handle_get_scene_graph(adapter, req.params).await;
-                tool_response(req_id, outcome, "scene graph failed", "scene_graph_error")
-            }
-
-            "browser_click" => {
-                let adapter = adapter.clone();
-                let params = req.params;
-                let rt_handle = tokio::runtime::Handle::current();
-                let outcome = tokio::task::spawn_blocking(move || {
-                    rt_handle
-                        .block_on(async move { tools::click::handle_click(&adapter, params).await })
-                })
+            _ => {
+                // All other tools require the session lock to serialize execution
+                let _permit = match tokio::time::timeout(
+                    std::time::Duration::from_secs(30),
+                    adapter.session_lock.clone().acquire_owned(),
+                )
                 .await
-                .map_err(|join_err| {
-                    McpError::InvalidRequest(format!("rpc handler task failed: {join_err}"))
-                })?;
-                tool_response(req_id, outcome, "click failed", "click_error")
-            }
+                {
+                    Ok(Ok(permit)) => permit,
+                    _ => {
+                        return Ok(JsonRpcResponse {
+                            jsonrpc: "2.0".to_string(),
+                            id: req_id,
+                            result: None,
+                            error: Some(JsonRpcError {
+                                code: -32002,
+                                message: "Session busy: another task is currently holding the lock."
+                                    .to_string(),
+                            }),
+                        });
+                    }
+                };
 
-            "browser_evaluate" => {
-                let adapter = adapter.clone();
-                let params = req.params;
-                let rt_handle = tokio::runtime::Handle::current();
-                let outcome = tokio::task::spawn_blocking(move || {
-                    rt_handle.block_on(async move {
-                        tools::evaluate::handle_evaluate(&adapter, params).await
-                    })
-                })
-                .await
-                .map_err(|join_err| {
-                    McpError::InvalidRequest(format!("rpc handler task failed: {join_err}"))
-                })?;
-                tool_response(req_id, outcome, "evaluate failed", "js_error")
-            }
+                match req.method.as_str() {
+                    "browser_navigate" => {
+                        let adapter = adapter.clone();
+                        let params = req.params;
+                        let rt_handle = tokio::runtime::Handle::current();
+                        let outcome = tokio::task::spawn_blocking(move || {
+                            rt_handle.block_on(async move {
+                                tools::navigate::handle_navigate(&adapter, params).await
+                            })
+                        })
+                        .await
+                        .map_err(|join_err| {
+                            McpError::InvalidRequest(format!("rpc handler task failed: {join_err}"))
+                        })?;
+                        tool_response(req_id, outcome, "navigation failed", "navigation_error")
+                    }
 
-            "browser_type" => {
-                let adapter = adapter.clone();
-                let params = req.params;
-                let rt_handle = tokio::runtime::Handle::current();
-                let outcome = tokio::task::spawn_blocking(move || {
-                    rt_handle.block_on(async move {
-                        tools::type_text::handle_type(&adapter, params).await
-                    })
-                })
-                .await
-                .map_err(|join_err| {
-                    McpError::InvalidRequest(format!("rpc handler task failed: {join_err}"))
-                })?;
-                tool_response(req_id, outcome, "type failed", "type_error")
-            }
+                    "browser_get_scene_graph" => {
+                        let adapter = adapter.clone();
+                        let params = req.params;
+                        let rt_handle = tokio::runtime::Handle::current();
+                        let outcome = tokio::task::spawn_blocking(move || {
+                            rt_handle.block_on(async move {
+                                tools::scene_graph::handle_get_scene_graph(&adapter, params).await
+                            })
+                        })
+                        .await
+                        .map_err(|join_err| {
+                            McpError::InvalidRequest(format!("rpc handler task failed: {join_err}"))
+                        })?;
+                        tool_response(req_id, outcome, "scene graph failed", "scene_graph_error")
+                    }
 
-            "browser_press_key" => {
-                let adapter = adapter.clone();
-                let params = req.params;
-                let rt_handle = tokio::runtime::Handle::current();
-                let outcome = tokio::task::spawn_blocking(move || {
-                    rt_handle.block_on(async move {
-                        tools::press_key::handle_press_key(&adapter, params).await
-                    })
-                })
-                .await
-                .map_err(|join_err| {
-                    McpError::InvalidRequest(format!("rpc handler task failed: {join_err}"))
-                })?;
-                tool_response(req_id, outcome, "press key failed", "press_key_error")
-            }
+                    "browser_click" => {
+                        let adapter = adapter.clone();
+                        let params = req.params;
+                        let rt_handle = tokio::runtime::Handle::current();
+                        let outcome = tokio::task::spawn_blocking(move || {
+                            rt_handle.block_on(async move {
+                                tools::click::handle_click(&adapter, params).await
+                            })
+                        })
+                        .await
+                        .map_err(|join_err| {
+                            McpError::InvalidRequest(format!("rpc handler task failed: {join_err}"))
+                        })?;
+                        tool_response(req_id, outcome, "click failed", "click_error")
+                    }
 
-            "browser_new_tab" => {
-                let outcome = tools::tabs::handle_new_tab(adapter, req.params).await;
-                tool_response(req_id, outcome, "new tab failed", "tab_error")
-            }
+                    "browser_evaluate" => {
+                        let adapter = adapter.clone();
+                        let params = req.params;
+                        let rt_handle = tokio::runtime::Handle::current();
+                        let outcome = tokio::task::spawn_blocking(move || {
+                            rt_handle.block_on(async move {
+                                tools::evaluate::handle_evaluate(&adapter, params).await
+                            })
+                        })
+                        .await
+                        .map_err(|join_err| {
+                            McpError::InvalidRequest(format!("rpc handler task failed: {join_err}"))
+                        })?;
+                        tool_response(req_id, outcome, "evaluate failed", "js_error")
+                    }
 
-            "browser_switch_tab" => {
-                let outcome = tools::tabs::handle_switch_tab(adapter, req.params).await;
-                tool_response(req_id, outcome, "switch tab failed", "tab_error")
-            }
+                    "browser_type" => {
+                        let adapter = adapter.clone();
+                        let params = req.params;
+                        let rt_handle = tokio::runtime::Handle::current();
+                        let outcome = tokio::task::spawn_blocking(move || {
+                            rt_handle.block_on(async move {
+                                tools::type_text::handle_type(&adapter, params).await
+                            })
+                        })
+                        .await
+                        .map_err(|join_err| {
+                            McpError::InvalidRequest(format!("rpc handler task failed: {join_err}"))
+                        })?;
+                        tool_response(req_id, outcome, "type failed", "type_error")
+                    }
 
-            "browser_list_tabs" => {
-                let outcome = tools::tabs::handle_list_tabs(adapter, req.params).await;
-                tool_response(req_id, outcome, "list tabs failed", "tab_error")
-            }
+                    "browser_press_key" => {
+                        let adapter = adapter.clone();
+                        let params = req.params;
+                        let rt_handle = tokio::runtime::Handle::current();
+                        let outcome = tokio::task::spawn_blocking(move || {
+                            rt_handle.block_on(async move {
+                                tools::press_key::handle_press_key(&adapter, params).await
+                            })
+                        })
+                        .await
+                        .map_err(|join_err| {
+                            McpError::InvalidRequest(format!("rpc handler task failed: {join_err}"))
+                        })?;
+                        tool_response(req_id, outcome, "press key failed", "press_key_error")
+                    }
 
-            "browser_close_tab" => {
-                let outcome = tools::tabs::handle_close_tab(adapter, req.params).await;
-                tool_response(req_id, outcome, "close tab failed", "tab_error")
-            }
+                    "browser_new_tab" => {
+                        let adapter = adapter.clone();
+                        let params = req.params;
+                        let rt_handle = tokio::runtime::Handle::current();
+                        let outcome = tokio::task::spawn_blocking(move || {
+                            rt_handle.block_on(async move {
+                                tools::tabs::handle_new_tab(&adapter, params).await
+                            })
+                        })
+                        .await
+                        .map_err(|join_err| {
+                            McpError::InvalidRequest(format!("rpc handler task failed: {join_err}"))
+                        })?;
+                        tool_response(req_id, outcome, "new tab failed", "tab_error")
+                    }
 
-            "browser_get_cookies" => {
-                let outcome = tools::cookies::handle_get_cookies(adapter, req.params).await;
-                tool_response(req_id, outcome, "get cookies failed", "cookie_error")
-            }
+                    "browser_switch_tab" => {
+                        let adapter = adapter.clone();
+                        let params = req.params;
+                        let rt_handle = tokio::runtime::Handle::current();
+                        let outcome = tokio::task::spawn_blocking(move || {
+                            rt_handle.block_on(async move {
+                                tools::tabs::handle_switch_tab(&adapter, params).await
+                            })
+                        })
+                        .await
+                        .map_err(|join_err| {
+                            McpError::InvalidRequest(format!("rpc handler task failed: {join_err}"))
+                        })?;
+                        tool_response(req_id, outcome, "switch tab failed", "tab_error")
+                    }
 
-            "browser_set_cookie" => {
-                let outcome = tools::cookies::handle_set_cookie(adapter, req.params).await;
-                tool_response(req_id, outcome, "set cookie failed", "cookie_error")
-            }
+                    "browser_list_tabs" => {
+                        let adapter = adapter.clone();
+                        let params = req.params;
+                        let rt_handle = tokio::runtime::Handle::current();
+                        let outcome = tokio::task::spawn_blocking(move || {
+                            rt_handle.block_on(async move {
+                                tools::tabs::handle_list_tabs(&adapter, params).await
+                            })
+                        })
+                        .await
+                        .map_err(|join_err| {
+                            McpError::InvalidRequest(format!("rpc handler task failed: {join_err}"))
+                        })?;
+                        tool_response(req_id, outcome, "list tabs failed", "tab_error")
+                    }
 
-            "browser_clear_cookies" => {
-                let outcome = tools::cookies::handle_clear_cookies(adapter, req.params).await;
-                tool_response(req_id, outcome, "clear cookies failed", "cookie_error")
-            }
+                    "browser_close_tab" => {
+                        let adapter = adapter.clone();
+                        let params = req.params;
+                        let rt_handle = tokio::runtime::Handle::current();
+                        let outcome = tokio::task::spawn_blocking(move || {
+                            rt_handle.block_on(async move {
+                                tools::tabs::handle_close_tab(&adapter, params).await
+                            })
+                        })
+                        .await
+                        .map_err(|join_err| {
+                            McpError::InvalidRequest(format!("rpc handler task failed: {join_err}"))
+                        })?;
+                        tool_response(req_id, outcome, "close tab failed", "tab_error")
+                    }
 
-            "browser_session_snapshot" => {
-                let outcome = tools::snapshot::handle_session_snapshot(adapter, req.params).await;
-                tool_response(req_id, outcome, "session snapshot failed", "snapshot_error")
-            }
+                    "browser_get_cookies" => {
+                        let adapter = adapter.clone();
+                        let params = req.params;
+                        let rt_handle = tokio::runtime::Handle::current();
+                        let outcome = tokio::task::spawn_blocking(move || {
+                            rt_handle.block_on(async move {
+                                tools::cookies::handle_get_cookies(&adapter, params).await
+                            })
+                        })
+                        .await
+                        .map_err(|join_err| {
+                            McpError::InvalidRequest(format!("rpc handler task failed: {join_err}"))
+                        })?;
+                        tool_response(req_id, outcome, "get cookies failed", "cookie_error")
+                    }
 
-            "browser_session_clone" => {
-                let outcome = tools::clone_session::handle_session_clone(adapter, req.params).await;
-                tool_response(req_id, outcome, "session clone failed", "clone_error")
-            }
+                    "browser_set_cookie" => {
+                        let adapter = adapter.clone();
+                        let params = req.params;
+                        let rt_handle = tokio::runtime::Handle::current();
+                        let outcome = tokio::task::spawn_blocking(move || {
+                            rt_handle.block_on(async move {
+                                tools::cookies::handle_set_cookie(&adapter, params).await
+                            })
+                        })
+                        .await
+                        .map_err(|join_err| {
+                            McpError::InvalidRequest(format!("rpc handler task failed: {join_err}"))
+                        })?;
+                        tool_response(req_id, outcome, "set cookie failed", "cookie_error")
+                    }
 
-            _ => JsonRpcResponse {
-                jsonrpc: "2.0".to_string(),
-                id: req_id,
-                result: None,
-                error: Some(JsonRpcError {
-                    code: -32601,
-                    message: format!("method not found: {}", req.method),
-                }),
-            },
+                    "browser_clear_cookies" => {
+                        let adapter = adapter.clone();
+                        let params = req.params;
+                        let rt_handle = tokio::runtime::Handle::current();
+                        let outcome = tokio::task::spawn_blocking(move || {
+                            rt_handle.block_on(async move {
+                                tools::cookies::handle_clear_cookies(&adapter, params).await
+                            })
+                        })
+                        .await
+                        .map_err(|join_err| {
+                            McpError::InvalidRequest(format!("rpc handler task failed: {join_err}"))
+                        })?;
+                        tool_response(req_id, outcome, "clear cookies failed", "cookie_error")
+                    }
+
+                    "browser_session_snapshot" => {
+                        let adapter = adapter.clone();
+                        let params = req.params;
+                        let rt_handle = tokio::runtime::Handle::current();
+                        let outcome = tokio::task::spawn_blocking(move || {
+                            rt_handle.block_on(async move {
+                                tools::snapshot::handle_session_snapshot(&adapter, params).await
+                            })
+                        })
+                        .await
+                        .map_err(|join_err| {
+                            McpError::InvalidRequest(format!("rpc handler task failed: {join_err}"))
+                        })?;
+                        tool_response(req_id, outcome, "session snapshot failed", "snapshot_error")
+                    }
+
+                    "browser_session_clone" => {
+                        let adapter = adapter.clone();
+                        let params = req.params;
+                        let rt_handle = tokio::runtime::Handle::current();
+                        let outcome = tokio::task::spawn_blocking(move || {
+                            rt_handle.block_on(async move {
+                                tools::clone_session::handle_session_clone(&adapter, params).await
+                            })
+                        })
+                        .await
+                        .map_err(|join_err| {
+                            McpError::InvalidRequest(format!("rpc handler task failed: {join_err}"))
+                        })?;
+                        tool_response(req_id, outcome, "session clone failed", "clone_error")
+                    }
+
+                    _ => JsonRpcResponse {
+                        jsonrpc: "2.0".to_string(),
+                        id: req_id,
+                        result: None,
+                        error: Some(JsonRpcError {
+                            code: -32601,
+                            message: format!("method not found: {}", req.method),
+                        }),
+                    },
+                }
+            }
         };
 
         Ok(resp)
@@ -349,7 +498,7 @@ mod tests {
         let req =
             McpServer::parse_request(r#"{"jsonrpc":"2.0","id":"a","method":"ping","params":{}}"#)
                 .unwrap();
-        let resp = server.handle_request(adapter, req, None).await.unwrap();
+        let resp = server.handle_request(&adapter, req, None).await.unwrap();
         assert_eq!(resp.result, Some(json!({ "ok": true, "pong": true })));
         assert!(resp.error.is_none());
     }
@@ -362,7 +511,7 @@ mod tests {
             McpServer::parse_request(r#"{"jsonrpc":"2.0","id":"a","method":"ping","params":{}}"#)
                 .unwrap();
         let err = server
-            .handle_request(adapter, req, Some("wrong"))
+            .handle_request(&adapter, req, Some("wrong"))
             .await
             .unwrap_err();
         assert!(matches!(err, McpError::Unauthorized));

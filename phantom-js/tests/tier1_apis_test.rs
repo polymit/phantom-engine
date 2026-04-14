@@ -1,6 +1,6 @@
 use std::sync::{
-    atomic::{AtomicBool, AtomicU64, Ordering},
     Arc,
+    atomic::{AtomicBool, AtomicU64, Ordering},
 };
 
 use phantom_js::tier1::session::Tier1Session;
@@ -226,11 +226,34 @@ async fn test_fetch_stub_exists() {
         .await
         .unwrap();
 
-    let resolved = session.eval("globalThis.__fetch_stub_value").await.unwrap();
+    let resolved_status = session
+        .eval("globalThis.__fetch_stub_value.status")
+        .await
+        .unwrap();
     assert_eq!(
-        resolved, "fetch_stub_response",
-        "fetch() Promise must resolve to fetch_stub_response"
+        resolved_status, "200",
+        "fetch() Promise must resolve to a Response with status 200"
     );
+
+    let resolved_ok = session
+        .eval("globalThis.__fetch_stub_value.ok")
+        .await
+        .unwrap();
+    assert_eq!(resolved_ok, "true", "fetch() Response must be ok");
+
+    session
+        .eval(
+            "globalThis.__fetch_text = 'pending'; \
+             globalThis.__fetch_stub_value.text().then(v => { globalThis.__fetch_text = v; });",
+        )
+        .await
+        .unwrap();
+
+    // Pump microtasks to let the .text() promise resolve
+    session.eval("").await.unwrap();
+
+    let text = session.eval("globalThis.__fetch_text").await.unwrap();
+    assert_eq!(text, "", "fetch() Response.text() must resolve to empty string");
 
     session.destroy();
 }

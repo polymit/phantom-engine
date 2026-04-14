@@ -1,4 +1,4 @@
-use rquickjs::{prelude::This, Ctx, Function, Object, Result};
+use rquickjs::{Ctx, Function, Object, Result, prelude::This};
 
 // window.fetch — v0.1 stub
 //
@@ -18,10 +18,32 @@ pub fn register_fetch<'js>(ctx: &Ctx<'js>, globals: &rquickjs::Object<'js>) -> R
             let globals = ctx.globals();
             let promise_ctor: Object<'js> = globals.get("Promise")?;
             let resolve: Function<'js> = promise_ctor.get("resolve")?;
-            resolve.call((
-                This(promise_ctor),
-                rquickjs::String::from_str(ctx.clone(), "fetch_stub_response")?,
-            ))
+
+            let response = Object::new(ctx.clone())?;
+            response.set("status", 200)?;
+            response.set("ok", true)?;
+            response.set("statusText", "OK")?;
+
+            let ctx_inner = ctx.clone();
+            let promise_inner = promise_ctor.clone();
+            let resolve_inner = resolve.clone();
+            let text_fn = Function::new(ctx.clone(), move || -> Result<rquickjs::Value<'js>> {
+                resolve_inner.call((
+                    This(promise_inner.clone()),
+                    rquickjs::String::from_str(ctx_inner.clone(), "")?,
+                ))
+            })?;
+            response.set("text", text_fn)?;
+
+            let ctx_inner = ctx.clone();
+            let promise_inner = promise_ctor.clone();
+            let resolve_inner = resolve.clone();
+            let json_fn = Function::new(ctx.clone(), move || -> Result<rquickjs::Value<'js>> {
+                resolve_inner.call((This(promise_inner.clone()), Object::new(ctx_inner.clone())?))
+            })?;
+            response.set("json", json_fn)?;
+
+            resolve.call((This(promise_ctor), response))
         },
     )?;
 

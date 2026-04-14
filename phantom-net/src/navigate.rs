@@ -1,9 +1,10 @@
-use crate::{PhantomNetError, SmartNetworkClient};
+use crate::{FetchResponse, PhantomNetError, SmartNetworkClient};
 use phantom_core::pipeline::CoreError;
-use phantom_core::{process_html, ParsedPage};
+use phantom_core::process_html;
 use phantom_serializer::{HeadlessSerializer, SerialiserConfig, SerialiserMode};
 use std::collections::HashMap;
 use tracing::{info, warn};
+use url::Url;
 
 #[derive(Debug, Clone)]
 pub struct NavigationConfig {
@@ -29,7 +30,7 @@ pub struct NavigationResult {
     pub status: u16,
     pub cct: String,
     pub node_count: usize,
-    pub page: ParsedPage,
+    pub tree: phantom_core::DomTree,
 }
 
 impl std::fmt::Debug for NavigationResult {
@@ -122,8 +123,23 @@ pub async fn navigate(
                         location: Some(location),
                     });
                 }
-                info!("Following redirect to {}", location);
-                current_url = location;
+
+                // Resolve relative redirect against current URL
+                let base = Url::parse(&current_url).map_err(|e| NavigationError::Network {
+                    url: current_url.clone(),
+                    source: PhantomNetError::InvalidUrl(e.to_string()),
+                })?;
+                let resolved = base.join(&location).map_err(|e| NavigationError::Network {
+                    url: current_url.clone(),
+                    source: PhantomNetError::InvalidUrl(format!(
+                        "failed to resolve redirect '{}': {}",
+                        location, e
+                    )),
+                })?;
+
+                let next_url = resolved.to_string();
+                info!("Following redirect to {}", next_url);
+                current_url = next_url;
                 redirect_count += 1;
                 current_attempt = 1; // Reset retries on successful redirect hop
                 continue;
@@ -157,43 +173,51 @@ pub async fn navigate(
         }
 
         // Now handling 200..=299
-        let html = String::from_utf8(response.body).map_err(|_| NavigationError::Encoding {
+        let html = decode_body(&response).map_err(|_| NavigationError::Encoding {
             url: current_url.clone(),
         })?;
 
         let final_url = response.final_url;
 
-        let page = process_html(
-            &html,
-            &final_url,
-            config.viewport_width,
-            config.viewport_height,
-        )
+        let final_url_clone = final_url.clone();
+        let viewport_width = config.viewport_width;
+        let viewport_height = config.viewport_height;
+        let task_hint = config.task_hint.clone();
+
+        let (tree, cct, node_count) = tokio::task::spawn_blocking(move || {
+            let page = process_html(&html, &final_url_clone, viewport_width, viewport_height)
+                .map_err(|e| NavigationError::Pipeline {
+                    url: final_url_clone.clone(),
+                    source: e,
+                })?;
+
+            let serialiser_mode = if task_hint.is_some() {
+                SerialiserMode::Selective
+            } else {
+                SerialiserMode::Full
+            };
+
+            let serialiser_config = SerialiserConfig {
+                url: final_url_clone,
+                viewport_width,
+                viewport_height,
+                mode: serialiser_mode,
+                task_hint,
+                scroll_x: 0.0,
+                scroll_y: 0.0,
+                total_height: viewport_height,
+            };
+
+            let cct = HeadlessSerializer::serialise(&page, &serialiser_config);
+            let node_count = cct.lines().filter(|line| !line.starts_with("##")).count();
+
+            Ok::<_, NavigationError>((page.tree, cct, node_count))
+        })
+        .await
         .map_err(|e| NavigationError::Pipeline {
             url: final_url.clone(),
-            source: e,
-        })?;
-
-        let serialiser_mode = if config.task_hint.is_some() {
-            SerialiserMode::Selective
-        } else {
-            SerialiserMode::Full
-        };
-
-        let serialiser_config = SerialiserConfig {
-            url: final_url.clone(),
-            viewport_width: config.viewport_width,
-            viewport_height: config.viewport_height,
-            mode: serialiser_mode,
-            task_hint: config.task_hint.clone(),
-            scroll_x: 0.0,
-            scroll_y: 0.0,
-            total_height: config.viewport_height,
-        };
-
-        let cct = HeadlessSerializer::serialise(&page, &serialiser_config);
-
-        let node_count = cct.lines().filter(|line| !line.starts_with("##")).count();
+            source: CoreError::Parse(format!("blocking task panicked: {e}")),
+        })??;
 
         info!(
             "Navigation successful: status {}, nodes {} for url {}",
@@ -205,7 +229,7 @@ pub async fn navigate(
             status: response.status,
             cct,
             node_count,
-            page,
+            tree,
         });
     }
 }
@@ -218,6 +242,36 @@ fn redirect_location(headers: &HashMap<String, String>) -> Option<String> {
             None
         }
     })
+}
+
+fn decode_body(res: &FetchResponse) -> Result<String, String> {
+    let content_type = res
+        .headers
+        .iter()
+        .find(|(k, _)| k.eq_ignore_ascii_case("content-type"))
+        .map(|(_, v)| v.as_str())
+        .unwrap_or("");
+
+    let charset = content_type
+        .split(';')
+        .find_map(|p| {
+            let p = p.trim();
+            if p.to_lowercase().starts_with("charset=") {
+                Some(&p[8..])
+            } else {
+                None
+            }
+        })
+        .unwrap_or("utf-8");
+
+    let encoding = encoding_rs::Encoding::for_label(charset.as_bytes()).unwrap_or(encoding_rs::UTF_8);
+
+    let (decoded, _, malformed) = encoding.decode(&res.body);
+    if malformed && charset.to_lowercase() == "utf-8" {
+        return Err("malformed utf-8 body".to_string());
+    }
+
+    Ok(decoded.into_owned())
 }
 
 #[cfg(test)]

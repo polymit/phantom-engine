@@ -17,6 +17,7 @@ url = "2"
 phantom-anti-detect = { path = "../phantom-anti-detect" }
 phantom-core = { path = "../phantom-core" }
 phantom-serializer = { path = "../phantom-serializer" }
+encoding_rs = "0.8.35"
 
 [dev-dependencies]
 indextree = "=4.8.0"

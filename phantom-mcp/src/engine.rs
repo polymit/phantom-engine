@@ -268,11 +268,13 @@ impl EngineAdapter {
     /// Clone the stored ParsedPage for re-serialisation.
     /// Returns None if no page has been navigated to yet.
     pub async fn get_page(&self) -> Option<ParsedPage> {
-        let key = *self.active_page_key.lock();
-        let store = self.page_store.lock();
-        let page = match key {
-            Some(tab_id) => store.get(&tab_id).cloned(),
-            None => store.get(&Uuid::nil()).cloned(),
+        let page = {
+            let key = *self.active_page_key.lock();
+            let store = self.page_store.lock();
+            match key {
+                Some(tab_id) => store.get(&tab_id).cloned(),
+                None => store.get(&Uuid::nil()).cloned(),
+            }
         }?;
 
         let limit = self.blocking_limit.clone();
@@ -288,11 +290,13 @@ impl EngineAdapter {
     /// Clone the stored ParsedPage and its viewport metadata.
     /// Returns None if no page has been navigated to yet.
     pub async fn get_page_with_viewport(&self) -> Option<(ParsedPage, String, f32, f32)> {
-        let key = *self.active_page_key.lock();
-        let store = self.page_store.lock();
-        let page = match key {
-            Some(tab_id) => store.get(&tab_id).cloned(),
-            None => store.get(&Uuid::nil()).cloned(),
+        let page = {
+            let key = *self.active_page_key.lock();
+            let store = self.page_store.lock();
+            match key {
+                Some(tab_id) => store.get(&tab_id).cloned(),
+                None => store.get(&Uuid::nil()).cloned(),
+            }
         }?;
 
         let limit = self.blocking_limit.clone();

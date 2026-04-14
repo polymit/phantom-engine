@@ -2,10 +2,10 @@ use rquickjs::{Ctx, Function, Persistent, Result};
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
-    panic::{catch_unwind, AssertUnwindSafe},
+    panic::{AssertUnwindSafe, catch_unwind},
     sync::{
-        atomic::{AtomicBool, AtomicU32, Ordering},
         Arc,
+        atomic::{AtomicBool, AtomicU32, Ordering},
     },
 };
 
@@ -241,4 +241,18 @@ pub fn register_timers<'js>(
     globals.set("clearInterval", globals.get::<_, Function>("clearTimeout")?)?;
 
     Ok(())
+}
+
+/// Clear all pending timers and cancellation records for a session.
+///
+/// MUST be called on the same thread where the session was created,
+/// as TIMER_STORE is thread-local and Persistent handles must be dropped
+/// on their creator thread.
+pub fn clear_all_timers_for_session(session_id: u64) {
+    TIMER_STORE.with(|store| {
+        store.borrow_mut().remove(&session_id);
+    });
+    TIMER_CANCELLED.with(|cancelled| {
+        cancelled.borrow_mut().remove(&session_id);
+    });
 }

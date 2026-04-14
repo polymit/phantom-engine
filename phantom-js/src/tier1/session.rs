@@ -2,9 +2,9 @@ use indextree::NodeId;
 use parking_lot::RwLock;
 use phantom_core::dom::{DomNode, DomTree, NodeData};
 use rand::RngCore;
-use rquickjs::{async_with, prelude::*, AsyncContext, AsyncRuntime};
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use rquickjs::{AsyncContext, AsyncRuntime, async_with, prelude::*};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::Instant;
 
 use crate::error::PhantomJsError;
@@ -461,17 +461,22 @@ impl Tier1Session {
     /// After calling this, the session cannot be used.
     /// Per D-08: burn it down — never reuse a session.
     pub fn destroy(self) {
-        self.timer_cancelled.store(true, Ordering::SeqCst);
-        // Drop order matters: context first, then runtime
-        drop(self.context);
-        drop(self.runtime);
+        // self is consumed here. Drop::drop will run first, then fields
+        // will be dropped in reverse declaration order: context, then runtime.
         tracing::debug!("Tier1Session destroyed — all JS resources freed");
+    }
+}
+
+impl Drop for Tier1Session {
+    fn drop(&mut self) {
+        self.timer_cancelled.store(true, Ordering::SeqCst);
+        crate::tier1::apis::timers::clear_all_timers_for_session(self.session_id);
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{deadline_from_now_ms, millis_to_u64_saturating, CPU_TIMEOUT_MS};
+    use super::{CPU_TIMEOUT_MS, deadline_from_now_ms, millis_to_u64_saturating};
 
     #[test]
     fn millis_to_u64_saturates_when_elapsed_overflows_u64() {

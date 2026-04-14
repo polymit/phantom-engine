@@ -32,7 +32,7 @@ pub fn process_html(
 
     // Pass 1: CSS parsing and initial visibility
     if let Some(root) = tree.document_root {
-        apply_css_pass(&mut tree, root, None);
+        apply_css_pass(&mut tree, root, None, false);
     }
 
     rebuild_page_from_tree(tree, url, viewport_width, viewport_height)
@@ -79,7 +79,12 @@ pub fn rebuild_page_from_tree(
     })
 }
 
-fn apply_css_pass(tree: &mut DomTree, node_id: NodeId, parent_style: Option<ComputedStyle>) {
+fn apply_css_pass(
+    tree: &mut DomTree,
+    node_id: NodeId,
+    parent_style: Option<ComputedStyle>,
+    ancestor_display_none: bool,
+) {
     let inline_style_val = tree.get(node_id).and_then(|node| {
         if let NodeData::Element { ref attributes, .. } = node.data {
             attributes.get("style").cloned()
@@ -90,6 +95,7 @@ fn apply_css_pass(tree: &mut DomTree, node_id: NodeId, parent_style: Option<Comp
 
     let computed = CssEngine::compute(inline_style_val.as_deref(), parent_style.as_ref());
 
+    let mut currently_display_none = ancestor_display_none;
     if let Some(node) = tree.get_mut(node_id) {
         if matches!(node.data, NodeData::Element { .. }) {
             node.computed_display = computed.display.clone();
@@ -100,7 +106,10 @@ fn apply_css_pass(tree: &mut DomTree, node_id: NodeId, parent_style: Option<Comp
             node.computed_height = computed.height.clone();
             node.z_index = computed.z_index;
 
-            node.is_visible = node.computed_display != Display::None
+            let is_display_none = node.computed_display == Display::None;
+            currently_display_none = ancestor_display_none || is_display_none;
+
+            node.is_visible = !currently_display_none
                 && node.computed_visibility != Visibility::Hidden
                 && node.computed_opacity > 0.0;
         }
@@ -108,7 +117,7 @@ fn apply_css_pass(tree: &mut DomTree, node_id: NodeId, parent_style: Option<Comp
 
     let children: Vec<NodeId> = node_id.children(&tree.arena).collect();
     for child in children {
-        apply_css_pass(tree, child, Some(computed.clone()));
+        apply_css_pass(tree, child, Some(computed.clone()), currently_display_none);
     }
 }
 

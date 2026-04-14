@@ -445,8 +445,9 @@ if (originalCreateAnalyser) {
         var origMeasure = CanvasRenderingContext2D.prototype.measureText;
         CanvasRenderingContext2D.prototype.measureText = function(text) {
             var m = origMeasure.call(this, text);
-            // Blueprint regex: /\s([^,;]+)(?:,|$)/ for font-family parsing
-            var match = this.font && this.font.match(/\s([^,;]+?)(?:\s*,|\s*$)/);
+            // Robust font-family extraction using new RegExp to avoid ESC issues in eval
+            var fontRegex = new RegExp("(?:^|\\s)(?:\\d+px|[\\d.]+px|[\\d.]+rem|[\\d.]+em)(?:/\\S+)?\\s+([^,;]+)");
+            var match = this.font && this.font.match(fontRegex);
             var family = match ? match[1].trim() : null;
             
             // Remove potential quotes from the family name for correct lookup
@@ -473,7 +474,8 @@ if (originalCreateAnalyser) {
     if (typeof document !== 'undefined' && document.fonts && FONT_TABLE) {
         var _origCheck = document.fonts.check.bind(document.fonts);
         document.fonts.check = function(font, text) {
-            var match = font && font.match(/\s([^,;]+?)(?:\s*,|\s*$)/);
+            var fontRegex = new RegExp("(?:^|\\s)(?:\\d+px|[\\d.]+px|[\\d.]+rem|[\\d.]+em)(?:/\\S+)?\\s+([^,;]+)");
+            var match = font && font.match(fontRegex);
             var family = match ? match[1].trim().replace(/^['"]|['"]$/g, '') : null;
             if (family && FONT_TABLE[family] !== undefined) {
                 return true;
@@ -485,7 +487,8 @@ if (originalCreateAnalyser) {
         if (document.fonts.load) {
             var _origLoad = document.fonts.load.bind(document.fonts);
             document.fonts.load = function(font, text) {
-                var match = font && font.match(/\s([^,;]+?)(?:\s*,|\s*$)/);
+                var fontRegex = new RegExp("(?:^|\\s)(?:\\d+px|[\\d.]+px|[\\d.]+rem|[\\d.]+em)(?:/\\S+)?\\s+([^,;]+)");
+                var match = font && font.match(fontRegex);
                 var family = match ? match[1].trim().replace(/^['"]|['"]$/g, '') : null;
                 if (family && FONT_TABLE[family] !== undefined) {
                     return Promise.resolve([{ family: family, status: 'loaded' }]);
@@ -585,6 +588,20 @@ if (typeof MouseEvent === 'undefined') {
         globalThis.UIEvent.call(this, type, options);
         this.relatedTarget = (options && options.relatedTarget) || null;
     };
+    
+    // Stealth toString() overrides
+    [
+        'Event', 'UIEvent', 'MouseEvent', 'PointerEvent', 'FocusEvent'
+    ].forEach(name => {
+        const ctor = globalThis[name];
+        if (ctor) {
+            Object.defineProperty(ctor, 'toString', {
+                value: function() { return `function ${name}() { [native code] }`; },
+                configurable: true,
+                writable: true
+            });
+        }
+    });
 }
 
 // 19. HTMLElement inheritance from EventTarget

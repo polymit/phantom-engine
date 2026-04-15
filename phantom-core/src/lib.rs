@@ -1,8 +1,11 @@
 pub mod css;
 pub mod dom;
+pub mod errors;
 pub mod layout;
 pub mod parser;
 pub mod pipeline;
+
+pub use errors::*;
 
 pub use css::{ComputedStyle, CssEngine};
 pub use dom::node::{AriaRole, Display, EventListenerType, PointerEvents, Visibility};

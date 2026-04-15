@@ -15,7 +15,7 @@ mod tests {
         ).unwrap();
 
         let viewport = ViewportBounds::new(0.0, 0.0, 1280.0, 720.0);
-        let vis_map = compute_visibility(&page.tree, &page.layout, &viewport);
+        let vis_map = compute_visibility(&page.tree, &page.layout_map, &viewport);
 
         // The body has a width and height so it should be visible
         // The display:none div must be invisible
@@ -47,7 +47,7 @@ mod tests {
         ).unwrap();
 
         let viewport = ViewportBounds::new(0.0, 0.0, 1280.0, 720.0);
-        let vis_map = compute_visibility(&page.tree, &page.layout, &viewport);
+        let vis_map = compute_visibility(&page.tree, &page.layout_map, &viewport);
 
         let hidden_btn = page.tree.get_element_by_id("hidden-btn").unwrap();
         assert!(

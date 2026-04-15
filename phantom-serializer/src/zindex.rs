@@ -192,7 +192,7 @@ mod tests {
         "#;
         let page = process_html(html, "https://z.test", 1280.0, 720.0).unwrap();
         let viewport = ViewportBounds::new(0.0, 0.0, 1280.0, 720.0);
-        let geo = crate::geometry::extract_geometry(&page.tree, &page.layout, &viewport);
+        let geo = crate::geometry::extract_geometry(&page.tree, &page.layout_map, &viewport);
         let z = resolve_zindex(&page.tree, &geo);
 
         let target = page.tree.get_element_by_id("target").unwrap();

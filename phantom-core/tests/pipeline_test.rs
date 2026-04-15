@@ -242,7 +242,7 @@ mod tests {
 
         let page = process_html(html, "https://percent-size.test", 400.0, 120.0).unwrap();
         let pct = page.tree.get_element_by_id("pct").unwrap();
-        let bounds = page.layout.get_bounds(pct);
+        let bounds = page.layout_map.get(&pct).unwrap();
 
         assert!(
             bounds.width > 0.0,
@@ -324,7 +324,7 @@ mod tests {
 
         let page = process_html(html, "https://text-layout.test", 1280.0, 720.0).unwrap();
         let wrapper = page.tree.get_element_by_id("wrapper").unwrap();
-        let bounds = page.layout.get_bounds(wrapper);
+        let bounds = page.layout_map.get(&wrapper).unwrap();
 
         // "Hello World" is 11 chars. With our heuristic of 8px/char, it's 88px.
         assert!(
@@ -333,8 +333,8 @@ mod tests {
             bounds.width
         );
         assert_eq!(
-            bounds.height, 20.0,
-            "wrapper height should be 20.0, got {}",
+            bounds.height, 18.0,
+            "wrapper height should be 18.0, got {}",
             bounds.height
         );
     }

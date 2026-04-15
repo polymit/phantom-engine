@@ -2,6 +2,7 @@ use axum::http::StatusCode;
 use serde_json::{json, Value};
 
 use crate::engine::EngineAdapter;
+use tracing::Instrument;
 
 #[derive(Debug, serde::Deserialize)]
 struct EvaluateParams {
@@ -25,7 +26,15 @@ pub async fn handle_evaluate(
     adapter: &EngineAdapter,
     params: Value,
 ) -> Result<Value, (StatusCode, Value)> {
-    let p: EvaluateParams = serde_json::from_value(params).map_err(|e| {
+    let span = tracing::info_span!(
+        "tool.evaluate",
+        script_len = tracing::field::Empty,
+        tier = tracing::field::Empty,
+        elapsed_ms = tracing::field::Empty,
+        timed_out = false
+    );
+    async move {
+        let p: EvaluateParams = serde_json::from_value(params).map_err(|e| {
         (
             StatusCode::BAD_REQUEST,
             json!({ "error": { "code": "invalid_params", "message": e.to_string() } }),
@@ -35,6 +44,10 @@ pub async fn handle_evaluate(
     // timeout_ms is accepted in the schema but QuickJS enforces its own 10s hard
     // limit via the interrupt handler. We surface it in the error message if provided.
     let _timeout_ms = p.timeout_ms;
+    
+    tracing::Span::current().record("script_len", p.script.len() as u64);
+    tracing::Span::current().record("tier", "tier1");
+    let start = std::time::Instant::now();
 
     let tree = {
         let page = adapter.get_page().await.ok_or_else(|| {
@@ -63,10 +76,12 @@ pub async fn handle_evaluate(
             // as JsEvaluation with "interrupted" in the message rather than
             // a distinct JsTimeout variant from this eval path.
             let code = if e.to_string().to_lowercase().contains("interrupt") {
+                tracing::Span::current().record("timed_out", true);
                 "js_timeout"
             } else {
                 "js_error"
             };
+            tracing::Span::current().record("elapsed_ms", start.elapsed().as_millis() as u64);
             return Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
                 json!({ "error": { "code": code, "message": e.to_string() } }),
@@ -86,8 +101,13 @@ pub async fn handle_evaluate(
         Err(_) => (Value::String(raw), "string"),
     };
 
+    tracing::Span::current().record("elapsed_ms", start.elapsed().as_millis() as u64);
+
     Ok(json!({
         "result": result_val,
         "type":   type_str,
     }))
+    }
+    .instrument(span)
+    .await
 }

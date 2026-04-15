@@ -1,4 +1,5 @@
 pub mod engine;
+pub mod telemetry;
 pub mod tools;
 
 pub use engine::EngineAdapter;

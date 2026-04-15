@@ -4,6 +4,7 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 
 use crate::engine::EngineAdapter;
+use tracing::Instrument;
 
 #[derive(Debug, Deserialize)]
 pub struct SceneGraphParams {
@@ -22,7 +23,16 @@ pub async fn handle_get_scene_graph(
     adapter: &EngineAdapter,
     params: Value,
 ) -> Result<Value, (StatusCode, Value)> {
-    let params: SceneGraphParams = serde_json::from_value(params).map_err(|e| {
+    let span = tracing::info_span!(
+        "tool.scene_graph",
+        mode = tracing::field::Empty,
+        task_hint = tracing::field::Empty,
+        node_count = tracing::field::Empty,
+        cct_bytes = tracing::field::Empty,
+        elapsed_ms = tracing::field::Empty
+    );
+    async move {
+        let params: SceneGraphParams = serde_json::from_value(params).map_err(|e| {
         (
             StatusCode::BAD_REQUEST,
             json!({ "error": { "code": "invalid_params", "message": e.to_string() } }),
@@ -44,6 +54,13 @@ pub async fn handle_get_scene_graph(
         Some("selective") => SerialiserMode::Selective,
         _ => SerialiserMode::Full,
     };
+    
+    let start = std::time::Instant::now();
+
+    // Record task_hint before it moves into config
+    if let Some(hint) = &params.task_hint {
+        tracing::Span::current().record("task_hint", hint.as_str());
+    }
 
     let config = SerialiserConfig {
         url: url.clone(),
@@ -65,10 +82,18 @@ pub async fn handle_get_scene_graph(
         SerialiserMode::Selective => "selective",
     };
 
+    tracing::Span::current().record("mode", mode_str);
+    tracing::Span::current().record("node_count", node_count as u64);
+    tracing::Span::current().record("cct_bytes", cct.len() as u64);
+    tracing::Span::current().record("elapsed_ms", start.elapsed().as_millis() as u64);
+
     Ok(json!({
         "cct":        cct,
         "node_count": node_count,
         "mode":       mode_str,
         "url":        url,
     }))
+    }
+    .instrument(span)
+    .await
 }

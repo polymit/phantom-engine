@@ -5,6 +5,7 @@ use serde_json::{json, Value};
 
 use crate::engine::{EngineAdapter, SessionPage};
 use phantom_net::navigate::{navigate, NavigationConfig, NavigationError};
+use tracing::Instrument;
 
 #[derive(Debug, Deserialize)]
 pub struct NavigateParams {
@@ -32,15 +33,26 @@ pub async fn handle_navigate(
     adapter: &EngineAdapter,
     params: Value,
 ) -> Result<Value, (StatusCode, Value)> {
-    let expected_key = adapter.current_page_key();
-    let params: NavigateParams = serde_json::from_value(params).map_err(|e| {
-        (
-            StatusCode::BAD_REQUEST,
-            json!({ "error": { "code": "invalid_params", "message": e.to_string() } }),
-        )
-    })?;
+    let span = tracing::info_span!(
+        "tool.navigate",
+        url = tracing::field::Empty,
+        status = tracing::field::Empty,
+        elapsed_ms = tracing::field::Empty,
+        html_bytes = tracing::field::Empty
+    );
+    async move {
+        let expected_key = adapter.current_page_key();
+        let params: NavigateParams = serde_json::from_value(params).map_err(|e| {
+            (
+                StatusCode::BAD_REQUEST,
+                json!({ "error": { "code": "invalid_params", "message": e.to_string() } }),
+            )
+        })?;
 
-    let budget = adapter
+        tracing::Span::current().record("url", params.url.as_str());
+        let start = std::time::Instant::now();
+
+        let budget = adapter
         .broker
         .get(expected_key)
         .map(|s| s.budget)
@@ -92,6 +104,11 @@ pub async fn handle_navigate(
     let response_node_count = result.node_count;
     let delta_root = result.tree.document_root;
 
+    tracing::Span::current().record("status", response_status);
+    tracing::Span::current().record("elapsed_ms", start.elapsed().as_millis() as u64);
+    // Best effort on html_bytes since it's not directly in NavigateResult
+    tracing::Span::current().record("html_bytes", response_cct.len() as u64);
+
     // Persist the parsed page so browser_get_scene_graph can re-serialise
     // with different scroll/mode parameters without re-fetching.
     let stored = adapter.store_page_if_current(
@@ -121,4 +138,7 @@ pub async fn handle_navigate(
         "cct":        response_cct,
         "node_count": response_node_count,
     }))
+    }
+    .instrument(span)
+    .await
 }

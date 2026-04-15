@@ -4,6 +4,7 @@ use phantom_js::BehaviorEngine;
 use phantom_serializer::CctDelta;
 use serde_json::{json, Value};
 use std::time::Duration;
+use tracing::Instrument;
 
 use super::escape_js_single_quoted;
 
@@ -18,7 +19,14 @@ pub async fn handle_click(
     adapter: &crate::engine::EngineAdapter,
     params: Value,
 ) -> Result<Value, (StatusCode, Value)> {
-    let click_params: ClickParams = serde_json::from_value(params).map_err(|e| {
+    let span = tracing::info_span!(
+        "tool.click",
+        selector = tracing::field::Empty,
+        hesitation_ms = tracing::field::Empty,
+        path_points = tracing::field::Empty
+    );
+    async move {
+        let click_params: ClickParams = serde_json::from_value(params).map_err(|e| {
         (
             StatusCode::BAD_REQUEST,
             json!({
@@ -31,6 +39,7 @@ pub async fn handle_click(
     })?;
 
     let selector = click_params.selector;
+    tracing::Span::current().record("selector", selector.as_str());
 
     let (tree, default_x, default_y, target_node_id) = {
         let page = adapter.get_page().await.ok_or_else(|| {
@@ -78,6 +87,7 @@ pub async fn handle_click(
     let target_x = click_params.x.unwrap_or(default_x);
     let target_y = click_params.y.unwrap_or(default_y);
     let mouse_path = behavior.generate_mouse_path((0.0, 0.0), (target_x, target_y));
+    tracing::Span::current().record("path_points", mouse_path.len() as u64);
 
     // Acquire session
     let mut session = adapter.tier1.acquire().await.map_err(|_| {
@@ -174,6 +184,7 @@ pub async fn handle_click(
 
     // 9. Hesitation delay
     let hesitation_ms = behavior.click_hesitation_ms();
+    tracing::Span::current().record("hesitation_ms", hesitation_ms);
     tokio::time::sleep(Duration::from_millis(hesitation_ms)).await;
 
     // 10-12. Dispatch up and click events
@@ -213,4 +224,7 @@ pub async fn handle_click(
         "x": target_x,
         "y": target_y
     }))
+    }
+    .instrument(span)
+    .await
 }

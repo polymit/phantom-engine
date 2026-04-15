@@ -57,38 +57,57 @@ impl Tier2Pool {
 
     /// Check out a session from the thread-local pool.
     pub fn acquire(&self) -> Result<Tier2Session, PhantomJsError> {
-        // 1. Check thread-local free list
-        let pooled = LOCAL_FREE.with(|free| {
-            let mut free = free.borrow_mut();
-            while let Some(pooled) = free.pop() {
-                if pooled.created_at.elapsed().as_secs() < STALE_SECS {
-                    return Some(pooled.session);
+        let span = tracing::debug_span!(
+            "pool.acquire",
+            tier = "tier2",
+            pool_size = self.max_count,
+            waited_ms = tracing::field::Empty
+        );
+        let _guard = span.enter();
+        let start = std::time::Instant::now();
+
+        let session_result = (|| {
+            // 1. Check thread-local free list
+            let pooled = LOCAL_FREE.with(|free| {
+                let mut free = free.borrow_mut();
+                while let Some(pooled) = free.pop() {
+                    if pooled.created_at.elapsed().as_secs() < STALE_SECS {
+                        return Some(pooled.session);
+                    }
+                    // Stale
+                    pooled.session.destroy();
+                    self.live_count.fetch_sub(1, Ordering::Relaxed);
                 }
-                // Stale
-                pooled.session.destroy();
-                self.live_count.fetch_sub(1, Ordering::Relaxed);
-            }
-            None
-        });
-
-        if let Some(session) = pooled {
-            return Ok(session);
-        }
-
-        // 2. Try to create a new one if limit not reached
-        if !self.try_reserve_slot() {
-            return Err(PhantomJsError::PoolExhausted {
-                max: self.max_count,
+                None
             });
+
+            if let Some(session) = pooled {
+                return Ok(session);
+            }
+
+            // 2. Try to create a new one if limit not reached
+            if !self.try_reserve_slot() {
+                return Err(PhantomJsError::PoolExhausted {
+                    max: self.max_count,
+                });
+            }
+
+            match Tier2Session::new(self.max_heap_bytes) {
+                Ok(session) => Ok(session),
+                Err(err) => {
+                    self.live_count.fetch_sub(1, Ordering::AcqRel);
+                    Err(err)
+                }
+            }
+        })();
+
+        let waited_ms = start.elapsed().as_millis() as u64;
+        tracing::Span::current().record("waited_ms", waited_ms);
+        if waited_ms > 100 {
+            tracing::warn!("Tier2 pool acquisition slow — pre-warm more runtimes");
         }
 
-        match Tier2Session::new(self.max_heap_bytes) {
-            Ok(session) => Ok(session),
-            Err(err) => {
-                self.live_count.fetch_sub(1, Ordering::AcqRel);
-                Err(err)
-            }
-        }
+        session_result
     }
 
     /// Return a session to the thread-local pool.

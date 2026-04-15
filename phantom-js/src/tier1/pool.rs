@@ -3,6 +3,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use crate::error::PhantomJsError;
 use crate::tier1::session::Tier1Session;
+use tracing::Instrument;
 
 pub struct Tier1Pool {
     // Tracks every checked-out session currently alive.
@@ -39,20 +40,38 @@ impl Tier1Pool {
 
     /// Check out a fresh Tier1Session.
     pub async fn acquire(&self) -> Result<Tier1Session, PhantomJsError> {
-        if !self.try_reserve_slot() {
-            return Err(PhantomJsError::PoolExhausted {
-                max: self.max_count,
-            });
-        }
-
-        let session = match Tier1Session::new().await {
-            Ok(session) => session,
-            Err(err) => {
-                self.live_count.fetch_sub(1, Ordering::AcqRel);
-                return Err(err);
+        let span = tracing::debug_span!(
+            "pool.acquire",
+            tier = "tier1",
+            pool_size = self.max_count,
+            waited_ms = tracing::field::Empty
+        );
+        async move {
+            let start = std::time::Instant::now();
+            if !self.try_reserve_slot() {
+                return Err(PhantomJsError::PoolExhausted {
+                    max: self.max_count,
+                });
             }
-        };
-        Ok(session)
+
+            let session = match Tier1Session::new().await {
+                Ok(session) => session,
+                Err(err) => {
+                    self.live_count.fetch_sub(1, Ordering::AcqRel);
+                    return Err(err);
+                }
+            };
+            
+            let waited_ms = start.elapsed().as_millis() as u64;
+            tracing::Span::current().record("waited_ms", waited_ms);
+            if waited_ms > 100 {
+                tracing::warn!("Tier1 pool acquisition slow — pre-warm more runtimes");
+            }
+            
+            Ok(session)
+        }
+        .instrument(span)
+        .await
     }
 
     /// Return a session after use.

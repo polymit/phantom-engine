@@ -18,6 +18,7 @@ use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use tokio::sync::OnceCell;
 use tokio::sync::RwLock;
 use tokio::task::spawn_blocking;
+use tracing::Instrument;
 use uuid::Uuid;
 
 static INIT: Once = Once::new();
@@ -406,205 +407,233 @@ impl EngineAdapter {
     }
 
     pub async fn suspend(&self, session_id: Uuid) -> Result<String, String> {
-        let start = Instant::now();
-        let session_id_str = session_id.to_string();
+        let span = tracing::info_span!(
+            "session.suspend",
+            session_id = %session_id,
+            snapshot_path = tracing::field::Empty,
+            elapsed_ms = tracing::field::Empty
+        );
+        async move {
+            let start = Instant::now();
+            let session_id_str = session_id.to_string();
 
-        // Session cookies have no Expires/Max-Age — serde's Serialize impl
-        // filters them out. cookie_store::serde::json preserves them.
-        let cookies_json = {
-            let store = self.cookie_store.lock().await;
-            let mut buf = Vec::new();
-            cookie_store::serde::json::save_incl_expired_and_nonpersistent(&store, &mut buf)
-                .map_err(|e| e.to_string())?;
-            buf
-        }; // tokio Mutex guard dropped here
+            // Session cookies have no Expires/Max-Age — serde's Serialize impl
+            // filters them out. cookie_store::serde::json preserves them.
+            let cookies_json = {
+                let store = self.cookie_store.lock().await;
+                let mut buf = Vec::new();
+                cookie_store::serde::json::save_incl_expired_and_nonpersistent(&store, &mut buf)
+                    .map_err(|e| e.to_string())?;
+                buf
+            }; // tokio Mutex guard dropped here
 
-        // STEP 2 — Collect localStorage from disk
-        let storage2 = self.storage.clone();
-        let sid2 = session_id_str.clone();
-        let limit2 = self.blocking_limit.clone();
-        let local_storage = tokio::task::spawn_blocking(move || {
-            let _permit = limit2.try_acquire().ok();
-            collect_localstorage(&sid2, &storage2)
-        })
-        .await
-        .map_err(|e| e.to_string())?;
-
-        // STEP 3 — Collect IndexedDB bytes
-        let storage3 = self.storage.clone();
-        let sid3 = session_id_str.clone();
-        let limit3 = self.blocking_limit.clone();
-        let indexeddb = tokio::task::spawn_blocking(move || {
-            let _permit = limit3.try_acquire().ok();
-            collect_indexeddb(&sid3, &storage3)
-        })
-        .await
-        .map_err(|e| e.to_string())?;
-
-        // STEP 4 — Build snapshot
-        let data = phantom_storage::snapshot::SnapshotData {
-            session_id: session_id_str.clone(),
-            cookies_json,
-            local_storage,
-            indexeddb,
-            cache_blobs: HashMap::new(), // cache blobs handled in future prompt
-            cache_meta: None,
-        };
-        let limit4 = self.blocking_limit.clone();
-        let compressed = tokio::task::spawn_blocking(move || {
-            let _permit = limit4.try_acquire().ok();
-            phantom_storage::snapshot::build_snapshot(&data)
-        })
-        .await
-        .map_err(|e| e.to_string())?
-        .map_err(|e| e.to_string())?;
-
-        // STEP 5 — Write to disk
-        let timestamp = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map_err(|e| e.to_string())?
-            .as_millis();
-
-        let storage5 = self.storage.clone();
-        let sid5 = session_id_str.clone();
-        let limit5 = self.blocking_limit.clone();
-        let session_dir = tokio::task::spawn_blocking(move || {
-            let _permit = limit5.try_acquire().ok();
-            storage5.create_session_dir(&sid5)
-        })
-        .await
-        .map_err(|e| e.to_string())?
-        .map_err(|e| e.to_string())?;
-
-        let path = session_dir.join(format!("snapshot-{}-{}.tar.zst", session_id_str, timestamp));
-        tokio::fs::write(&path, &compressed)
+            // STEP 2 — Collect localStorage from disk
+            let storage2 = self.storage.clone();
+            let sid2 = session_id_str.clone();
+            let limit2 = self.blocking_limit.clone();
+            let local_storage = tokio::task::spawn_blocking(move || {
+                let _permit = limit2.try_acquire().ok();
+                collect_localstorage(&sid2, &storage2)
+            })
             .await
             .map_err(|e| e.to_string())?;
 
-        // STEP 6 — Update SessionBroker state
-        self.broker
-            .set_state(session_id, SessionState::Suspended)
+            // STEP 3 — Collect IndexedDB bytes
+            let storage3 = self.storage.clone();
+            let sid3 = session_id_str.clone();
+            let limit3 = self.blocking_limit.clone();
+            let indexeddb = tokio::task::spawn_blocking(move || {
+                let _permit = limit3.try_acquire().ok();
+                collect_indexeddb(&sid3, &storage3)
+            })
+            .await
             .map_err(|e| e.to_string())?;
 
-        let elapsed = start.elapsed();
-        if elapsed.as_millis() >= 200 {
-            tracing::warn!(
-                "suspend elapsed: {}ms (target: < 200ms)",
-                elapsed.as_millis()
-            );
-        }
-        tracing::info!("suspend elapsed: {}ms", elapsed.as_millis());
+            // STEP 4 — Build snapshot
+            let data = phantom_storage::snapshot::SnapshotData {
+                session_id: session_id_str.clone(),
+                cookies_json,
+                local_storage,
+                indexeddb,
+                cache_blobs: HashMap::new(), // cache blobs handled in future prompt
+                cache_meta: None,
+            };
+            let limit4 = self.blocking_limit.clone();
+            let compressed = tokio::task::spawn_blocking(move || {
+                let _permit = limit4.try_acquire().ok();
+                phantom_storage::snapshot::build_snapshot(&data)
+            })
+            .await
+            .map_err(|e| e.to_string())?
+            .map_err(|e| e.to_string())?;
 
-        Ok(path.to_string_lossy().into_owned())
+            // STEP 5 — Write to disk
+            let timestamp = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .map_err(|e| e.to_string())?
+                .as_millis();
+
+            let storage5 = self.storage.clone();
+            let sid5 = session_id_str.clone();
+            let limit5 = self.blocking_limit.clone();
+            let session_dir = tokio::task::spawn_blocking(move || {
+                let _permit = limit5.try_acquire().ok();
+                storage5.create_session_dir(&sid5)
+            })
+            .await
+            .map_err(|e| e.to_string())?
+            .map_err(|e| e.to_string())?;
+
+            let path = session_dir.join(format!("snapshot-{}-{}.tar.zst", session_id_str, timestamp));
+            tokio::fs::write(&path, &compressed)
+                .await
+                .map_err(|e| e.to_string())?;
+
+            // STEP 6 — Update SessionBroker state
+            self.broker
+                .set_state(session_id, SessionState::Suspended)
+                .map_err(|e| e.to_string())?;
+
+            let elapsed = start.elapsed();
+            if elapsed.as_millis() >= 200 {
+                tracing::warn!(
+                    "suspend elapsed: {}ms (target: < 200ms)",
+                    elapsed.as_millis()
+                );
+            }
+            tracing::info!("suspend elapsed: {}ms", elapsed.as_millis());
+            
+            tracing::Span::current().record("snapshot_path", path.to_string_lossy().as_ref());
+            tracing::Span::current().record("elapsed_ms", elapsed.as_millis() as u64);
+
+            Ok(path.to_string_lossy().into_owned())
+        }
+        .instrument(span)
+        .await
     }
 
     /// Rehydrates session state from the latest snapshot archive on disk.
     /// Verifies HMAC integrity before loading any data — rejects tampered snapshots.
     pub async fn resume(&self, session_id: Uuid) -> Result<(), String> {
-        let start = Instant::now();
-        let session_id_str = session_id.to_string();
+        let span = tracing::info_span!(
+            "session.resume",
+            session_id = %session_id,
+            elapsed_ms = tracing::field::Empty,
+            hmac_verified = tracing::field::Empty
+        );
+        async move {
+            let start = Instant::now();
+            let session_id_str = session_id.to_string();
 
-        let session_dir = self
-            .storage
-            .session_dir(&session_id_str)
-            .map_err(|e| e.to_string())?;
+            let session_dir = self
+                .storage
+                .session_dir(&session_id_str)
+                .map_err(|e| e.to_string())?;
 
-        let snapshot_path = Self::find_latest_snapshot(&session_dir)?;
+            let snapshot_path = Self::find_latest_snapshot(&session_dir)?;
 
-        let compressed = tokio::fs::read(&snapshot_path)
-            .await
-            .map_err(|e| e.to_string())?;
+            let compressed = tokio::fs::read(&snapshot_path)
+                .await
+                .map_err(|e| e.to_string())?;
 
-        // HMAC gate — reject before touching any in-memory state
-        let manifest = phantom_storage::snapshot::read_manifest_from_snapshot(&compressed)
-            .map_err(|e| e.to_string())?;
-        phantom_storage::snapshot::verify_manifest(&manifest).map_err(|e| e.to_string())?;
-        let snapshot_files = Self::extract_files_from_snapshot(&compressed)?;
-        Self::verify_snapshot_payload(&manifest, &snapshot_files)?;
+            // HMAC gate — reject before touching any in-memory state
+            let manifest = phantom_storage::snapshot::read_manifest_from_snapshot(&compressed)
+                .map_err(|e| e.to_string())?;
+            phantom_storage::snapshot::verify_manifest(&manifest).map_err(|e| e.to_string())?;
+            
+            tracing::Span::current().record("hmac_verified", true);
+            
+            let snapshot_files = Self::extract_files_from_snapshot(&compressed)?;
+            Self::verify_snapshot_payload(&manifest, &snapshot_files)?;
 
-        // Rehydrate cookies using modern API
-        let cookies_bytes = snapshot_files
-            .get("cookies.bin")
-            .cloned()
-            .ok_or_else(|| "snapshot missing file: cookies.bin".to_string())?;
-        if !cookies_bytes.is_empty() {
-            let store =
-                cookie_store::serde::json::load_all(BufReader::new(Cursor::new(&cookies_bytes)))
-                    .map_err(|e| format!("cookie deserialise: {}", e))?;
-            *self.cookie_store.lock().await = store;
-        }
+            // Rehydrate cookies using modern API
+            let cookies_bytes = snapshot_files
+                .get("cookies.bin")
+                .cloned()
+                .ok_or_else(|| "snapshot missing file: cookies.bin".to_string())?;
+            if !cookies_bytes.is_empty() {
+                let store =
+                    cookie_store::serde::json::load_all(BufReader::new(Cursor::new(&cookies_bytes)))
+                        .map_err(|e| format!("cookie deserialise: {}", e))?;
+                *self.cookie_store.lock().await = store;
+            }
 
-        // BATCH REHYDRATION — Consolidate all storage writes into ONE blocking task
-        // for maximum performance (< 50ms) regardless of the number of origins.
-        let storage = self.storage.clone();
-        let sid = session_id_str.clone();
-        let manifest_clone = manifest.clone();
-        let snapshot_files_clone = snapshot_files.clone();
-        let limit_resume = self.blocking_limit.clone();
+            // BATCH REHYDRATION — Consolidate all storage writes into ONE blocking task
+            // for maximum performance (< 50ms) regardless of the number of origins.
+            let storage = self.storage.clone();
+            let sid = session_id_str.clone();
+            let manifest_clone = manifest.clone();
+            let snapshot_files_clone = snapshot_files.clone();
+            let limit_resume = self.blocking_limit.clone();
 
-        tokio::task::spawn_blocking(move || {
-            let _permit = limit_resume.try_acquire().ok();
-            let session_dir = storage.session_dir(&sid).map_err(|e| e.to_string())?;
+            tokio::task::spawn_blocking(move || {
+                let _permit = limit_resume.try_acquire().ok();
+                let session_dir = storage.session_dir(&sid).map_err(|e| e.to_string())?;
 
-            for filename in manifest_clone.checksums.keys() {
-                // localStorage
-                if let Some(rest) = filename.strip_prefix("localstorage/") {
-                    let hash = rest.strip_suffix(".json").ok_or("invalid ls filename")?;
-                    let json_bytes = snapshot_files_clone
-                        .get(filename)
-                        .cloned()
-                        .ok_or_else(|| format!("snapshot missing file: {}", filename))?;
-                    if json_bytes.is_empty() {
-                        continue;
+                for filename in manifest_clone.checksums.keys() {
+                    // localStorage
+                    if let Some(rest) = filename.strip_prefix("localstorage/") {
+                        let hash = rest.strip_suffix(".json").ok_or("invalid ls filename")?;
+                        let json_bytes = snapshot_files_clone
+                            .get(filename)
+                            .cloned()
+                            .ok_or_else(|| format!("snapshot missing file: {}", filename))?;
+                        if json_bytes.is_empty() {
+                            continue;
+                        }
+
+                        let kv_map: HashMap<String, String> = serde_json::from_slice(&json_bytes)
+                            .map_err(|e| format!("localstorage deserialise: {}", e))?;
+
+                        let ls_dir = session_dir.join("localstorage");
+                        std::fs::create_dir_all(&ls_dir).map_err(|e| e.to_string())?;
+                        let db = sled::open(ls_dir.join(format!("{}.sled", hash)))
+                            .map_err(|e| e.to_string())?;
+                        db.clear().map_err(|e| e.to_string())?;
+                        for (k, v) in &kv_map {
+                            db.insert(k.as_bytes(), v.as_bytes())
+                                .map_err(|e| e.to_string())?;
+                        }
+                        db.flush().map_err(|e| e.to_string())?;
                     }
+                    // IndexedDB
+                    else if let Some(rest) = filename.strip_prefix("indexeddb/") {
+                        let hash = rest.strip_suffix(".sqlite").ok_or("invalid idb filename")?;
+                        let sqlite_bytes = snapshot_files_clone
+                            .get(filename)
+                            .cloned()
+                            .ok_or_else(|| format!("snapshot missing file: {}", filename))?;
+                        if sqlite_bytes.is_empty() {
+                            continue;
+                        }
 
-                    let kv_map: HashMap<String, String> = serde_json::from_slice(&json_bytes)
-                        .map_err(|e| format!("localstorage deserialise: {}", e))?;
-
-                    let ls_dir = session_dir.join("localstorage");
-                    std::fs::create_dir_all(&ls_dir).map_err(|e| e.to_string())?;
-                    let db = sled::open(ls_dir.join(format!("{}.sled", hash)))
-                        .map_err(|e| e.to_string())?;
-                    db.clear().map_err(|e| e.to_string())?;
-                    for (k, v) in &kv_map {
-                        db.insert(k.as_bytes(), v.as_bytes())
+                        let idb_dir = session_dir.join("indexeddb");
+                        std::fs::create_dir_all(&idb_dir).map_err(|e| e.to_string())?;
+                        std::fs::write(idb_dir.join(format!("{}.sqlite", hash)), &sqlite_bytes)
                             .map_err(|e| e.to_string())?;
                     }
-                    db.flush().map_err(|e| e.to_string())?;
                 }
-                // IndexedDB
-                else if let Some(rest) = filename.strip_prefix("indexeddb/") {
-                    let hash = rest.strip_suffix(".sqlite").ok_or("invalid idb filename")?;
-                    let sqlite_bytes = snapshot_files_clone
-                        .get(filename)
-                        .cloned()
-                        .ok_or_else(|| format!("snapshot missing file: {}", filename))?;
-                    if sqlite_bytes.is_empty() {
-                        continue;
-                    }
+                Ok::<_, String>(())
+            })
+            .await
+            .map_err(|e| e.to_string())??;
 
-                    let idb_dir = session_dir.join("indexeddb");
-                    std::fs::create_dir_all(&idb_dir).map_err(|e| e.to_string())?;
-                    std::fs::write(idb_dir.join(format!("{}.sqlite", hash)), &sqlite_bytes)
-                        .map_err(|e| e.to_string())?;
-                }
+            self.broker
+                .set_state(session_id, SessionState::Running)
+                .map_err(|e| e.to_string())?;
+
+            let elapsed = start.elapsed();
+            if elapsed.as_millis() >= 50 {
+                tracing::warn!("resume elapsed: {}ms (target: < 50ms)", elapsed.as_millis());
             }
-            Ok::<_, String>(())
-        })
-        .await
-        .map_err(|e| e.to_string())??;
+            tracing::info!("resume elapsed: {}ms", elapsed.as_millis());
+            
+            tracing::Span::current().record("elapsed_ms", elapsed.as_millis() as u64);
 
-        self.broker
-            .set_state(session_id, SessionState::Running)
-            .map_err(|e| e.to_string())?;
-
-        let elapsed = start.elapsed();
-        if elapsed.as_millis() >= 50 {
-            tracing::warn!("resume elapsed: {}ms (target: < 50ms)", elapsed.as_millis());
+            Ok(())
         }
-        tracing::info!("resume elapsed: {}ms", elapsed.as_millis());
-
-        Ok(())
+        .instrument(span)
+        .await
     }
 
     fn verify_snapshot_payload(
@@ -725,76 +754,89 @@ impl EngineAdapter {
     /// COW clone: suspend source -> rewrite snapshot with new UUID -> resume as new session.
     /// Source remains Suspended. Clone is fully independent with its own HMAC key.
     pub async fn clone_session(&self, source_id: Uuid) -> Result<Uuid, String> {
-        let start = Instant::now();
-
-        // Suspend source — serializes all state to a snapshot on disk
-        let snapshot_path_str = self.suspend(source_id).await?;
-        let snapshot_path = PathBuf::from(&snapshot_path_str);
-
-        let new_id = Uuid::new_v4();
-        let new_id_str = new_id.to_string();
-
-        // Create the clone's session directory with restricted perms
-        let storage = self.storage.clone();
-        let sid = new_id_str.clone();
-        let new_session_dir = tokio::task::spawn_blocking(move || storage.create_session_dir(&sid))
-            .await
-            .map_err(|e| e.to_string())?
-            .map_err(|e| e.to_string())?;
-
-        // Read source snapshot and rewrite the session_id + re-sign HMAC
-        let original_bytes = tokio::fs::read(&snapshot_path)
-            .await
-            .map_err(|e| e.to_string())?;
-
-        let sid2 = new_id_str.clone();
-        let new_bytes = tokio::task::spawn_blocking(move || {
-            Self::rewrite_snapshot_session_id(&original_bytes, &sid2)
-        })
-        .await
-        .map_err(|e| e.to_string())??;
-
-        // Write rewritten snapshot to clone's directory
-        let timestamp = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map_err(|e| e.to_string())?
-            .as_millis();
-        let new_snapshot_path =
-            new_session_dir.join(format!("snapshot-{}-{}.tar.zst", new_id_str, timestamp));
-        tokio::fs::write(&new_snapshot_path, &new_bytes)
-            .await
-            .map_err(|e| e.to_string())?;
-
-        // Register as a new session mirroring the source's engine/budget/persona
-        let source_session = self.broker.get(source_id).map_err(|e| e.to_string())?;
-        let new_session = phantom_session::Session::with_uuid(
-            new_id,
-            source_session.engine,
-            source_session.budget.clone(),
-            source_session.persona_id.clone(),
+        let span = tracing::info_span!(
+            "session.clone",
+            source_id = %source_id,
+            clone_id = tracing::field::Empty,
+            elapsed_ms = tracing::field::Empty
         );
-        self.broker.register(new_session);
+        async move {
+            let start = Instant::now();
 
-        // Resume the clone — rehydrates cookies, localStorage, IndexedDB from the rewritten snapshot
-        self.resume(new_id).await?;
+            // Suspend source — serializes all state to a snapshot on disk
+            let snapshot_path_str = self.suspend(source_id).await?;
+            let snapshot_path = PathBuf::from(&snapshot_path_str);
 
-        let elapsed = start.elapsed();
-        if elapsed.as_millis() >= 200 {
-            tracing::warn!(
-                "clone {} -> {} elapsed: {}ms (minimum: < 200ms)",
+            let new_id = Uuid::new_v4();
+            let new_id_str = new_id.to_string();
+
+            // Create the clone's session directory with restricted perms
+            let storage = self.storage.clone();
+            let sid = new_id_str.clone();
+            let new_session_dir = tokio::task::spawn_blocking(move || storage.create_session_dir(&sid))
+                .await
+                .map_err(|e| e.to_string())?
+                .map_err(|e| e.to_string())?;
+
+            // Read source snapshot and rewrite the session_id + re-sign HMAC
+            let original_bytes = tokio::fs::read(&snapshot_path)
+                .await
+                .map_err(|e| e.to_string())?;
+
+            let sid2 = new_id_str.clone();
+            let new_bytes = tokio::task::spawn_blocking(move || {
+                Self::rewrite_snapshot_session_id(&original_bytes, &sid2)
+            })
+            .await
+            .map_err(|e| e.to_string())??;
+
+            // Write rewritten snapshot to clone's directory
+            let timestamp = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .map_err(|e| e.to_string())?
+                .as_millis();
+            let new_snapshot_path =
+                new_session_dir.join(format!("snapshot-{}-{}.tar.zst", new_id_str, timestamp));
+            tokio::fs::write(&new_snapshot_path, &new_bytes)
+                .await
+                .map_err(|e| e.to_string())?;
+
+            // Register as a new session mirroring the source's engine/budget/persona
+            let source_session = self.broker.get(source_id).map_err(|e| e.to_string())?;
+            let new_session = phantom_session::Session::with_uuid(
+                new_id,
+                source_session.engine,
+                source_session.budget.clone(),
+                source_session.persona_id.clone(),
+            );
+            self.broker.register(new_session);
+
+            // Resume the clone — rehydrates cookies, localStorage, IndexedDB from the rewritten snapshot
+            self.resume(new_id).await?;
+
+            let elapsed = start.elapsed();
+            if elapsed.as_millis() >= 200 {
+                tracing::warn!(
+                    "clone {} -> {} elapsed: {}ms (minimum: < 200ms)",
+                    source_id,
+                    new_id,
+                    elapsed.as_millis()
+                );
+            }
+            tracing::info!(
+                "clone {} -> {} in {}ms",
                 source_id,
                 new_id,
                 elapsed.as_millis()
             );
-        }
-        tracing::info!(
-            "clone {} -> {} in {}ms",
-            source_id,
-            new_id,
-            elapsed.as_millis()
-        );
 
-        Ok(new_id)
+            tracing::Span::current().record("clone_id", new_id_str.as_str());
+            tracing::Span::current().record("elapsed_ms", elapsed.as_millis() as u64);
+
+            Ok(new_id)
+        }
+        .instrument(span)
+        .await
     }
 
     /// Decompresses a snapshot, extracts all files, rebuilds with a new session_id.

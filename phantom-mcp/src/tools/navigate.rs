@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
 use crate::engine::{EngineAdapter, SessionPage};
+use crate::metrics;
 use phantom_net::navigate::{navigate, NavigationConfig, NavigationError};
 use tracing::Instrument;
 
@@ -89,6 +90,7 @@ pub async fn handle_navigate(
                     StatusCode::BAD_GATEWAY,
                 ),
                 NavigationError::AllAttemptsFailed { .. } => {
+                    metrics::CIRCUIT_BREAKER_ERRORS_TOTAL.with_label_values(&["navigate"]).inc();
                     ("all_attempts_failed".to_string(), StatusCode::BAD_GATEWAY)
                 }
             };
@@ -105,9 +107,14 @@ pub async fn handle_navigate(
     let delta_root = result.tree.document_root;
 
     tracing::Span::current().record("status", response_status);
-    tracing::Span::current().record("elapsed_ms", start.elapsed().as_millis() as u64);
-    // Best effort on html_bytes since it's not directly in NavigateResult
+    let elapsed = start.elapsed();
+    tracing::Span::current().record("elapsed_ms", elapsed.as_millis() as u64);
     tracing::Span::current().record("html_bytes", response_cct.len() as u64);
+
+    metrics::HTTP_REQUESTS_TOTAL
+        .with_label_values(&[&response_status.to_string()])
+        .inc();
+    metrics::HTTP_REQUEST_DURATION_SECONDS.observe(elapsed.as_secs_f64());
 
     // Persist the parsed page so browser_get_scene_graph can re-serialise
     // with different scroll/mode parameters without re-fetching.

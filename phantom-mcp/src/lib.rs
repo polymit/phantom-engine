@@ -1,4 +1,5 @@
 pub mod engine;
+pub mod metrics;
 pub mod telemetry;
 pub mod tools;
 
@@ -7,6 +8,7 @@ use std::sync::Arc;
 
 use axum::extract::State;
 use axum::http::{HeaderMap, StatusCode};
+use axum::response::IntoResponse;
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
@@ -61,6 +63,8 @@ impl McpServer {
         Router::new()
             .route("/rpc", post(rpc_endpoint))
             .route("/sse", get(crate::tools::subscribe::sse_handler))
+            .route("/metrics", get(handle_metrics))
+            .route("/health", get(handle_health))
             .with_state(self)
     }
 
@@ -481,6 +485,21 @@ async fn rpc_endpoint(
     }
 }
 
+async fn handle_metrics() -> impl IntoResponse {
+    (
+        StatusCode::OK,
+        [("Content-Type", "text/plain; version=0.0.4; charset=utf-8")],
+        metrics::metrics_text(),
+    )
+}
+
+async fn handle_health() -> impl IntoResponse {
+    axum::Json(serde_json::json!({
+        "status": "ok",
+        "version": env!("CARGO_PKG_VERSION"),
+    }))
+}
+
 #[cfg(test)]
 mod tests {
     use super::{McpError, McpServer};
@@ -503,6 +522,25 @@ mod tests {
         let resp = server.handle_request(&adapter, req, None).await.unwrap();
         assert_eq!(resp.result, Some(json!({ "ok": true, "pong": true })));
         assert!(resp.error.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_health_endpoint() {
+        use axum::response::IntoResponse;
+        let resp = super::handle_health().await.into_response();
+        assert_eq!(resp.status(), axum::http::StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn test_metrics_endpoint() {
+        use axum::response::IntoResponse;
+        crate::metrics::SESSIONS_ACTIVE.set(1);
+        let resp = super::handle_metrics().await.into_response();
+        assert_eq!(resp.status(), axum::http::StatusCode::OK);
+        
+        let body_bytes = axum::body::to_bytes(resp.into_body(), 1024 * 1024).await.unwrap();
+        let body_str = String::from_utf8_lossy(&body_bytes);
+        assert!(body_str.contains("phantom_sessions_active"));
     }
 
     #[tokio::test]

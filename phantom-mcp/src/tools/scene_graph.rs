@@ -4,6 +4,7 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 
 use crate::engine::EngineAdapter;
+use crate::metrics;
 use tracing::Instrument;
 
 #[derive(Debug, Deserialize)]
@@ -82,10 +83,14 @@ pub async fn handle_get_scene_graph(
         SerialiserMode::Selective => "selective",
     };
 
+    let elapsed = start.elapsed();
+    metrics::DOM_SNAPSHOT_DURATION_SECONDS.observe(elapsed.as_secs_f64());
+    metrics::DOM_NODES_SERIALISED.observe(node_count as f64);
+
     tracing::Span::current().record("mode", mode_str);
     tracing::Span::current().record("node_count", node_count as u64);
     tracing::Span::current().record("cct_bytes", cct.len() as u64);
-    tracing::Span::current().record("elapsed_ms", start.elapsed().as_millis() as u64);
+    tracing::Span::current().record("elapsed_ms", elapsed.as_millis() as u64);
 
     Ok(json!({
         "cct":        cct,

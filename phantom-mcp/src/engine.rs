@@ -19,6 +19,7 @@ use tokio::sync::OnceCell;
 use tokio::sync::RwLock;
 use tokio::task::spawn_blocking;
 use tracing::Instrument;
+use crate::metrics;
 use uuid::Uuid;
 
 static INIT: Once = Once::new();
@@ -152,6 +153,8 @@ pub struct EngineAdapter {
     pub session_lock: Arc<tokio::sync::Semaphore>,
     /// Global semaphore to prevent OS thread exhaustion from blocking tasks.
     pub blocking_limit: Arc<tokio::sync::Semaphore>,
+    /// Creation time for measuring session duration.
+    pub created_at: Instant,
 }
 
 impl EngineAdapter {
@@ -181,7 +184,7 @@ impl EngineAdapter {
 
         let (delta_tx, _) = tokio::sync::broadcast::channel(128);
 
-        Self {
+        let engine = Self {
             network: Arc::new(network),
             broker: Arc::new(broker),
             tier1,
@@ -197,15 +200,30 @@ impl EngineAdapter {
             delta_replay: Arc::new(Mutex::new(VecDeque::with_capacity(DELTA_REPLAY_CAP))),
             session_lock: Arc::new(tokio::sync::Semaphore::new(1)),
             blocking_limit: Arc::new(tokio::sync::Semaphore::new(MAX_BLOCKING_THREADS)),
-        }
+            created_at: Instant::now(),
+        };
+
+        metrics::SESSIONS_ACTIVE.inc();
+        metrics::SESSIONS_CREATED_TOTAL.with_label_values(&["mcp"]).inc();
+        metrics::CIRCUIT_BREAKER_STATE.set(0); // 0 = Closed (Normal Operation)
+
+        engine
     }
 
-    /// Convenience constructor used by blueprint tests that call `EngineAdapter::new().await`.
-    /// Delegates to the 4-arg form with sensible defaults.
     pub async fn new_default() -> Self {
         Self::new(5, 0, 5, 0, ResourceBudget::default()).await
     }
+}
 
+impl Drop for EngineAdapter {
+    fn drop(&mut self) {
+        metrics::SESSIONS_ACTIVE.dec();
+        let duration = self.created_at.elapsed().as_secs_f64();
+        metrics::SESSION_DURATION_SECONDS.observe(duration);
+    }
+}
+
+impl EngineAdapter {
     pub fn inject_delta(&self, delta: String) -> usize {
         {
             let mut replay = self.delta_replay.lock();
@@ -488,6 +506,8 @@ impl EngineAdapter {
             tokio::fs::write(&path, &compressed)
                 .await
                 .map_err(|e| e.to_string())?;
+
+            metrics::STORAGE_QUOTA_USED_BYTES.set(compressed.len() as i64);
 
             // STEP 6 — Update SessionBroker state
             self.broker

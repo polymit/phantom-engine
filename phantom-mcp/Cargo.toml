@@ -11,6 +11,7 @@ tokio = { version = "1", features = ["full"] }
 thiserror = "1"
 tracing = "=0.1.44"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter", "json"] }
+prometheus = "0.14.0"
 parking_lot = "0.12.5"
 phantom-anti-detect = { path = "../phantom-anti-detect" }
 phantom-net = { path = "../phantom-net" }

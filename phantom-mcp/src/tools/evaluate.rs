@@ -2,6 +2,7 @@ use axum::http::StatusCode;
 use serde_json::{json, Value};
 
 use crate::engine::EngineAdapter;
+use crate::metrics;
 use tracing::Instrument;
 
 #[derive(Debug, serde::Deserialize)]
@@ -60,17 +61,21 @@ pub async fn handle_evaluate(
     };
 
     let mut session = adapter.tier1.acquire().await.map_err(|_| {
+        metrics::CIRCUIT_BREAKER_ERRORS_TOTAL.with_label_values(&["tier1_pool"]).inc();
         (
             StatusCode::SERVICE_UNAVAILABLE,
             json!({ "error": { "code": "session_pool_exhausted", "message": "tier1 pool exhausted" } }),
         )
     })?;
 
+    metrics::JS_RUNTIMES_USED.inc();
+
     session.attach_dom(tree).await;
 
     let raw = match session.eval(&p.script).await {
         Ok(v) => v,
         Err(e) => {
+            metrics::JS_RUNTIMES_USED.dec();
             adapter.tier1.release_after_use(session);
             // The interrupt handler terminates scripts and the error surfaces
             // as JsEvaluation with "interrupted" in the message rather than
@@ -89,6 +94,7 @@ pub async fn handle_evaluate(
         }
     };
 
+    metrics::JS_RUNTIMES_USED.dec();
     adapter.tier1.release_after_use(session);
 
     // Try to parse the result string as a JSON value. If it succeeds, carry the
@@ -101,7 +107,12 @@ pub async fn handle_evaluate(
         Err(_) => (Value::String(raw), "string"),
     };
 
-    tracing::Span::current().record("elapsed_ms", start.elapsed().as_millis() as u64);
+    let elapsed = start.elapsed();
+    metrics::JS_EVALUATION_DURATION_SECONDS
+        .with_label_values(&["tier1"])
+        .observe(elapsed.as_secs_f64());
+
+    tracing::Span::current().record("elapsed_ms", elapsed.as_millis() as u64);
 
     Ok(json!({
         "result": result_val,

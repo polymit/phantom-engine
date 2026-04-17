@@ -240,7 +240,9 @@ async fn phase3_snapshot_and_verify() {
     )
     .unwrap();
     let resp = server.handle_request(&adapter, req, None).await.unwrap();
-    let res = resp.result.unwrap();
+    let res = resp
+        .result
+        .unwrap_or_else(|| panic!("Snapshot failed: {:?}", resp.error));
     let path = res.get("snapshot_path").unwrap().as_str().unwrap();
     let size = res.get("size_bytes").unwrap().as_u64().unwrap();
     assert!(size > 0);

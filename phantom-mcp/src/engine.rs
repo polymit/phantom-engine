@@ -33,15 +33,6 @@ const MAX_BLOCKING_THREADS: usize = 32;
 /// Global V8 platform initialiser. Safe to call multiple times.
 pub fn init_v8() {
     INIT.call_once(|| {
-        // SAFETY: set_var is technically unsafe in multi-threaded contexts (UB).
-        // However, this init_v8() is called via Once::call_once during EngineAdapter::new()
-        // which occurs during main() startup before any threads or the Tokio runtime are spawned.
-        if std::env::var("PHANTOM_SNAPSHOT_KEY").is_err() {
-            std::env::set_var(
-                "PHANTOM_SNAPSHOT_KEY",
-                "test-secret-key-do-not-use-in-production",
-            );
-        }
         phantom_js::init_v8_platform();
     });
 }
@@ -122,7 +113,7 @@ pub struct TabStore {
 }
 
 /// EngineAdapter is the single shared state type for the MCP server.
-/// It owns all subsystems. Clone is cheap — all fields are Arc<T>.
+/// It owns all subsystems. Clone is cheap — all fields are `Arc<T>`.
 #[derive(Clone)]
 pub struct EngineAdapter {
     /// HTTP client built from the first persona in the pool.

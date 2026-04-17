@@ -544,6 +544,7 @@ pub fn is_valid_session_id(session_id: &str) -> bool {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::{is_valid_session_id, SessionStorageManager, StorageError};
 

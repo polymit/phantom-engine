@@ -47,48 +47,58 @@ fn process_node_visibility(
     tree: &DomTree,
     layout_map: &LayoutMap,
     viewport: &ViewportBounds,
-    node_id: NodeId,
-    parent_visible: bool,
+    root_node_id: NodeId,
+    initial_parent_visible: bool,
     map: &mut VisibilityMap,
 ) {
-    if !parent_visible {
-        map.set(node_id, false);
-        for child in node_id.children(&tree.arena) {
-            process_node_visibility(tree, layout_map, viewport, child, false, map);
-        }
-        return;
-    }
+    let mut stack = vec![(root_node_id, initial_parent_visible)];
 
-    let Some(dom_node) = tree.get(node_id) else {
-        map.set(node_id, false);
-        for child in node_id.children(&tree.arena) {
-            process_node_visibility(tree, layout_map, viewport, child, false, map);
-        }
-        return;
-    };
-
-    let visible = match &dom_node.data {
-        NodeData::Document => true,
-        NodeData::Comment { .. } => false,
-        NodeData::Text { content } => !content.trim().is_empty(),
-        NodeData::Element { .. } => {
-            if let Some(bounds) = layout_map.get(&node_id) {
-                let c1 = dom_node.computed_display != Display::None;
-                let c2 = dom_node.computed_visibility != Visibility::Hidden;
-                let c3 = dom_node.computed_opacity > 0.0;
-                let c4 = bounds.width > 0.0;
-                let c5 = bounds.height > 0.0;
-                let c6 = bounds.intersects(viewport);
-                c1 && c2 && c3 && c4 && c5 && c6
-            } else {
-                false
+    while let Some((node_id, parent_visible)) = stack.pop() {
+        if !parent_visible {
+            map.set(node_id, false);
+            let mut children: Vec<_> = node_id.children(&tree.arena).collect();
+            children.reverse();
+            for child in children {
+                stack.push((child, false));
             }
+            continue;
         }
-    };
 
-    map.set(node_id, visible);
+        let Some(dom_node) = tree.get(node_id) else {
+            map.set(node_id, false);
+            let mut children: Vec<_> = node_id.children(&tree.arena).collect();
+            children.reverse();
+            for child in children {
+                stack.push((child, false));
+            }
+            continue;
+        };
 
-    for child in node_id.children(&tree.arena) {
-        process_node_visibility(tree, layout_map, viewport, child, visible, map);
+        let visible = match &dom_node.data {
+            NodeData::Document => true,
+            NodeData::Comment { .. } => false,
+            NodeData::Text { content } => !content.trim().is_empty(),
+            NodeData::Element { .. } => {
+                if let Some(bounds) = layout_map.get(&node_id) {
+                    let c1 = dom_node.computed_display != Display::None;
+                    let c2 = dom_node.computed_visibility != Visibility::Hidden;
+                    let c3 = dom_node.computed_opacity > 0.0;
+                    let c4 = bounds.width > 0.0;
+                    let c5 = bounds.height > 0.0;
+                    let c6 = bounds.intersects(viewport);
+                    c1 && c2 && c3 && c4 && c5 && c6
+                } else {
+                    false
+                }
+            }
+        };
+
+        map.set(node_id, visible);
+
+        let mut children: Vec<_> = node_id.children(&tree.arena).collect();
+        children.reverse();
+        for child in children {
+            stack.push((child, visible));
+        }
     }
 }

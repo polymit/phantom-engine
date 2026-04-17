@@ -3,7 +3,7 @@ use rquickjs::{Ctx, Result, class::Trace};
 
 /// JS-facing HTMLElement class.
 /// Stores only arena_id: u64 — per D-09, NEVER a Rust reference.
-/// Methods access the DOM via ctx.userdata::<PhantomDomHandle>().
+/// Methods access the DOM via `ctx.userdata::<PhantomDomHandle>()`.
 #[derive(Trace, Clone, rquickjs::JsLifetime)]
 #[rquickjs::class(rename = "HTMLElement")]
 pub struct JsHTMLElement {

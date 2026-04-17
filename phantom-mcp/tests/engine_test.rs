@@ -350,7 +350,16 @@ async fn scene_graph_uses_stored_viewport_dimensions() {
     use phantom_core::process_html;
     use phantom_mcp::engine::SessionPage;
 
-    let adapter = get_test_adapter().await.clone();
+    let adapter = Arc::new(
+        EngineAdapter::new(
+            1,
+            0,
+            1,
+            0,
+            phantom_session::ResourceBudget::default(),
+        )
+        .await,
+    );
     let server = McpServer::new_with_adapter(None, adapter.clone());
 
     let page = process_html(

@@ -29,7 +29,7 @@ pub struct NavigateResult {
 /// Called by the JSON-RPC dispatcher when `method == "browser_navigate"`.
 /// Returns a serialised [`NavigateResult`] on success, or a structured
 /// error value on failure. The caller is responsible for wrapping this
-/// in a [`JsonRpcResponse`].
+/// in a `JsonRpcResponse`.
 pub async fn handle_navigate(
     adapter: &EngineAdapter,
     params: Value,
@@ -118,11 +118,9 @@ pub async fn handle_navigate(
         // Only charge the CPU-bound pipeline cost (parse + layout + serialise)
         // against the session budget — NOT the network I/O wait time.
         let cpu_ms = result.pipeline_ms.unwrap_or(0);
-        if let Err(err) = adapter.enforce_budget_usage(
-            response_cct.len(),
-            cpu_ms,
-            response_cct.len(),
-        ) {
+        if let Err(err) =
+            adapter.enforce_budget_usage(response_cct.len(), cpu_ms, response_cct.len())
+        {
             return Err((
                 StatusCode::TOO_MANY_REQUESTS,
                 json!({ "error": { "code": "budget_exceeded", "message": err.to_string() } }),

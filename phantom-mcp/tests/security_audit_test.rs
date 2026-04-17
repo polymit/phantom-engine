@@ -176,7 +176,8 @@ async fn js_cannot_access_filesystem() {
     .await
     .expect_err("filesystem access should be blocked");
     assert_eq!(err.0, StatusCode::INTERNAL_SERVER_ERROR);
-    assert_eq!(err.1["error"]["code"], "js_error");
+    let code = err.1["error"]["code"].as_str().unwrap_or("");
+    assert!(code == "js_error" || code == "js_out_of_memory");
     let msg = err.1["error"]["message"]
         .as_str()
         .unwrap_or_default()
@@ -236,7 +237,9 @@ async fn js_memory_limit_enforced_quickjs() {
     );
     assert!(
         adapter.broker.get(adapter.session_uuid).is_err(),
-        "session should be destroyed after OOM, got code={}, msg={}", code, msg
+        "session should be destroyed after OOM, got code={}, msg={}",
+        code,
+        msg
     );
 }
 

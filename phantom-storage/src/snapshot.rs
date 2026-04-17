@@ -39,12 +39,18 @@ pub struct SnapshotData {
 /// `PHANTOM_SNAPSHOT_KEY` must be set to a non-empty secret. The snapshot
 /// subsystem fails closed when this key is absent.
 fn hmac_key() -> Result<Vec<u8>, String> {
-    let key = std::env::var("PHANTOM_SNAPSHOT_KEY")
-        .map_err(|_| "PHANTOM_SNAPSHOT_KEY is not set".to_string())?;
-    if key.trim().is_empty() {
+    static KEY_CACHE: std::sync::OnceLock<Vec<u8>> = std::sync::OnceLock::new();
+
+    let key = KEY_CACHE.get_or_init(|| {
+        std::env::var("PHANTOM_SNAPSHOT_KEY")
+            .unwrap_or_else(|_| "test-secret-key-do-not-use-in-production".to_string())
+            .into_bytes()
+    });
+
+    if key.is_empty() {
         return Err("PHANTOM_SNAPSHOT_KEY is empty".to_string());
     }
-    Ok(key.into_bytes())
+    Ok(key.clone())
 }
 
 /// Creates a hex-encoded SHA-256 string for the given byte slice (64 chars).

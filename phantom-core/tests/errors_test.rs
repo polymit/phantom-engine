@@ -1,4 +1,6 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use phantom_core::errors::*;
+use phantom_storage::StorageError;
 use std::io;
 
 #[test]
@@ -12,7 +14,9 @@ fn test_network_error_dns_display() {
 
 #[test]
 fn test_dom_error_element_not_found_display() {
-    let err = DomError::ElementNotFound { selector: ".btn".to_string() };
+    let err = DomError::ElementNotFound {
+        selector: ".btn".to_string(),
+    };
     assert_eq!(err.to_string(), "element not found: '.btn'");
 }
 
@@ -44,7 +48,20 @@ fn test_internal_error_runtime_pool_display() {
     assert_eq!(err.to_string(), "runtime pool exhausted (max 10)");
 }
 
-
+#[test]
+fn test_storage_error_converts_to_browser_internal() {
+    let err = StorageError::Io("disk full".to_string());
+    let converted: BrowserError = err.into();
+    match converted {
+        BrowserError::Internal(InternalError::Panic(msg)) => {
+            assert!(
+                msg.contains("io error: disk full"),
+                "unexpected converted message: {msg}"
+            );
+        }
+        other => panic!("wrong conversion variant: {other:?}"),
+    }
+}
 
 #[test]
 fn test_string_converts_to_js_error() {
@@ -79,7 +96,10 @@ fn test_navigation_error_too_many_redirects() {
         location: "http://b.com".to_string(),
         count: 5,
     };
-    assert_eq!(err.to_string(), "too many redirects for http://a.com: 5 redirects (last: http://b.com)");
+    assert_eq!(
+        err.to_string(),
+        "too many redirects for http://a.com: 5 redirects (last: http://b.com)"
+    );
 }
 
 #[test]

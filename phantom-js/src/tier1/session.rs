@@ -312,6 +312,7 @@ impl Tier1Session {
     /// Module-based loading (`load_shims`) is not available here because
     /// `AsyncRuntime::new()` does not configure a module loader. Direct eval
     /// is correct and matches the existing shim syntax test approach.
+    #[allow(clippy::expect_used)]
     pub async fn attach_dom(&mut self, tree: phantom_core::dom::DomTree) {
         let mut rng = rand::rngs::OsRng;
         let canvas_noise_seed = rng.next_u64();
@@ -374,7 +375,7 @@ impl Tier1Session {
 
     /// Execute a JavaScript string and return the result as a String.
     ///
-    /// Uses async_with! — NEVER use ctx.with() in this codebase.
+    /// Uses async_with! — never use the blocking context accessor in this codebase.
     /// Drains microtasks after execution (required for Promises).
     pub async fn eval(&self, script: &str) -> Result<String, PhantomJsError> {
         let now_ms = elapsed_ms_u64(self.interrupt_epoch);

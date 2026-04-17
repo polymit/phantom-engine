@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use phantom_storage::snapshot::{
     build_snapshot, read_manifest_from_snapshot, verify_manifest, SnapshotData,
 };

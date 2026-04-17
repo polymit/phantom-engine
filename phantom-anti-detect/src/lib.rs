@@ -298,6 +298,7 @@ pub struct BehaviorTiming {
 }
 
 impl BehaviorTiming {
+    #[allow(clippy::expect_used)]
     pub fn new() -> Self {
         Self {
             click_hesitation: LogNormal::new(4.2, 0.9).expect("valid lognormal params"),

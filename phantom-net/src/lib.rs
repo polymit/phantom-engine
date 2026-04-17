@@ -260,6 +260,7 @@ fn normalize_authority(input: &str) -> Result<String, PhantomNetError> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::{AltSvcInfo, PhantomNetError, SmartNetworkClient, Transport};
 

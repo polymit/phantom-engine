@@ -33,6 +33,9 @@ pub struct NavigationResult {
     pub cct: String,
     pub node_count: usize,
     pub tree: phantom_core::DomTree,
+    /// CPU-only pipeline time in milliseconds (parse + layout + serialise).
+    /// Excludes network I/O wait time.
+    pub pipeline_ms: Option<u64>,
 }
 
 impl std::fmt::Debug for NavigationResult {
@@ -186,7 +189,9 @@ pub async fn navigate(
         let viewport_height = config.viewport_height;
         let task_hint = config.task_hint.clone();
 
-        let (tree, cct, node_count) = tokio::task::spawn_blocking(move || {
+        let (tree, cct, node_count, pipeline_ms) = tokio::task::spawn_blocking(move || {
+            let pipeline_start = std::time::Instant::now();
+
             let page = process_html(&html, &final_url_clone, viewport_width, viewport_height)
                 .map_err(|e| NavigationError::Pipeline {
                     url: final_url_clone.clone(),
@@ -212,8 +217,9 @@ pub async fn navigate(
 
             let cct = HeadlessSerializer::serialise(&page, &serialiser_config);
             let node_count = cct.lines().filter(|line| !line.starts_with("##")).count();
+            let pipeline_elapsed = pipeline_start.elapsed().as_millis() as u64;
 
-            Ok::<_, NavigationError>((page.tree, cct, node_count))
+            Ok::<_, NavigationError>((page.tree, cct, node_count, pipeline_elapsed))
         })
         .await
         .map_err(|e| NavigationError::Pipeline {
@@ -222,8 +228,8 @@ pub async fn navigate(
         })??;
 
         info!(
-            "Navigation successful: status {}, nodes {} for url {}",
-            response.status, node_count, final_url
+            "Navigation successful: status {}, nodes {}, pipeline {}ms for url {}",
+            response.status, node_count, pipeline_ms, final_url
         );
 
         return Ok(NavigationResult {
@@ -232,6 +238,7 @@ pub async fn navigate(
             cct,
             node_count,
             tree,
+            pipeline_ms: Some(pipeline_ms),
         });
     }
 }

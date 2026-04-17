@@ -2,6 +2,7 @@
 name = "phantom-session"
 version = "0.1.0"
 edition = "2021"
+license = "Apache-2.0"
 
 [dependencies]
 uuid = { version = "1", features = ["v4"] }
@@ -9,3 +10,10 @@ crossbeam = "0.8"
 tokio = { version = "1", features = ["full"] }
 thiserror = "1"
 tracing = "=0.1.44"
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports", "async_futures"] }
+
+[[bench]]
+name = "session_bench"
+harness = false

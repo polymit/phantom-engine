@@ -2,6 +2,7 @@
 name = "phantom-js"
 version = "0.1.0"
 edition = "2024"
+license = "Apache-2.0"
 
 [dependencies]
 rquickjs = { version = "=0.11.0", default-features = false, features = ["std", "futures", "loader", "macro", "classes", "disable-assertions"] }
@@ -23,6 +24,11 @@ serde_json = "1"
 [dev-dependencies]
 phantom-serializer = { path = "../phantom-serializer" }
 deno_core = "=0.397.0"
+criterion = { version = "0.5", features = ["html_reports"] }
 
 [build-dependencies]
 deno_core = "=0.397.0"
+
+[[bench]]
+name = "eval_bench"
+harness = false

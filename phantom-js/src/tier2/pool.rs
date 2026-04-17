@@ -2,6 +2,7 @@ use std::cell::RefCell;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Instant;
 
+use crate::circuit_breaker::CircuitBreaker;
 use crate::error::PhantomJsError;
 use crate::tier2::session::Tier2Session;
 
@@ -18,6 +19,7 @@ pub struct Tier2Pool {
     live_count: AtomicUsize,
     max_count: usize,
     max_heap_bytes: Option<usize>,
+    circuit_breaker: CircuitBreaker,
 }
 
 const STALE_SECS: u64 = 300; // 5 minutes
@@ -28,6 +30,7 @@ impl Tier2Pool {
             live_count: AtomicUsize::new(0),
             max_count,
             max_heap_bytes,
+            circuit_breaker: CircuitBreaker::new(),
         };
         pool.pre_warm(pre_warm_count);
         pool
@@ -65,6 +68,11 @@ impl Tier2Pool {
         );
         let _guard = span.enter();
         let start = std::time::Instant::now();
+        if !self.circuit_breaker.is_permitted() {
+            return Err(PhantomJsError::PoolExhausted {
+                max: self.max_count,
+            });
+        }
 
         let session_result = (|| {
             // 1. Check thread-local free list
@@ -82,20 +90,26 @@ impl Tier2Pool {
             });
 
             if let Some(session) = pooled {
+                self.circuit_breaker.record_success();
                 return Ok(session);
             }
 
             // 2. Try to create a new one if limit not reached
             if !self.try_reserve_slot() {
+                self.circuit_breaker.record_failure();
                 return Err(PhantomJsError::PoolExhausted {
                     max: self.max_count,
                 });
             }
 
             match Tier2Session::new(self.max_heap_bytes) {
-                Ok(session) => Ok(session),
+                Ok(session) => {
+                    self.circuit_breaker.record_success();
+                    Ok(session)
+                }
                 Err(err) => {
                     self.live_count.fetch_sub(1, Ordering::AcqRel);
+                    self.circuit_breaker.record_failure();
                     Err(err)
                 }
             }
@@ -150,6 +164,15 @@ impl Tier2Pool {
                 Err(next) => cur = next,
             }
         }
+    }
+
+    pub fn circuit_breaker_state(&self) -> usize {
+        self.circuit_breaker.state()
+    }
+
+    pub fn available(&self) -> usize {
+        self.max_count
+            .saturating_sub(self.live_count.load(Ordering::Acquire))
     }
 
     /// Shut down the pool for the current thread and destroy all free sessions.

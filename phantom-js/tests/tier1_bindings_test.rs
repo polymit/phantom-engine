@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 #[tokio::test]
 async fn test_tier1_eval_basic_js() {
     phantom_js::init_v8_platform();

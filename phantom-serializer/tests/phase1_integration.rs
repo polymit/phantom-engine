@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(test)]
 mod phase1_integration {
     use phantom_core::process_html;

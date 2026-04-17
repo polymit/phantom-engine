@@ -64,6 +64,7 @@ pub fn extract_geometry(
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::extract_geometry;
     use phantom_core::layout::bounds::ViewportBounds;

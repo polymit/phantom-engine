@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use cookie_store::CookieStore;
 use phantom_anti_detect::{ChromeProfile, GpuProfile, PersonaPool};
 use phantom_core::process_html;

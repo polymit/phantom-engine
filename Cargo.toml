@@ -11,3 +11,5 @@ members = [
     "phantom-anti-detect"
 ]
 
+[workspace.dev-dependencies]
+criterion = "0.5"

@@ -9,7 +9,11 @@ pub const DEFAULT_SESSIONS_PER_HOUR: u32 = 100;
 #[derive(thiserror::Error, Debug)]
 pub enum NetworkError {
     #[error("DNS resolution failed for {host}")]
-    Dns { host: String, #[source] source: io::Error },
+    Dns {
+        host: String,
+        #[source]
+        source: io::Error,
+    },
 
     #[error("TLS handshake failed: {0}")]
     Tls(String),
@@ -60,7 +64,11 @@ pub enum NavigationError {
     Timeout { url: String, timeout_ms: u64 },
 
     #[error("too many redirects for {url}: {count} redirects (last: {location})")]
-    TooManyRedirects { url: String, location: String, count: u32 },
+    TooManyRedirects {
+        url: String,
+        location: String,
+        count: u32,
+    },
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -69,7 +77,11 @@ pub enum BrowserSessionError {
     Expired { session_id: String },
 
     #[error("budget exceeded: {resource} {used}/{limit}")]
-    BudgetExceeded { resource: String, used: u64, limit: u64 },
+    BudgetExceeded {
+        resource: String,
+        used: u64,
+        limit: u64,
+    },
 
     #[error("tab not found: {tab_id}")]
     TabNotFound { tab_id: String },
@@ -105,16 +117,51 @@ pub enum BrowserError {
     Internal(#[from] InternalError),
 }
 
-
-
 impl From<String> for JsError {
     fn from(msg: String) -> Self {
-        JsError::UncaughtException { message: msg, stack: String::new() }
+        JsError::UncaughtException {
+            message: msg,
+            stack: String::new(),
+        }
     }
 }
 
 impl From<&str> for JsError {
     fn from(msg: &str) -> Self {
-        JsError::UncaughtException { message: msg.to_string(), stack: String::new() }
+        JsError::UncaughtException {
+            message: msg.to_string(),
+            stack: String::new(),
+        }
+    }
+}
+
+impl From<phantom_storage::StorageError> for BrowserError {
+    fn from(err: phantom_storage::StorageError) -> Self {
+        BrowserError::Internal(InternalError::Panic(err.to_string()))
+    }
+}
+
+impl From<phantom_session::SessionError> for BrowserSessionError {
+    fn from(err: phantom_session::SessionError) -> Self {
+        match err {
+            phantom_session::SessionError::NotFound(id) => BrowserSessionError::Expired {
+                session_id: id.to_string(),
+            },
+            phantom_session::SessionError::BudgetExceeded {
+                resource,
+                used,
+                limit,
+            } => BrowserSessionError::BudgetExceeded {
+                resource,
+                used,
+                limit,
+            },
+        }
+    }
+}
+
+impl From<phantom_session::SessionError> for BrowserError {
+    fn from(err: phantom_session::SessionError) -> Self {
+        BrowserError::Session(err.into())
     }
 }

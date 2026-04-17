@@ -2,6 +2,7 @@
 name    = "phantom-net"
 version = "0.1.0"
 edition = "2021"
+license = "Apache-2.0"
 
 [dependencies]
 wreq      = { version = "=6.0.0-rc.28", features = ["prefix-symbols"] }

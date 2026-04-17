@@ -1,0 +1,51 @@
+---
+name: Daily Security Scan
+
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+jobs:
+  cargo-audit-daily:
+    name: Daily cargo-audit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Run cargo-audit
+        uses: actions-rust-lang/audit@v1
+        with:
+          denyWarnings: true
+          createIssues: true
+
+  cargo-deny-daily:
+    name: Daily cargo-deny (advisories + sources)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Run cargo-deny (advisories and sources)
+        uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check advisories sources
+
+  docker-scan:
+    name: Docker Image Vulnerability Scan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Build image for scan
+        run: docker build -t phantom-scan:latest .
+      - name: Run Trivy vulnerability scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: phantom-scan:latest
+          format: table
+          exit-code: "1"
+          ignore-unfixed: true
+          severity: CRITICAL,HIGH

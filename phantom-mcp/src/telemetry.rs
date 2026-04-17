@@ -6,14 +6,13 @@
 //! RUST_LOG controls log level: RUST_LOG=phantom=debug,tower_http=warn
 //! LOG_FORMAT controls output: json (production) | pretty | compact (default)
 
-use tracing_subscriber::{fmt, EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
+use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 pub fn init() {
-    let env_filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new("info"));
+    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
 
     let format = std::env::var("LOG_FORMAT").unwrap_or_else(|_| "compact".to_string());
-    
+
     let base_subscriber = tracing_subscriber::registry().with(env_filter);
 
     match format.as_str() {
@@ -23,21 +22,16 @@ pub fn init() {
                 .init();
         }
         "pretty" => {
-            base_subscriber
-                .with(fmt::layer().pretty())
-                .init();
+            base_subscriber.with(fmt::layer().pretty()).init();
         }
         _ => {
-            base_subscriber
-                .with(fmt::layer().compact())
-                .init();
+            base_subscriber.with(fmt::layer().compact()).init();
         }
     }
 }
 
 pub fn init_test() {
-    let env_filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new("debug"));
+    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("debug"));
 
     let _ = tracing_subscriber::registry()
         .with(env_filter)

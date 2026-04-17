@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 #[test]
 fn test_v8_platform_initialises_without_panic() {
     // This test verifies that init_v8_platform() does not crash.

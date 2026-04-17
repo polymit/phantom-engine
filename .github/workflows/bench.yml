@@ -1,0 +1,57 @@
+---
+name: Benchmarks (Criterion)
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 4 * * 1'
+
+jobs:
+  bench:
+    name: Criterion Benchmarks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Set up sccache
+        uses: mozilla-actions/sccache-action@v0.0.9
+      - name: Cache Cargo and target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            target/
+          key: ${{ runner.os }}-bench-${{ hashFiles('**/Cargo.lock') }}
+      - name: Run criterion benchmarks
+        run: |
+          cargo bench --workspace -- --output-format=bencher 2>&1 | tee bench_output.txt
+      - name: Upload benchmark artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: criterion-results-${{ github.sha }}
+          path: |
+            target/criterion/
+            bench_output.txt
+          retention-days: 90
+      - name: Track benchmark history
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          tool: cargo
+          output-file-path: bench_output.txt
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          auto-push: true
+          alert-threshold: "110%"
+          comment-on-alert: true
+          fail-on-alert: false
+          benchmark-data-dir-path: docs/benchmarks
+      - name: Print performance goal checklist
+        run: |
+          echo "=== Performance Goals Check ==="
+          echo "CCT 1000-node serialisation GOAL: <5ms"
+          echo "Session startup QuickJS GOAL: <10ms"
+          echo "Session startup V8 GOAL: <50ms"
+          echo "Review target/criterion HTML reports for trend details"

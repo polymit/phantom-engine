@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use phantom_core::process_html;
 use phantom_js::tier1::session::Tier1Session;
 use phantom_serializer::{HeadlessSerializer, SerialiserConfig};

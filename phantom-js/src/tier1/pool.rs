@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+use crate::circuit_breaker::CircuitBreaker;
 use crate::error::PhantomJsError;
 use crate::tier1::session::Tier1Session;
 use tracing::Instrument;
@@ -10,6 +11,7 @@ pub struct Tier1Pool {
     // acquire() reserves a slot before constructing Tier1Session.
     live_count: AtomicUsize,
     max_count: usize,
+    circuit_breaker: CircuitBreaker,
 }
 
 impl Tier1Pool {
@@ -19,6 +21,7 @@ impl Tier1Pool {
         let pool = Arc::new(Self {
             live_count: AtomicUsize::new(0),
             max_count,
+            circuit_breaker: CircuitBreaker::new(),
         });
         pool.pre_warm(pre_warm_count).await;
         pool
@@ -48,7 +51,14 @@ impl Tier1Pool {
         );
         async move {
             let start = std::time::Instant::now();
+            if !self.circuit_breaker.is_permitted() {
+                return Err(PhantomJsError::PoolExhausted {
+                    max: self.max_count,
+                });
+            }
+
             if !self.try_reserve_slot() {
+                self.circuit_breaker.record_failure();
                 return Err(PhantomJsError::PoolExhausted {
                     max: self.max_count,
                 });
@@ -58,16 +68,18 @@ impl Tier1Pool {
                 Ok(session) => session,
                 Err(err) => {
                     self.live_count.fetch_sub(1, Ordering::AcqRel);
+                    self.circuit_breaker.record_failure();
                     return Err(err);
                 }
             };
-            
+
+            self.circuit_breaker.record_success();
             let waited_ms = start.elapsed().as_millis() as u64;
             tracing::Span::current().record("waited_ms", waited_ms);
             if waited_ms > 100 {
                 tracing::warn!("Tier1 pool acquisition slow — pre-warm more runtimes");
             }
-            
+
             Ok(session)
         }
         .instrument(span)
@@ -101,5 +113,14 @@ impl Tier1Pool {
                 Err(next) => cur = next,
             }
         }
+    }
+
+    pub fn circuit_breaker_state(&self) -> usize {
+        self.circuit_breaker.state()
+    }
+
+    pub fn available(&self) -> usize {
+        self.max_count
+            .saturating_sub(self.live_count.load(Ordering::Acquire))
     }
 }

@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 #[test]
 fn test_tier2_snapshot_loads() {
     // This verifies:

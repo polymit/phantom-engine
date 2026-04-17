@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 fn main() {
     // Tell cargo to re-run build.rs if JS files change
     println!("cargo:rerun-if-changed=js/browser_shims.js");

@@ -176,6 +176,7 @@ pub fn resolve_zindex(tree: &DomTree, geometry: &GeometryMap) -> ZIndexMap {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::{advance_stamp, resolve_zindex};
     use phantom_core::layout::bounds::ViewportBounds;

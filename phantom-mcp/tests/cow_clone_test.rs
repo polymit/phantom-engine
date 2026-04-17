@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use phantom_mcp::engine::get_test_adapter;
 use phantom_mcp::{JsonRpcResponse, McpServer};
 use phantom_session::{EngineKind, ResourceBudget, SessionState};

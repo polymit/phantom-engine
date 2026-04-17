@@ -3,6 +3,7 @@ pub mod snapshot;
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, OnceLock};
 
 #[derive(Debug, thiserror::Error)]
 pub enum StorageError {
@@ -18,6 +19,19 @@ pub enum StorageError {
     PathTraversal(String),
     #[error("serialisation error: {0}")]
     Serialise(String),
+}
+
+type StorageQuotaObserver = Arc<dyn Fn(i64) + Send + Sync>;
+static STORAGE_QUOTA_OBSERVER: OnceLock<StorageQuotaObserver> = OnceLock::new();
+
+pub fn install_storage_quota_observer(observer: StorageQuotaObserver) {
+    let _ = STORAGE_QUOTA_OBSERVER.set(observer);
+}
+
+fn report_storage_quota(bytes: i64) {
+    if let Some(observer) = STORAGE_QUOTA_OBSERVER.get() {
+        observer(bytes);
+    }
 }
 
 pub fn normalise_origin(origin: &str) -> String {
@@ -127,6 +141,9 @@ impl SessionStorageManager {
         }
 
         std::fs::rename(&tmp_path, &final_path).map_err(|e| StorageError::Io(e.to_string()))?;
+        if let Ok(metadata) = std::fs::metadata(&final_path) {
+            report_storage_quota(metadata.len() as i64);
+        }
 
         Ok(())
     }
@@ -220,6 +237,7 @@ impl SessionStorageManager {
         db.insert(key.as_bytes(), value.as_bytes())
             .map_err(|e| StorageError::Sled(e.to_string()))?;
         db.flush().map_err(|e| StorageError::Sled(e.to_string()))?;
+        report_storage_quota(value.len() as i64);
         Ok(())
     }
 
@@ -347,6 +365,7 @@ impl SessionStorageManager {
             rusqlite::params![db_name, store_name, key, value],
         )
         .map_err(|e| StorageError::Sqlite(e.to_string()))?;
+        report_storage_quota(value.len() as i64);
         Ok(())
     }
 
@@ -469,6 +488,7 @@ impl SessionStorageManager {
             .map_err(|e| StorageError::Sled(e.to_string()))?;
         meta.flush()
             .map_err(|e| StorageError::Sled(e.to_string()))?;
+        report_storage_quota(body.len() as i64);
 
         Ok(key)
     }

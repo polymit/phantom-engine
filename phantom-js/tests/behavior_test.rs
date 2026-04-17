@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 // behavior_test.rs — verifies statistical properties of BehaviorEngine
 // and geometric properties of the Bezier mouse path generator.
 //

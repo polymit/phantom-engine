@@ -54,97 +54,110 @@ pub async fn handle_navigate(
         let start = std::time::Instant::now();
 
         let budget = adapter
-        .broker
-        .get(expected_key)
-        .map(|s| s.budget)
-        .unwrap_or_default();
+            .broker
+            .get(adapter.session_uuid)
+            .map(|s| s.budget)
+            .unwrap_or_default();
 
-    let config = NavigationConfig {
-        viewport_width: params.viewport_width.unwrap_or(1280.0),
-        viewport_height: params.viewport_height.unwrap_or(720.0),
-        task_hint: params.task_hint,
-        max_network_bytes: Some(budget.max_network_bytes),
-        ..Default::default()
-    };
+        let config = NavigationConfig {
+            viewport_width: params.viewport_width.unwrap_or(1280.0),
+            viewport_height: params.viewport_height.unwrap_or(720.0),
+            task_hint: params.task_hint,
+            max_network_bytes: Some(budget.max_network_bytes),
+            ..Default::default()
+        };
 
-    let result = navigate(&adapter.network, &params.url, &config)
-        .await
-        .map_err(|e| {
-            let (code, http_status) = match &e {
-                NavigationError::HttpError { status, .. } => {
-                    (format!("http_error_{}", status), StatusCode::BAD_GATEWAY)
-                }
-                NavigationError::Network { .. } => {
-                    ("network_error".to_string(), StatusCode::BAD_GATEWAY)
-                }
-                NavigationError::Encoding { .. } => (
-                    "encoding_error".to_string(),
-                    StatusCode::UNPROCESSABLE_ENTITY,
-                ),
-                NavigationError::Pipeline { .. } => (
-                    "pipeline_error".to_string(),
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                ),
-                NavigationError::RedirectResponse { status, .. } => (
-                    format!("redirect_response_{}", status),
-                    StatusCode::BAD_GATEWAY,
-                ),
-                NavigationError::AllAttemptsFailed { .. } => {
-                    metrics::CIRCUIT_BREAKER_ERRORS_TOTAL.with_label_values(&["navigate"]).inc();
-                    ("all_attempts_failed".to_string(), StatusCode::BAD_GATEWAY)
-                }
-            };
-            (
-                http_status,
-                json!({ "error": { "code": code, "message": e.to_string() } }),
-            )
-        })?;
+        let result = navigate(&adapter.network, &params.url, &config)
+            .await
+            .map_err(|e| {
+                let (code, http_status) = match &e {
+                    NavigationError::HttpError { status, .. } => {
+                        (format!("http_error_{}", status), StatusCode::BAD_GATEWAY)
+                    }
+                    NavigationError::Network { .. } => {
+                        ("network_error".to_string(), StatusCode::BAD_GATEWAY)
+                    }
+                    NavigationError::Encoding { .. } => (
+                        "encoding_error".to_string(),
+                        StatusCode::UNPROCESSABLE_ENTITY,
+                    ),
+                    NavigationError::Pipeline { .. } => (
+                        "pipeline_error".to_string(),
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                    ),
+                    NavigationError::RedirectResponse { status, .. } => (
+                        format!("redirect_response_{}", status),
+                        StatusCode::BAD_GATEWAY,
+                    ),
+                    NavigationError::AllAttemptsFailed { .. } => {
+                        ("all_attempts_failed".to_string(), StatusCode::BAD_GATEWAY)
+                    }
+                };
+                (
+                    http_status,
+                    json!({ "error": { "code": code, "message": e.to_string() } }),
+                )
+            })?;
 
-    let response_url = result.url.clone();
-    let response_status = result.status;
-    let response_cct = result.cct.clone();
-    let response_node_count = result.node_count;
-    let delta_root = result.tree.document_root;
+        let response_url = result.url.clone();
+        let response_status = result.status;
+        let response_cct = result.cct.clone();
+        let response_node_count = result.node_count;
+        let delta_root = result.tree.document_root;
 
-    tracing::Span::current().record("status", response_status);
-    let elapsed = start.elapsed();
-    tracing::Span::current().record("elapsed_ms", elapsed.as_millis() as u64);
-    tracing::Span::current().record("html_bytes", response_cct.len() as u64);
+        tracing::Span::current().record("status", response_status);
+        let elapsed = start.elapsed();
+        tracing::Span::current().record("elapsed_ms", elapsed.as_millis() as u64);
+        tracing::Span::current().record("html_bytes", response_cct.len() as u64);
 
-    metrics::HTTP_REQUESTS_TOTAL
-        .with_label_values(&[&response_status.to_string()])
-        .inc();
-    metrics::HTTP_REQUEST_DURATION_SECONDS.observe(elapsed.as_secs_f64());
+        metrics::HTTP_REQUESTS_TOTAL
+            .with_label_values(&[&response_status.to_string()])
+            .inc();
+        metrics::HTTP_REQUEST_DURATION_SECONDS.observe(elapsed.as_secs_f64());
 
-    // Persist the parsed page so browser_get_scene_graph can re-serialise
-    // with different scroll/mode parameters without re-fetching.
-    let stored = adapter.store_page_if_current(
-        expected_key,
-        SessionPage::with_viewport(
-            result.tree,
-            result.url.clone(),
-            result.status,
-            config.viewport_width,
-            config.viewport_height,
-        ),
-    );
-    if !stored {
-        tracing::debug!("navigate result dropped because active tab changed during navigation");
-    }
-    if let Some(node_id) = delta_root {
-        adapter.inject_cct_delta(CctDelta::Update {
-            node_id,
-            display: None,
-            bounds: None,
-        });
-    }
+        // Only charge the CPU-bound pipeline cost (parse + layout + serialise)
+        // against the session budget — NOT the network I/O wait time.
+        let cpu_ms = result.pipeline_ms.unwrap_or(0);
+        if let Err(err) = adapter.enforce_budget_usage(
+            response_cct.len(),
+            cpu_ms,
+            response_cct.len(),
+        ) {
+            return Err((
+                StatusCode::TOO_MANY_REQUESTS,
+                json!({ "error": { "code": "budget_exceeded", "message": err.to_string() } }),
+            ));
+        }
 
-    Ok(json!({
-        "url":        response_url,
-        "status":     response_status,
-        "cct":        response_cct,
-        "node_count": response_node_count,
-    }))
+        // Persist the parsed page so browser_get_scene_graph can re-serialise
+        // with different scroll/mode parameters without re-fetching.
+        let stored = adapter.store_page_if_current(
+            expected_key,
+            SessionPage::with_viewport(
+                result.tree,
+                result.url.clone(),
+                result.status,
+                config.viewport_width,
+                config.viewport_height,
+            ),
+        );
+        if !stored {
+            tracing::debug!("navigate result dropped because active tab changed during navigation");
+        }
+        if let Some(node_id) = delta_root {
+            adapter.inject_cct_delta(CctDelta::Update {
+                node_id,
+                display: None,
+                bounds: None,
+            });
+        }
+
+        Ok(json!({
+            "url":        response_url,
+            "status":     response_status,
+            "cct":        response_cct,
+            "node_count": response_node_count,
+        }))
     }
     .instrument(span)
     .await

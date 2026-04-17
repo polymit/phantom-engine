@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use phantom_mcp::engine::{get_test_adapter, init_v8};
 use phantom_mcp::{EngineAdapter, McpServer};
 use std::sync::Arc;

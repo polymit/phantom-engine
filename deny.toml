@@ -1,0 +1,69 @@
+# deny.toml — Phantom Engine dependency policy
+# Enforces dependency security limits and licensing parameters.
+
+[graph]
+targets = [
+  "x86_64-unknown-linux-gnu",
+  "aarch64-unknown-linux-gnu",
+]
+all-features = false
+
+[advisories]
+version = 2
+ignore = []
+
+[licenses]
+version = 2
+allow = [
+  "Apache-2.0",
+  "Apache-2.0 WITH LLVM-exception",
+  "MIT",
+  "MIT-0",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "ISC",
+  "Zlib",
+  "Unicode-3.0",
+  "OpenSSL",
+  "CC0-1.0",
+  "MPL-2.0",
+  "CDLA-Permissive-2.0",
+]
+confidence-threshold = 0.8
+
+# wreq-util is LGPL-3.0 — accepted because it is a transitive utility
+# crate from wreq (our TLS-fingerprint-safe HTTP client). wreq itself
+# is MIT-licensed. wreq-util contains no code we modify or link statically
+# in a way that triggers LGPL copyleft obligations.
+[[licenses.exceptions]]
+allow = ["LGPL-3.0"]
+crate = "wreq-util"
+
+[bans]
+multiple-versions = "warn"
+wildcards = "allow"
+deny = [
+  { crate = "reqwest", reason = "bot-detectable TLS fingerprint" },
+  { crate = "rquest", reason = "missing JA4H controls, replaced by wreq" },
+  { crate = "hyper-rustls", reason = "bot-detectable TLS fingerprint" },
+  { crate = "native-tls", reason = "uses system TLS, detectable fingerprint" },
+  { crate = "openssl-sys", reason = "causes symbol conflicts with boring-sys" },
+  { crate = "rusty_v8", reason = "old unmaintained crate name, use v8 instead" },
+]
+# anyhow is a transitive dep of deno_core — we cannot remove it without
+# forking deno_core. Custom code should use thiserror.
+skip = [
+  { crate = "anyhow", reason = "transitive from deno_core, not used directly" },
+]
+
+[[bans.features]]
+crate = "rquickjs"
+deny = ["parallel"]
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "warn"
+allow-registry = [
+  "https://github.com/rust-lang/crates.io-index",
+  "sparse+https://index.crates.io/",
+]

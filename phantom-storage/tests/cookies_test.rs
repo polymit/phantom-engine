@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use cookie_store::CookieStore;
 use phantom_storage::SessionStorageManager;
 use tempfile::tempdir;

@@ -16,6 +16,7 @@ pub struct BehaviorEngine {
 }
 
 impl BehaviorEngine {
+    #[allow(clippy::expect_used)]
     pub fn new() -> Self {
         Self {
             // EXACT parameters from blueprint — DO NOT CHANGE

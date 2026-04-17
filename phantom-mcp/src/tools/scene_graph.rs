@@ -34,70 +34,76 @@ pub async fn handle_get_scene_graph(
     );
     async move {
         let params: SceneGraphParams = serde_json::from_value(params).map_err(|e| {
-        (
-            StatusCode::BAD_REQUEST,
-            json!({ "error": { "code": "invalid_params", "message": e.to_string() } }),
-        )
-    })?;
-
-    let (page, url, viewport_width, viewport_height) =
-        adapter.get_page_with_viewport().await.ok_or_else(|| {
             (
-                StatusCode::CONFLICT,
-                json!({ "error": {
-                    "code": "no_page_loaded",
-                    "message": "Call browser_navigate before browser_get_scene_graph"
-                }}),
+                StatusCode::BAD_REQUEST,
+                json!({ "error": { "code": "invalid_params", "message": e.to_string() } }),
             )
         })?;
 
-    let mode = match params.mode.as_deref() {
-        Some("selective") => SerialiserMode::Selective,
-        _ => SerialiserMode::Full,
-    };
-    
-    let start = std::time::Instant::now();
+        let (page, url, viewport_width, viewport_height) =
+            adapter.get_page_with_viewport().await.ok_or_else(|| {
+                (
+                    StatusCode::CONFLICT,
+                    json!({ "error": {
+                        "code": "no_page_loaded",
+                        "message": "Call browser_navigate before browser_get_scene_graph"
+                    }}),
+                )
+            })?;
 
-    // Record task_hint before it moves into config
-    if let Some(hint) = &params.task_hint {
-        tracing::Span::current().record("task_hint", hint.as_str());
-    }
+        let mode = match params.mode.as_deref() {
+            Some("selective") => SerialiserMode::Selective,
+            _ => SerialiserMode::Full,
+        };
 
-    let config = SerialiserConfig {
-        url: url.clone(),
-        scroll_x: params.scroll_x.unwrap_or(0.0),
-        scroll_y: params.scroll_y.unwrap_or(0.0),
-        viewport_width,
-        viewport_height,
-        total_height: viewport_height,
-        mode: mode.clone(),
-        task_hint: params.task_hint,
-    };
+        let start = std::time::Instant::now();
 
-    let cct = HeadlessSerializer::serialise(&page, &config);
+        // Record task_hint before it moves into config
+        if let Some(hint) = &params.task_hint {
+            tracing::Span::current().record("task_hint", hint.as_str());
+        }
 
-    let node_count = cct.lines().filter(|l| !l.starts_with("##")).count();
+        let config = SerialiserConfig {
+            url: url.clone(),
+            scroll_x: params.scroll_x.unwrap_or(0.0),
+            scroll_y: params.scroll_y.unwrap_or(0.0),
+            viewport_width,
+            viewport_height,
+            total_height: viewport_height,
+            mode: mode.clone(),
+            task_hint: params.task_hint,
+        };
 
-    let mode_str = match mode {
-        SerialiserMode::Full => "full",
-        SerialiserMode::Selective => "selective",
-    };
+        let cct = HeadlessSerializer::serialise(&page, &config);
 
-    let elapsed = start.elapsed();
-    metrics::DOM_SNAPSHOT_DURATION_SECONDS.observe(elapsed.as_secs_f64());
-    metrics::DOM_NODES_SERIALISED.observe(node_count as f64);
+        let node_count = cct.lines().filter(|l| !l.starts_with("##")).count();
 
-    tracing::Span::current().record("mode", mode_str);
-    tracing::Span::current().record("node_count", node_count as u64);
-    tracing::Span::current().record("cct_bytes", cct.len() as u64);
-    tracing::Span::current().record("elapsed_ms", elapsed.as_millis() as u64);
+        let mode_str = match mode {
+            SerialiserMode::Full => "full",
+            SerialiserMode::Selective => "selective",
+        };
 
-    Ok(json!({
-        "cct":        cct,
-        "node_count": node_count,
-        "mode":       mode_str,
-        "url":        url,
-    }))
+        let elapsed = start.elapsed();
+        metrics::DOM_SNAPSHOT_DURATION_SECONDS.observe(elapsed.as_secs_f64());
+        metrics::DOM_NODES_SERIALISED.observe(node_count as f64);
+        if let Err(err) = adapter.enforce_budget_usage(cct.len(), elapsed.as_millis() as u64, 0) {
+            return Err((
+                StatusCode::TOO_MANY_REQUESTS,
+                json!({ "error": { "code": "budget_exceeded", "message": err.to_string() } }),
+            ));
+        }
+
+        tracing::Span::current().record("mode", mode_str);
+        tracing::Span::current().record("node_count", node_count as u64);
+        tracing::Span::current().record("cct_bytes", cct.len() as u64);
+        tracing::Span::current().record("elapsed_ms", elapsed.as_millis() as u64);
+
+        Ok(json!({
+            "cct":        cct,
+            "node_count": node_count,
+            "mode":       mode_str,
+            "url":        url,
+        }))
     }
     .instrument(span)
     .await

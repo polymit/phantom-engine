@@ -2,6 +2,7 @@
 name = "phantom-serializer"
 version = "0.1.0"
 edition = "2021"
+license = "Apache-2.0"
 
 [dependencies]
 phantom-core = { path = "../phantom-core" }
@@ -13,3 +14,10 @@ serde = { version = "1", features = ["derive"] }
 indextree = "=4.8.0"
 once_cell = "1.21.4"
 rustc-hash = "1"
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "cct_bench"
+harness = false

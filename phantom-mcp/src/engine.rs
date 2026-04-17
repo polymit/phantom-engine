@@ -1,16 +1,20 @@
 use std::collections::{HashMap, VecDeque};
 use std::io::{BufReader, Cursor, Read};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering as AtomicOrdering};
 use std::sync::Arc;
 
+use crate::metrics;
 use parking_lot::Mutex;
 use phantom_anti_detect::{Persona, PersonaPool};
-use phantom_core::{rebuild_page_from_tree, DomTree, ParsedPage};
+use phantom_core::{
+    rebuild_page_from_tree, BrowserError, BrowserSessionError, DomTree, ParsedPage,
+};
 use phantom_js::tier1::pool::Tier1Pool;
 use phantom_js::tier2::pool::Tier2Pool;
 use phantom_net::SmartNetworkClient;
 use phantom_serializer::CctDelta;
-use phantom_session::{ResourceBudget, SessionBroker, SessionState};
+use phantom_session::{EngineKind, ResourceBudget, Session, SessionBroker, SessionState};
 use phantom_storage::SessionStorageManager;
 use sha2::{Digest, Sha256};
 use std::sync::Once;
@@ -19,7 +23,6 @@ use tokio::sync::OnceCell;
 use tokio::sync::RwLock;
 use tokio::task::spawn_blocking;
 use tracing::Instrument;
-use crate::metrics;
 use uuid::Uuid;
 
 static INIT: Once = Once::new();
@@ -30,6 +33,9 @@ const MAX_BLOCKING_THREADS: usize = 32;
 /// Global V8 platform initialiser. Safe to call multiple times.
 pub fn init_v8() {
     INIT.call_once(|| {
+        // SAFETY: set_var is technically unsafe in multi-threaded contexts (UB).
+        // However, this init_v8() is called via Once::call_once during EngineAdapter::new()
+        // which occurs during main() startup before any threads or the Tokio runtime are spawned.
         if std::env::var("PHANTOM_SNAPSHOT_KEY").is_err() {
             std::env::set_var(
                 "PHANTOM_SNAPSHOT_KEY",
@@ -155,6 +161,8 @@ pub struct EngineAdapter {
     pub blocking_limit: Arc<tokio::sync::Semaphore>,
     /// Creation time for measuring session duration.
     pub created_at: Instant,
+    /// Tracks whether the primary session is still alive for metrics accounting.
+    pub session_active: Arc<AtomicBool>,
 }
 
 impl EngineAdapter {
@@ -171,8 +179,11 @@ impl EngineAdapter {
     ) -> Self {
         let mut persona_pool = PersonaPool::default_pool();
         let first_persona = persona_pool.next_persona();
+        let persona_id = first_persona.user_agent.clone();
         let mut network = SmartNetworkClient::with_persona(&first_persona);
         network.max_network_bytes = Some(budget.max_network_bytes);
+        let session_budget = budget.clone();
+        let session_uuid = uuid::Uuid::new_v4();
 
         let broker = SessionBroker::new();
 
@@ -194,18 +205,39 @@ impl EngineAdapter {
             active_page_key: Arc::new(Mutex::new(None)),
             tab_store: Arc::new(RwLock::new(TabStore::default())),
             storage: phantom_storage::SessionStorageManager::new("./storage"),
-            session_uuid: uuid::Uuid::new_v4(),
+            session_uuid,
             cookie_store: Arc::new(tokio::sync::Mutex::new(cookie_store::CookieStore::default())),
             delta_tx,
             delta_replay: Arc::new(Mutex::new(VecDeque::with_capacity(DELTA_REPLAY_CAP))),
             session_lock: Arc::new(tokio::sync::Semaphore::new(1)),
             blocking_limit: Arc::new(tokio::sync::Semaphore::new(MAX_BLOCKING_THREADS)),
             created_at: Instant::now(),
+            session_active: Arc::new(AtomicBool::new(true)),
         };
 
         metrics::SESSIONS_ACTIVE.inc();
-        metrics::SESSIONS_CREATED_TOTAL.with_label_values(&["mcp"]).inc();
-        metrics::CIRCUIT_BREAKER_STATE.set(0); // 0 = Closed (Normal Operation)
+        metrics::SESSIONS_CREATED_TOTAL
+            .with_label_values(&["tier1"])
+            .inc();
+        metrics::CIRCUIT_BREAKER_STATE
+            .with_label_values(&["tier1"])
+            .set(0);
+        metrics::CIRCUIT_BREAKER_STATE
+            .with_label_values(&["tier2"])
+            .set(0);
+
+        phantom_storage::install_storage_quota_observer(Arc::new(|bytes| {
+            metrics::STORAGE_QUOTA_USED_BYTES.set(bytes);
+        }));
+
+        let session = Session::with_uuid(
+            session_uuid,
+            EngineKind::QuickJs,
+            session_budget,
+            persona_id,
+        );
+        engine.broker.register(session);
+        let _ = engine.broker.set_state(session_uuid, SessionState::Running);
 
         engine
     }
@@ -217,13 +249,58 @@ impl EngineAdapter {
 
 impl Drop for EngineAdapter {
     fn drop(&mut self) {
-        metrics::SESSIONS_ACTIVE.dec();
+        if self.session_active.swap(false, AtomicOrdering::AcqRel) {
+            metrics::SESSIONS_ACTIVE.dec();
+        }
         let duration = self.created_at.elapsed().as_secs_f64();
         metrics::SESSION_DURATION_SECONDS.observe(duration);
     }
 }
 
 impl EngineAdapter {
+    pub fn session_count(&self) -> usize {
+        self.broker.len()
+    }
+
+    pub fn enforce_budget_usage(
+        &self,
+        heap_bytes: usize,
+        cpu_ms: u64,
+        network_bytes: usize,
+    ) -> Result<(), BrowserError> {
+        match self.broker.record_usage_and_check(
+            self.session_uuid,
+            heap_bytes,
+            cpu_ms,
+            network_bytes,
+        ) {
+            Ok(()) => Ok(()),
+            Err(phantom_session::SessionError::BudgetExceeded {
+                resource,
+                used,
+                limit,
+            }) => {
+                tracing::warn!(
+                    session_id = %self.session_uuid,
+                    resource = %resource,
+                    used,
+                    limit,
+                    "session budget exceeded; destroying session"
+                );
+                let _ = self.broker.remove(self.session_uuid);
+                if self.session_active.swap(false, AtomicOrdering::AcqRel) {
+                    metrics::SESSIONS_ACTIVE.dec();
+                }
+                Err(BrowserError::Session(BrowserSessionError::BudgetExceeded {
+                    resource,
+                    used,
+                    limit,
+                }))
+            }
+            Err(err) => Err(err.into()),
+        }
+    }
+
     pub fn inject_delta(&self, delta: String) -> usize {
         {
             let mut replay = self.delta_replay.lock();
@@ -502,7 +579,8 @@ impl EngineAdapter {
             .map_err(|e| e.to_string())?
             .map_err(|e| e.to_string())?;
 
-            let path = session_dir.join(format!("snapshot-{}-{}.tar.zst", session_id_str, timestamp));
+            let path =
+                session_dir.join(format!("snapshot-{}-{}.tar.zst", session_id_str, timestamp));
             tokio::fs::write(&path, &compressed)
                 .await
                 .map_err(|e| e.to_string())?;
@@ -522,7 +600,7 @@ impl EngineAdapter {
                 );
             }
             tracing::info!("suspend elapsed: {}ms", elapsed.as_millis());
-            
+
             tracing::Span::current().record("snapshot_path", path.to_string_lossy().as_ref());
             tracing::Span::current().record("elapsed_ms", elapsed.as_millis() as u64);
 
@@ -560,9 +638,9 @@ impl EngineAdapter {
             let manifest = phantom_storage::snapshot::read_manifest_from_snapshot(&compressed)
                 .map_err(|e| e.to_string())?;
             phantom_storage::snapshot::verify_manifest(&manifest).map_err(|e| e.to_string())?;
-            
+
             tracing::Span::current().record("hmac_verified", true);
-            
+
             let snapshot_files = Self::extract_files_from_snapshot(&compressed)?;
             Self::verify_snapshot_payload(&manifest, &snapshot_files)?;
 
@@ -572,9 +650,10 @@ impl EngineAdapter {
                 .cloned()
                 .ok_or_else(|| "snapshot missing file: cookies.bin".to_string())?;
             if !cookies_bytes.is_empty() {
-                let store =
-                    cookie_store::serde::json::load_all(BufReader::new(Cursor::new(&cookies_bytes)))
-                        .map_err(|e| format!("cookie deserialise: {}", e))?;
+                let store = cookie_store::serde::json::load_all(BufReader::new(Cursor::new(
+                    &cookies_bytes,
+                )))
+                .map_err(|e| format!("cookie deserialise: {}", e))?;
                 *self.cookie_store.lock().await = store;
             }
 
@@ -602,8 +681,9 @@ impl EngineAdapter {
                             continue;
                         }
 
-                        let kv_map: HashMap<String, String> = serde_json::from_slice(&json_bytes)
-                            .map_err(|e| format!("localstorage deserialise: {}", e))?;
+                        let kv_map: HashMap<String, String> =
+                            serde_json::from_slice(&json_bytes)
+                                .map_err(|e| format!("localstorage deserialise: {}", e))?;
 
                         let ls_dir = session_dir.join("localstorage");
                         std::fs::create_dir_all(&ls_dir).map_err(|e| e.to_string())?;
@@ -647,7 +727,7 @@ impl EngineAdapter {
                 tracing::warn!("resume elapsed: {}ms (target: < 50ms)", elapsed.as_millis());
             }
             tracing::info!("resume elapsed: {}ms", elapsed.as_millis());
-            
+
             tracing::Span::current().record("elapsed_ms", elapsed.as_millis() as u64);
 
             Ok(())
@@ -793,10 +873,11 @@ impl EngineAdapter {
             // Create the clone's session directory with restricted perms
             let storage = self.storage.clone();
             let sid = new_id_str.clone();
-            let new_session_dir = tokio::task::spawn_blocking(move || storage.create_session_dir(&sid))
-                .await
-                .map_err(|e| e.to_string())?
-                .map_err(|e| e.to_string())?;
+            let new_session_dir =
+                tokio::task::spawn_blocking(move || storage.create_session_dir(&sid))
+                    .await
+                    .map_err(|e| e.to_string())?
+                    .map_err(|e| e.to_string())?;
 
             // Read source snapshot and rewrite the session_id + re-sign HMAC
             let original_bytes = tokio::fs::read(&snapshot_path)

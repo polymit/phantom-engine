@@ -2,6 +2,7 @@
 name = "phantom-core"
 version = "0.1.0"
 edition = "2021"
+license = "Apache-2.0"
 
 [dependencies]
 html5ever = "0.38.0"
@@ -13,3 +14,5 @@ indextree = "=4.8.0"
 selectors = "0.25"
 thiserror = "1"
 tracing = "=0.1.44"
+phantom-session = { path = "../phantom-session" }
+phantom-storage = { path = "../phantom-storage" }

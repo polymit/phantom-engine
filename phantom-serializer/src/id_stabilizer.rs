@@ -92,7 +92,10 @@ fn process_node_ids(
                 if !text.is_empty() {
                     let mut hasher = rustc_hash::FxHasher::default();
                     // Limit text hash to first 64 chars to avoid volatility on long blocks
-                    let anchor_text = if text.len() > 64 { &text[..64] } else { &text };
+                    let anchor_text = match text.char_indices().nth(64) {
+                        Some((idx, _)) => &text[..idx],
+                        None => &text,
+                    };
                     anchor_text.hash(&mut hasher);
                     role_code.hash(&mut hasher);
                     (format!("n_{:x}", hasher.finish()), IdConfidence::Medium)
@@ -109,10 +112,9 @@ fn process_node_ids(
             let mut hasher = rustc_hash::FxHasher::default();
             path.hash(&mut hasher);
             // Text nodes are anchored by path + content hash for extreme stability
-            let anchor_text = if content.len() > 64 {
-                &content[..64]
-            } else {
-                content
+            let anchor_text = match content.char_indices().nth(64) {
+                Some((idx, _)) => &content[..idx],
+                None => content,
             };
             anchor_text.hash(&mut hasher);
             (format!("n_{:x}", hasher.finish()), IdConfidence::Low)
@@ -137,7 +139,9 @@ fn process_node_ids(
     // Stable child traversal with tag-relative indices
     let mut tag_indices: HashMap<String, usize> = HashMap::new();
     for child in node_id.children(&tree.arena) {
-        let child_node = tree.get(child).unwrap();
+        let Some(child_node) = tree.get(child) else {
+            continue;
+        };
         let child_tag = match &child_node.data {
             NodeData::Element { tag_name, .. } => tag_name.clone(),
             NodeData::Text { .. } => "#text".to_string(),
@@ -159,6 +163,7 @@ fn is_framework_auto_id(id: &str) -> bool {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::stabilise_ids;
     use crate::visibility::VisibilityMap;

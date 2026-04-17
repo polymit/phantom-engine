@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use phantom_storage::{normalise_origin, origin_hash, SessionStorageManager, StorageError};
 use tempfile::tempdir;
 

@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use phantom_anti_detect::Persona;
 use phantom_net::navigate::{navigate, NavigationConfig, NavigationError};
 use phantom_net::SmartNetworkClient;

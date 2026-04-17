@@ -428,11 +428,10 @@ pub struct CctNode {
 }
 
 fn clip_100(s: &str) -> &str {
-    if s.chars().count() <= 100 {
-        return s;
+    match s.char_indices().nth(100) {
+        Some((idx, _)) => &s[..idx],
+        None => s,
     }
-    let end = s.char_indices().nth(100).map(|(i, _)| i).unwrap_or(s.len());
-    &s[..end]
 }
 
 fn encode_text(s: &str) -> String {

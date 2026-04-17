@@ -3,12 +3,14 @@
 #![allow(clippy::needless_doctest_main)]
 
 pub mod behavior;
+pub mod circuit_breaker;
 pub mod error;
 pub mod shims;
 pub mod tier1;
 pub mod tier2;
 
 pub use behavior::BehaviorEngine;
+pub use circuit_breaker::CircuitBreaker;
 pub use error::PhantomJsError;
 
 /// Initialise the V8 platform.

@@ -53,6 +53,15 @@ impl DeltaEngine {
         }
     }
 
+    pub fn with_window_ms(window_ms: u64) -> Self {
+        Self {
+            pending: VecDeque::new(),
+            batch_start: None,
+            window_ms,
+            max_pending: MAX_PENDING_MUTATIONS,
+        }
+    }
+
     pub fn push(&mut self, mutation: RawMutation) {
         if self.pending.is_empty() {
             self.batch_start = Some(Instant::now());

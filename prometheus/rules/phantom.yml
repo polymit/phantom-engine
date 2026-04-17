@@ -1,0 +1,30 @@
+---
+groups:
+  - name: phantom.sessions
+    rules:
+      - alert: PhantomEngineDown
+        expr: up{job="phantom-engine"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Phantom Engine is down"
+          description: "No metrics received from Phantom Engine for 1 minute."
+
+      - alert: RuntimePoolCircuitOpen
+        expr: phantom_circuit_breaker_state >= 1
+        for: 30s
+        labels:
+          severity: warning
+        annotations:
+          summary: "Runtime pool circuit breaker is not closed"
+          description: "Pool pressure detected. New sessions may fail fast."
+
+      - alert: HighSessionMemory
+        expr: storage_quota_used_bytes > 40 * 1024 * 1024
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Session storage approaching 40MB"
+          description: "Storage usage is above warning threshold."

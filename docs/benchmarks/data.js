@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1776511951025,
+  "lastUpdate": 1776512076433,
   "repoUrl": "https://github.com/polymit/phantom-engine",
   "entries": {
     "Benchmark": [
@@ -587,6 +587,90 @@ window.BENCHMARK_DATA = {
             "name": "pool_acquire_tier1",
             "value": 155298,
             "range": "± 563",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "0eaf1c28b6623a9b30617393557f8b22e568ee32",
+          "message": "fix(deploy): align environment variable names with engine code\n\n- Change PHANTOM_RATE_LIMIT_PER_HOUR to PHANTOM_RATE_LIMIT in docker-compose.yml.\n- This ensures the engine correctly reads the limit from the environment.",
+          "timestamp": "2026-04-18T17:01:45+05:30",
+          "tree_id": "2c9cffc8d1a0de839869da424983a4b786165fc0",
+          "url": "https://github.com/polymit/phantom-engine/commit/0eaf1c28b6623a9b30617393557f8b22e568ee32"
+        },
+        "date": 1776512075719,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 429,
+            "range": "± 28",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 440,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 353,
+            "range": "± 5",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 92,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 3105817,
+            "range": "± 58196",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3145032,
+            "range": "± 52800",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5434,
+            "range": "± 24",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3217,
+            "range": "± 14",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 0,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 218282,
+            "range": "± 1282",
             "unit": "ns/iter"
           }
         ]

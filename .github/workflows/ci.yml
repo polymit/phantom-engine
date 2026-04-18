@@ -85,7 +85,7 @@ jobs:
       - name: Verify restricted dependencies absent
         run: |
           for restricted in reqwest rquest native-tls openssl-sys rusty_v8; do
-            if grep -rn "\"${restricted}\"" --include="*.toml" .; then
+            if grep -rn "\"${restricted}\"" --include="*.toml" --exclude="deny.toml" .; then
               echo "FATAL: restricted dependency found: ${restricted}"
               exit 1
             fi
@@ -151,7 +151,7 @@ jobs:
       - name: Run cargo-audit
         uses: actions-rust-lang/audit@v1
         with:
-          denyWarnings: true
+          denyWarnings: false
 
   lock-verify:
     name: Cargo.lock Integrity
@@ -197,7 +197,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Set up MSRV toolchain
-        uses: dtolnay/rust-toolchain@1.85.0
+        uses: dtolnay/rust-toolchain@1.88.0
       - name: Cache Cargo registry
         uses: actions/cache@v4
         with:

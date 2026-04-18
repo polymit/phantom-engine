@@ -154,7 +154,7 @@ fn process_node_ids(
         // if we want to match the recursive behavior exactly.
         // But the indices are relative to the parent, so it's easier to just iterate normally
         // and collect the child info, then push to stack.
-        
+
         let mut children_to_push = Vec::new();
         for child in node_id.children(&tree.arena) {
             let Some(child_node) = tree.get(child) else {
@@ -171,7 +171,7 @@ fn process_node_ids(
             children_to_push.push((child, path.clone(), child_tag.clone(), current_idx));
             tag_indices.insert(child_tag, current_idx + 1);
         }
-        
+
         for item in children_to_push.into_iter().rev() {
             stack.push(item);
         }

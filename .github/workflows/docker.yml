@@ -113,16 +113,16 @@ jobs:
             echo "Prometheus response: $response"
             
             result=$(echo "$response" | python3 -c '
-import json, sys
-try:
-    d = json.load(sys.stdin)
-    if d.get("status") == "success":
-        print(len(d.get("data", {}).get("result", [])))
-    else:
-        print("0")
-except:
-    print("0")
-')
+              import json, sys
+              try:
+                  d = json.load(sys.stdin)
+                  if d.get("status") == "success":
+                      print(len(d.get("data", {}).get("result", [])))
+                  else:
+                      print("0")
+              except:
+                  print("0")
+            ')
             if [ "$result" -gt 0 ]; then
               echo "Metrics found! count: $result"
               exit 0

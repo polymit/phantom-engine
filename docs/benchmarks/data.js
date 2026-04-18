@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1776506927930,
+  "lastUpdate": 1776509728441,
   "repoUrl": "https://github.com/polymit/phantom-engine",
   "entries": {
     "Benchmark": [
@@ -335,6 +335,90 @@ window.BENCHMARK_DATA = {
             "name": "pool_acquire_tier1",
             "value": 205584,
             "range": "± 1856",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "e39be444ed90fd39899cae0082825f631beab255",
+          "message": "fix(engine): link environment variables to limits and increase CPU budget for testing\n\n- Enable PHANTOM_RATE_LIMIT and PHANTOM_SESSION_LIMIT in phantom-mcp server.\n- Refactor McpServer for dynamic limits and updated health reporting.\n- Increase max_cpu_ms_per_sec to 1000ms in phantom-session (NOTE: This increase is temporary and intended for high-scale CI load testing to prevent false budget failures).",
+          "timestamp": "2026-04-18T16:22:36+05:30",
+          "tree_id": "bacebe70a0041e66aaa5546d1fd0c176493bd33f",
+          "url": "https://github.com/polymit/phantom-engine/commit/e39be444ed90fd39899cae0082825f631beab255"
+        },
+        "date": 1776509727676,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 426,
+            "range": "± 3",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 438,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 345,
+            "range": "± 6",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 92,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 3050676,
+            "range": "± 63585",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3090722,
+            "range": "± 10289",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5373,
+            "range": "± 10",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3104,
+            "range": "± 17",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 0,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 218079,
+            "range": "± 2703",
             "unit": "ns/iter"
           }
         ]

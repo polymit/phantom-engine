@@ -99,6 +99,7 @@ pub struct McpServer {
     api_key: Option<String>,
     rate_limiter: Arc<ApiRateLimiter>,
     pub adapter: Arc<EngineAdapter>,
+    pub session_limit: usize,
 }
 
 impl McpServer {
@@ -111,10 +112,20 @@ impl McpServer {
         adapter: Arc<EngineAdapter>,
         sessions_per_hour: u32,
     ) -> Self {
+        Self::new_with_adapter_full(api_key, adapter, sessions_per_hour, SESSION_LIMIT)
+    }
+
+    pub fn new_with_adapter_full(
+        api_key: Option<String>,
+        adapter: Arc<EngineAdapter>,
+        sessions_per_hour: u32,
+        session_limit: usize,
+    ) -> Self {
         Self {
             api_key,
             rate_limiter: Arc::new(ApiRateLimiter::new(sessions_per_hour)),
             adapter,
+            session_limit,
         }
     }
 
@@ -568,7 +579,7 @@ fn breaker_state_label(state: usize) -> &'static str {
 
 async fn handle_health(State(server): State<McpServer>) -> impl IntoResponse {
     let active = server.adapter.session_count();
-    let utilization_pct = ((active as f64 / SESSION_LIMIT as f64) * 1000.0).round() / 10.0;
+    let utilization_pct = ((active as f64 / server.session_limit as f64) * 1000.0).round() / 10.0;
     let tier1_state = breaker_state_label(server.adapter.tier1.circuit_breaker_state());
     let tier2_state = breaker_state_label(server.adapter.tier2.circuit_breaker_state());
     let any_open = tier1_state == "open" || tier2_state == "open";
@@ -586,7 +597,7 @@ async fn handle_health(State(server): State<McpServer>) -> impl IntoResponse {
         "version": env!("CARGO_PKG_VERSION"),
         "sessions": {
             "active": active,
-            "limit": SESSION_LIMIT,
+            "limit": server.session_limit,
             "utilization_pct": utilization_pct,
         },
         "pools": {

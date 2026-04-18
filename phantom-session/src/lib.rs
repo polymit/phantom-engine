@@ -30,7 +30,7 @@ impl Default for ResourceBudget {
     fn default() -> Self {
         Self {
             max_heap_bytes: 512 * 1024 * 1024,
-            max_cpu_ms_per_sec: 250,
+            max_cpu_ms_per_sec: 1000,
             max_network_bytes: 64 * 1024 * 1024,
         }
     }

@@ -183,7 +183,7 @@ dependencies = [
  "bitflags 2.11.1",
  "cexpr",
  "clang-sys",
- "itertools 0.13.0",
+ "itertools 0.10.5",
  "log",
  "prettyplease",
  "proc-macro2",
@@ -1758,15 +1758,6 @@ name = "itertools"
 version = "0.10.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b0fd2260e829bddf4cb6ea802289de2f86d6a7a690192fbe91b3f46e0f2c8473"
-dependencies = [
- "either",
-]
-
-[[package]]
-name = "itertools"
-version = "0.13.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "413ee7dfc52ee1a4949ceeb7dbc8a33f2d6c088194d9f922fb8318faf1f01186"
 dependencies = [
  "either",
 ]
@@ -3776,9 +3767,9 @@ dependencies = [
 
 [[package]]
 name = "v8"
-version = "147.2.0"
+version = "147.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "76428cc491699b74b3bb7185d910b3991837c69b4f4e05bf5a2e2231bf1d79df"
+checksum = "a7b40cc5c1de4d30b3d96f9d4ef83683123c4b324e295a213ae7c70e28ccc047"
 dependencies = [
  "bindgen",
  "bitflags 2.11.1",

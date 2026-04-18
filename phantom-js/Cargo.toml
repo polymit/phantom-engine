@@ -7,6 +7,7 @@ license = "Apache-2.0"
 [dependencies]
 rquickjs = { version = "=0.11.0", default-features = false, features = ["std", "futures", "loader", "macro", "classes", "disable-assertions"] }
 deno_core = "=0.397.0"
+v8 = "=147.1.0"
 
 tokio = { version = "1", features = ["full"] }
 selectors = "0.25"

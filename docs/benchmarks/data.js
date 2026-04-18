@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1776512076433,
+  "lastUpdate": 1776524869632,
   "repoUrl": "https://github.com/polymit/phantom-engine",
   "entries": {
     "Benchmark": [
@@ -671,6 +671,90 @@ window.BENCHMARK_DATA = {
             "name": "pool_acquire_tier1",
             "value": 218282,
             "range": "± 1282",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "843ea6676482a53048a46e3be4d904670b9c7100",
+          "message": "fix(ci): harden prometheus metrics verification\n\n- Added retry logic (10 attempts, 5s interval) for Prometheus queries.\n- Improved Python parsing to handle non-JSON or error responses gracefully.\n- Added direct engine metrics check for easier debugging of scrape issues.",
+          "timestamp": "2026-04-18T20:35:01+05:30",
+          "tree_id": "b2a3c1ec719457cc8a6d460e99f5dd6c04af0711",
+          "url": "https://github.com/polymit/phantom-engine/commit/843ea6676482a53048a46e3be4d904670b9c7100"
+        },
+        "date": 1776524869356,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 605,
+            "range": "± 2",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 616,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 491,
+            "range": "± 4",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 95,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 3290385,
+            "range": "± 20832",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3276237,
+            "range": "± 16703",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5498,
+            "range": "± 79",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3249,
+            "range": "± 36",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 206444,
+            "range": "± 1851",
             "unit": "ns/iter"
           }
         ]

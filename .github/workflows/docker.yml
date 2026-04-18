@@ -105,26 +105,17 @@ jobs:
       - name: Verify Prometheus metrics are populated
         run: |
           echo "Checking direct engine metrics..."
-          curl -sf http://localhost:8080/metrics | grep sessions_active || echo "Warning: sessions_active not found in direct metrics"
+          curl -sf http://localhost:8080/metrics | grep sessions_created_total || echo "Warning: Metric not found"
           
           echo "Querying Prometheus (with retries)..."
           for i in {1..10}; do
-            response=$(curl -s 'http://localhost:9090/api/v1/query?query={__name__=~"(sessions_active|phantom_sessions_active)"}')
+            # Query sessions_created_total which persists even after sessions close
+            response=$(curl -s -G 'http://localhost:9090/api/v1/query' --data-urlencode 'query=sessions_created_total')
             echo "Prometheus response: $response"
             
-            result=$(echo "$response" | python3 -c '
-              import json, sys
-              try:
-                  d = json.load(sys.stdin)
-                  if d.get("status") == "success":
-                      print(len(d.get("data", {}).get("result", [])))
-                  else:
-                      print("0")
-              except:
-                  print("0")
-            ')
+            result=$(echo "$response" | python3 -c "import json, sys; d=json.load(sys.stdin); print(sum(int(r['value'][1]) for r in d.get('data', {}).get('result', []))) if d.get('status') == 'success' else print(0)")
             if [ "$result" -gt 0 ]; then
-              echo "Metrics found! count: $result"
+              echo "Metrics confirmed! Total sessions created: $result"
               exit 0
             fi
             echo "Metrics not populated yet, waiting... ($i/10)"

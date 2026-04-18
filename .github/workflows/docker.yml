@@ -24,6 +24,14 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Set up sccache
+        uses: mozilla-actions/sccache-action@v0.0.9
+      - name: Run internal scale test (1000 sessions)
+        run: |
+          cargo test --package phantom-mcp --test scale_test scale_full_1000 \
+            -- --nocapture --test-threads=1
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Log in to GHCR
@@ -87,11 +95,6 @@ jobs:
           docker compose -f docker-compose.yml up -d phantom
           timeout 60 bash -c 'until curl -sf http://localhost:8080/health; do sleep 2; done'
           echo "Phantom engine ready"
-      - name: Run full scale test inside container
-        run: |
-          docker compose -f docker-compose.yml exec -T phantom \
-            cargo test --package phantom-mcp --test scale_test scale_full_1000 \
-            -- --nocapture --test-threads=1
       - name: Run k6 navigate load
         run: k6 run --env PHANTOM_API_KEY="${PHANTOM_API_KEY}" --env PHANTOM_BASE_URL=http://localhost:8080 k6/navigate_load.js
       - name: Run k6 scene graph load

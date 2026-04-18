@@ -104,12 +104,34 @@ jobs:
         run: k6 run --env PHANTOM_API_KEY="${PHANTOM_API_KEY}" --env PHANTOM_BASE_URL=http://localhost:8080 k6/mixed_load.js
       - name: Verify Prometheus metrics are populated
         run: |
-          sessions=$(curl -s 'http://localhost:9090/api/v1/query?query={__name__=~"(sessions_active|phantom_sessions_active)"}' \
-            | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d["data"]["result"])')
-          echo "sessions metric series: ${sessions}"
-          http_req=$(curl -s 'http://localhost:9090/api/v1/query?query={__name__=~"(http_requests_total|phantom_http_requests_total)"}' \
-            | python3 -c 'import json,sys; d=json.load(sys.stdin); print(len(d["data"]["result"]))')
-          echo "http_requests_total series count: ${http_req}"
+          echo "Checking direct engine metrics..."
+          curl -sf http://localhost:8080/metrics | grep sessions_active || echo "Warning: sessions_active not found in direct metrics"
+          
+          echo "Querying Prometheus (with retries)..."
+          for i in {1..10}; do
+            response=$(curl -s 'http://localhost:9090/api/v1/query?query={__name__=~"(sessions_active|phantom_sessions_active)"}')
+            echo "Prometheus response: $response"
+            
+            result=$(echo "$response" | python3 -c '
+import json, sys
+try:
+    d = json.load(sys.stdin)
+    if d.get("status") == "success":
+        print(len(d.get("data", {}).get("result", [])))
+    else:
+        print("0")
+except:
+    print("0")
+')
+            if [ "$result" -gt 0 ]; then
+              echo "Metrics found! count: $result"
+              exit 0
+            fi
+            echo "Metrics not populated yet, waiting... ($i/10)"
+            sleep 5
+          done
+          echo "Error: Metrics failed to populate in Prometheus after 50 seconds"
+          exit 1
       - name: Print final metric snapshot
         if: always()
         run: curl -s http://localhost:8080/metrics | grep -E '^(sessions|phantom_sessions|js_|phantom_js|http_|phantom_http|dom_|phantom_dom|storage_|phantom_storage)'

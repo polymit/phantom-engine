@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1776504561253,
+  "lastUpdate": 1776505463890,
   "repoUrl": "https://github.com/polymit/phantom-engine",
   "entries": {
     "Benchmark": [
@@ -167,6 +167,90 @@ window.BENCHMARK_DATA = {
             "name": "pool_acquire_tier1",
             "value": 204252,
             "range": "± 2028",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "3310ebe74e94b9db8a1937d10d90033ec1c4529b",
+          "message": "fix(ci): increase rate limits for scale testing\n\n- Set PHANTOM_RATE_LIMIT to 1,000,000 in CI to allow high-concurrency k6 tests.\n- Set PHANTOM_SESSION_LIMIT to 2,000 to ensure the 1,000 session test has headroom.",
+          "timestamp": "2026-04-18T15:11:23+05:30",
+          "tree_id": "d9175afca43b2a0248f1aaa2db65687ab053ac01",
+          "url": "https://github.com/polymit/phantom-engine/commit/3310ebe74e94b9db8a1937d10d90033ec1c4529b"
+        },
+        "date": 1776505463480,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 561,
+            "range": "± 9",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 557,
+            "range": "± 9",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 468,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 81,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 2532972,
+            "range": "± 103220",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 2514758,
+            "range": "± 79482",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 4109,
+            "range": "± 13",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 2536,
+            "range": "± 38",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 158990,
+            "range": "± 1214",
             "unit": "ns/iter"
           }
         ]

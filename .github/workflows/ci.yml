@@ -190,14 +190,16 @@ jobs:
           [ "$fail" -eq 0 ] || exit 1
 
   msrv:
-    name: MSRV (Rust 1.75)
+    name: MSRV (Rust 1.94)
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Set up MSRV toolchain
-        uses: dtolnay/rust-toolchain@1.88.0
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.94.0
       - name: Cache Cargo registry
         uses: actions/cache@v4
         with:

@@ -40,7 +40,7 @@ jobs:
       - name: Track benchmark history
         uses: benchmark-action/github-action-benchmark@v1
         with:
-          tool: cargo
+          tool: bencher
           output-file-path: bench_output.txt
           github-token: ${{ secrets.GITHUB_TOKEN }}
           auto-push: true

@@ -82,6 +82,8 @@ jobs:
           else
             echo "PHANTOM_API_KEY=phantom-ci-key" >> "$GITHUB_ENV"
           fi
+          echo "PHANTOM_SESSION_LIMIT=2000" >> "$GITHUB_ENV"
+          echo "PHANTOM_RATE_LIMIT=1000000" >> "$GITHUB_ENV"
       - name: Install k6
         uses: grafana/setup-k6-action@v1
       - name: Verify Docker Compose availability

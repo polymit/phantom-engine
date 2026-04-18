@@ -6,7 +6,7 @@ services:
       dockerfile: Dockerfile
       cache_from:
         - type=gha
-    image: ghcr.io/polymit/phantom-engine:latest
+    image: ghcr.io/polymit/phantom-engine:${TAG:-latest}
     container_name: phantom-engine
     restart: unless-stopped
     ports:
@@ -19,7 +19,7 @@ services:
       PHANTOM_API_KEY: ${PHANTOM_API_KEY}
       PHANTOM_LOG_FORMAT: json
       PHANTOM_SESSION_LIMIT: ${PHANTOM_SESSION_LIMIT:-1000}
-      PHANTOM_RATE_LIMIT_PER_HOUR: ${PHANTOM_RATE_LIMIT:-100}
+      PHANTOM_RATE_LIMIT_PER_HOUR: ${PHANTOM_RATE_LIMIT:-100000}
       RUST_LOG: phantom=info,tower_http=warn
     depends_on:
       prometheus:

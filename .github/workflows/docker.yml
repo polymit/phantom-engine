@@ -3,7 +3,8 @@ name: Docker Build + Full Scale Test
 
 on:
   push:
-    branches: [main]
+    tags:
+      - 'v*'
   workflow_dispatch:
 
 env:

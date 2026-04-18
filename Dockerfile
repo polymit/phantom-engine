@@ -15,10 +15,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     python3 \
     && rm -rf /var/lib/apt/lists/*
-RUN cargo install cargo-chef --version "^0.1" --locked
-RUN cargo install sccache --version "^0.8" --locked
+RUN cargo install cargo-chef --version "^0.1" --locked && \
+    cargo install sccache --version "^0.8" --locked
 ENV RUSTC_WRAPPER=sccache
 ENV SCCACHE_DIR=/sccache
+ENV CARGO_BUILD_JOBS=2
+ENV CARGO_NET_GIT_FETCH_WITH_CLI=true
 WORKDIR /app
 
 FROM chef AS planner

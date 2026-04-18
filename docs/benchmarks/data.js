@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1776509728441,
+  "lastUpdate": 1776510889062,
   "repoUrl": "https://github.com/polymit/phantom-engine",
   "entries": {
     "Benchmark": [
@@ -419,6 +419,90 @@ window.BENCHMARK_DATA = {
             "name": "pool_acquire_tier1",
             "value": 218079,
             "range": "± 2703",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "054cd5378a83afcfde1962e9c63f3a96d85dbf4c",
+          "message": "fix(ci): rename job and pin TAG to current SHA\n\n- Renamed job to 'Build + Full Scale Test (1000 Sessions)'.\n- Explicitly passed TAG env var to docker compose to ensure the fresh build is used.",
+          "timestamp": "2026-04-18T16:42:00+05:30",
+          "tree_id": "693ae4b8e4e84f1827b464a3bd3df2acb3dca653",
+          "url": "https://github.com/polymit/phantom-engine/commit/054cd5378a83afcfde1962e9c63f3a96d85dbf4c"
+        },
+        "date": 1776510888742,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 594,
+            "range": "± 3",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 604,
+            "range": "± 2",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 491,
+            "range": "± 7",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 95,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 3299653,
+            "range": "± 26401",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3294055,
+            "range": "± 11985",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5419,
+            "range": "± 18",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3160,
+            "range": "± 40",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 205428,
+            "range": "± 2578",
             "unit": "ns/iter"
           }
         ]

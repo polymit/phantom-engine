@@ -28,7 +28,10 @@ jobs:
           key: ${{ runner.os }}-bench-${{ hashFiles('**/Cargo.lock') }}
       - name: Run criterion benchmarks
         run: |
-          cargo bench --workspace -- --output-format=bencher | grep "bench:" > bench_output.txt || true
+          touch bench_output.txt
+          for b in session_bench cct_bench eval_bench; do
+            cargo bench --workspace --bench $b -- --output-format=bencher | grep "bench:" >> bench_output.txt || true
+          done
           cat bench_output.txt
       - name: Upload benchmark artifacts
         uses: actions/upload-artifact@v4

@@ -12,6 +12,8 @@ jobs:
     name: Criterion Benchmarks
     runs-on: ubuntu-24.04
     timeout-minutes: 45
+    permissions:
+      contents: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -30,9 +32,16 @@ jobs:
         run: |
           touch bench_output.txt
           for b in session_bench cct_bench eval_bench; do
-            cargo bench --workspace --bench $b -- --output-format=bencher | grep "bench:" >> bench_output.txt || true
+            echo "Running benchmark: $b"
+            cargo bench --workspace --bench $b -- --output-format=bencher | tee bench_raw.log
+            grep "bench:" bench_raw.log >> bench_output.txt || true
           done
+          echo "=== BENCHMARK OUTPUT ==="
           cat bench_output.txt
+          if [ ! -s bench_output.txt ]; then
+            echo "Error: No benchmark results found in output. Check bench_raw.log for details."
+            exit 1
+          fi
       - name: Upload benchmark artifacts
         uses: actions/upload-artifact@v4
         with:

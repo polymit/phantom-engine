@@ -13,7 +13,7 @@ env:
 
 jobs:
   docker-build:
-    name: Build Docker Image (Multi-Stage cargo-chef + sccache)
+    name: Build + Full Scale Test (1000 Sessions)
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     permissions:
@@ -81,11 +81,15 @@ jobs:
       - name: Verify Docker Compose availability
         run: docker compose version
       - name: Start observability stack
+        env:
+          TAG: sha-${{ github.sha }}
         run: |
           docker compose -f docker-compose.yml up -d prometheus grafana node-exporter
           timeout 60 bash -c 'until curl -sf http://localhost:9090/-/ready; do sleep 2; done'
           echo "Prometheus ready"
       - name: Start Phantom engine
+        env:
+          TAG: sha-${{ github.sha }}
         run: |
           docker compose -f docker-compose.yml up -d phantom
           timeout 60 bash -c 'until curl -sf http://localhost:8080/health; do sleep 2; done'

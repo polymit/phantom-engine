@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1776526197739,
+  "lastUpdate": 1776526256793,
   "repoUrl": "https://github.com/polymit/phantom-engine",
   "entries": {
     "Benchmark": [
@@ -839,6 +839,90 @@ window.BENCHMARK_DATA = {
             "name": "pool_acquire_tier1",
             "value": 204521,
             "range": "± 1640",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "167a4944809f59cca45a06bcf9a776c71ff936e3",
+          "message": "ci: cleanup temporary trigger",
+          "timestamp": "2026-04-18T20:58:15+05:30",
+          "tree_id": "b2a3c1ec719457cc8a6d460e99f5dd6c04af0711",
+          "url": "https://github.com/polymit/phantom-engine/commit/167a4944809f59cca45a06bcf9a776c71ff936e3"
+        },
+        "date": 1776526256494,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 711,
+            "range": "± 20",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 717,
+            "range": "± 3",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 602,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 102,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 3228971,
+            "range": "± 16204",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3227433,
+            "range": "± 14684",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5498,
+            "range": "± 26",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3272,
+            "range": "± 15",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 202331,
+            "range": "± 1835",
             "unit": "ns/iter"
           }
         ]

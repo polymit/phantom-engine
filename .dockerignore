@@ -1,0 +1,25 @@
+# Docker ignore file - Phantom Engine
+# Exclude build artifacts, git metadata, and infrastructure configs
+
+target/
+.git/
+.github/
+.env*
+Dockerfile
+.dockerignore
+docker-compose.yml
+
+# Infrastructure and monitoring
+grafana/
+k6/
+prometheus/
+prometheus.yml
+
+# Temporary files and logs
+*.log
+*.tmp
+.DS_Store
+
+# Documentation
+*.md
+docs/

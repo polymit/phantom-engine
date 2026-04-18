@@ -12,6 +12,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ninja-build \
     git \
     perl \
+    curl \
+    python3 \
     && rm -rf /var/lib/apt/lists/*
 RUN cargo install cargo-chef --version "^0.1" --locked
 RUN cargo install sccache --version "^0.8" --locked

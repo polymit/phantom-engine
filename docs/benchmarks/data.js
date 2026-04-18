@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1776510889062,
+  "lastUpdate": 1776511951025,
   "repoUrl": "https://github.com/polymit/phantom-engine",
   "entries": {
     "Benchmark": [
@@ -503,6 +503,90 @@ window.BENCHMARK_DATA = {
             "name": "pool_acquire_tier1",
             "value": 205428,
             "range": "± 2578",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "046b2b1ba03634b08282c52fcf7c36e01a1587ba",
+          "message": "fix(deploy): make docker-compose image tag dynamic\n\n- Change hardcoded ':latest' to 'latest' to allow CI to test fresh builds.\n- Increase default rate limit to 100,000 to prevent local test bottleneck.",
+          "timestamp": "2026-04-18T16:59:26+05:30",
+          "tree_id": "fbd5e7004df108ae16b715640abd5845facea6c9",
+          "url": "https://github.com/polymit/phantom-engine/commit/046b2b1ba03634b08282c52fcf7c36e01a1587ba"
+        },
+        "date": 1776511950326,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 558,
+            "range": "± 2",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 562,
+            "range": "± 8",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 466,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 80,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 2500247,
+            "range": "± 11299",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 2494564,
+            "range": "± 10120",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 4190,
+            "range": "± 8",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 2549,
+            "range": "± 36",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 155298,
+            "range": "± 563",
             "unit": "ns/iter"
           }
         ]

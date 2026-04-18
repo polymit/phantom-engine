@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     perl \
     curl \
     python3 \
+    xz-utils \
     && rm -rf /var/lib/apt/lists/*
 RUN set -eux; \
     arch=$(uname -m); \
@@ -22,7 +23,7 @@ RUN set -eux; \
         aarch64) chef_arch="aarch64-unknown-linux-musl"; sccache_arch="aarch64-unknown-linux-musl" ;; \
         *) echo "Unsupported architecture: $arch"; exit 1 ;; \
     esac; \
-    curl -L "https://github.com/LukeMathWalker/cargo-chef/releases/download/v0.1.77/cargo-chef-${chef_arch}.tar.gz" | tar xz -C /usr/local/bin; \
+    curl -L "https://github.com/LukeMathWalker/cargo-chef/releases/download/v0.1.77/cargo-chef-${chef_arch}.tar.xz" | tar xJ -C /usr/local/bin; \
     curl -L "https://github.com/mozilla/sccache/releases/download/v0.8.2/sccache-v0.8.2-${sccache_arch}.tar.gz" | tar xz --strip-components=1 -C /usr/local/bin; \
     chmod +x /usr/local/bin/cargo-chef /usr/local/bin/sccache;
 ENV RUSTC_WRAPPER=sccache

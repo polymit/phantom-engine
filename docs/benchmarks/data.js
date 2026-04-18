@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1776503205701,
+  "lastUpdate": 1776504561253,
   "repoUrl": "https://github.com/polymit/phantom-engine",
   "entries": {
     "Benchmark": [
@@ -83,6 +83,90 @@ window.BENCHMARK_DATA = {
             "name": "pool_acquire_tier1",
             "value": 205355,
             "range": "± 1148",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "6542879ae5f27fb32c806a574e457c9143bab894",
+          "message": "refactor(ci): move scale test to host and cleanup docker execution\n\n- Run internal scale_full_1000 test on the host before Docker build.\n- Remove failing 'cargo test' execution from the slim production container.\n- Ensure the engine logic is verified before spending time on the Docker build.",
+          "timestamp": "2026-04-18T14:56:30+05:30",
+          "tree_id": "8ba01547f27e54c72e9f2a00a76d33d22452b6b2",
+          "url": "https://github.com/polymit/phantom-engine/commit/6542879ae5f27fb32c806a574e457c9143bab894"
+        },
+        "date": 1776504560804,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 593,
+            "range": "± 2",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 597,
+            "range": "± 2",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 491,
+            "range": "± 27",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 95,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 3279970,
+            "range": "± 26535",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3271417,
+            "range": "± 29520",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5435,
+            "range": "± 27",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3131,
+            "range": "± 36",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 204252,
+            "range": "± 2028",
             "unit": "ns/iter"
           }
         ]

@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1776577195258,
+  "lastUpdate": 1776581758102,
   "repoUrl": "https://github.com/polymit/phantom-engine",
   "entries": {
     "Benchmark": [
@@ -1343,6 +1343,90 @@ window.BENCHMARK_DATA = {
             "name": "pool_acquire_tier1",
             "value": 205105,
             "range": "± 2129",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "f5b802a19b0c9ba154fea5adf40c9adb1618c31c",
+          "message": "fix(test): resolve rand 0.9 compatibility in workspace tests\n\nThis commit resolves the remaining compilation and policy issues\nfrom the rand 0.9.3 upgrade.\n\n- Replaced OsRng with rand::random() in phantom-net tests and integration tests.\n- Aligned MockStepRng with rand 0.9 RngCore trait (removed try_fill_bytes).\n- Removed stale RUSTSEC-2026-0097 ignore rule from deny.toml.\n- Verified zero-warning state across all workspace targets.\n\nFixes build failures in phantom-net and phantom-anti-detect tests.",
+          "timestamp": "2026-04-19T12:23:10+05:30",
+          "tree_id": "5b170fcaaa194f525041a31eaadd62ce217537ad",
+          "url": "https://github.com/polymit/phantom-engine/commit/f5b802a19b0c9ba154fea5adf40c9adb1618c31c"
+        },
+        "date": 1776581757805,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 595,
+            "range": "± 5",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 601,
+            "range": "± 6",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 490,
+            "range": "± 4",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 95,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 3249467,
+            "range": "± 27490",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3245575,
+            "range": "± 15992",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5367,
+            "range": "± 23",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3148,
+            "range": "± 8",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 204092,
+            "range": "± 2776",
             "unit": "ns/iter"
           }
         ]

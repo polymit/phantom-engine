@@ -314,7 +314,7 @@ impl Tier1Session {
     /// is correct and matches the existing shim syntax test approach.
     #[allow(clippy::expect_used)]
     pub async fn attach_dom(&mut self, tree: phantom_core::dom::DomTree) {
-        let mut rng = rand::rngs::OsRng;
+        let mut rng = rand::rng();
         let canvas_noise_seed = rng.next_u64();
         let handle = PhantomDomHandle::new(tree);
         self.dom_handle = Some(handle.clone());

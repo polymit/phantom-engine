@@ -36,7 +36,7 @@ impl Tier2Session {
             runtime.v8_isolate().enter();
         }
 
-        let mut rng = rand::rngs::OsRng;
+        let mut rng = rand::rng();
         let seed = rng.next_u64();
         let init_res = runtime.execute_script(
             "<phantom_canvas_seed>",

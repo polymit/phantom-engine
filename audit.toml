@@ -7,5 +7,4 @@ ignore = [
   "RUSTSEC-2025-0057", # fxhash transitive
   "RUSTSEC-2024-0384", # instant transitive from sled
   "RUSTSEC-2024-0436", # paste transitive from v8
-  "RUSTSEC-2026-0097", # rand 0.8.5 - unsound but requires custom logger we don't use
 ]

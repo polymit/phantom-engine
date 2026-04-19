@@ -1,4 +1,3 @@
-use rand::rngs::OsRng;
 use rand::RngCore;
 use rand_distr::{Distribution, LogNormal};
 
@@ -228,7 +227,7 @@ pub struct PersonaPool {
 impl PersonaPool {
     pub fn new(personas: Vec<Persona>) -> Self {
         let personas = if personas.is_empty() {
-            let mut rng = OsRng;
+            let mut rng = rand::rng();
             vec![Persona::chrome_133(next_seed(&mut rng))]
         } else {
             personas
@@ -237,7 +236,7 @@ impl PersonaPool {
     }
 
     pub fn default_pool() -> Self {
-        let mut rng = OsRng;
+        let mut rng = rand::rng();
         Self::default_pool_with_rng(&mut rng)
     }
 
@@ -307,12 +306,12 @@ impl BehaviorTiming {
     }
 
     pub fn click_hesitation_ms(&self) -> u64 {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         self.click_hesitation.sample(&mut rng).clamp(20.0, 500.0) as u64
     }
 
     pub fn inter_action_delay_ms(&self) -> u64 {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         self.inter_action.sample(&mut rng).clamp(50.0, 3000.0) as u64
     }
 }

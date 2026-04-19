@@ -2,11 +2,9 @@
 use phantom_anti_detect::Persona;
 use phantom_net::navigate::{navigate, NavigationConfig, NavigationError};
 use phantom_net::SmartNetworkClient;
-use rand::rngs::OsRng;
-use rand::RngCore;
 
 fn make_client() -> SmartNetworkClient {
-    SmartNetworkClient::with_persona(&Persona::chrome_133(OsRng.next_u64()))
+    SmartNetworkClient::with_persona(&Persona::chrome_133(rand::random::<u64>()))
 }
 
 fn assert_network_unavailable(err: &NavigationError) {

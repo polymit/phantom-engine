@@ -294,10 +294,8 @@ mod tests {
     #[tokio::test]
     async fn fetch_invalid_url_returns_invalid_url_error() {
         use phantom_anti_detect::Persona;
-        use rand::rngs::OsRng;
-        use rand::RngCore;
 
-        let persona = Persona::chrome_133(OsRng.next_u64());
+        let persona = Persona::chrome_133(rand::random::<u64>());
         let client = SmartNetworkClient::with_persona(&persona);
 
         let err = match client.fetch("not-a-url", None).await {

@@ -325,7 +325,32 @@ impl Default for BehaviorTiming {
 #[cfg(test)]
 mod tests {
     use super::{BehaviorTiming, ChromeProfile, Persona, PersonaPool};
-    use rand::rngs::mock::StepRng;
+    use rand::RngCore;
+
+    struct MockStepRng {
+        val: u64,
+        step: u64,
+    }
+
+    impl MockStepRng {
+        fn new(val: u64, step: u64) -> Self {
+            Self { val, step }
+        }
+    }
+
+    impl RngCore for MockStepRng {
+        fn next_u32(&mut self) -> u32 {
+            self.next_u64() as u32
+        }
+        fn next_u64(&mut self) -> u64 {
+            let v = self.val;
+            self.val = self.val.wrapping_add(self.step);
+            v
+        }
+        fn fill_bytes(&mut self, _dest: &mut [u8]) {
+            unimplemented!()
+        }
+    }
 
     #[test]
     fn persona_pool_rotates_round_robin() {
@@ -351,7 +376,7 @@ mod tests {
 
     #[test]
     fn default_pool_uses_rng_output_for_canvas_seed() {
-        let mut rng = StepRng::new(41, 17); // 41, 58, 75, ...
+        let mut rng = MockStepRng::new(41, 17); // 41, 58, 75, ...
         let mut pool = PersonaPool::default_pool_with_rng(&mut rng);
 
         let p1 = pool.next_persona();
@@ -365,7 +390,7 @@ mod tests {
 
     #[test]
     fn default_pool_seeds_are_distinct_even_with_repeating_rng() {
-        let mut rng = StepRng::new(7, 0); // always 7
+        let mut rng = MockStepRng::new(7, 0); // always 7
         let mut pool = PersonaPool::default_pool_with_rng(&mut rng);
 
         let p1 = pool.next_persona();

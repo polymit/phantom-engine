@@ -632,49 +632,36 @@ impl EngineAdapter {
 
             tracing::Span::current().record("hmac_verified", true);
 
-            let snapshot_files = Self::extract_files_from_snapshot(&compressed)?;
-            Self::verify_snapshot_payload(&manifest, &snapshot_files)?;
-
-            // Rehydrate cookies using modern API
-            let cookies_bytes = snapshot_files
-                .get("cookies.bin")
-                .cloned()
-                .ok_or_else(|| "snapshot missing file: cookies.bin".to_string())?;
-            if !cookies_bytes.is_empty() {
-                let store = cookie_store::serde::json::load_all(BufReader::new(Cursor::new(
-                    &cookies_bytes,
-                )))
-                .map_err(|e| format!("cookie deserialise: {}", e))?;
-                *self.cookie_store.lock().await = store;
-            }
-
-            // BATCH REHYDRATION — Consolidate all storage writes into ONE blocking task
-            // for maximum performance (< 50ms) regardless of the number of origins.
+            // BATCH REHYDRATION — Consolidate ALL CPU/IO intensive tasks into ONE blocking task.
+            // This includes extraction, verification, and database writes.
             let storage = self.storage.clone();
             let sid = session_id_str.clone();
             let manifest_clone = manifest.clone();
-            let snapshot_files_clone = snapshot_files.clone();
             let limit_resume = self.blocking_limit.clone();
+            let compressed_clone = compressed.clone();
 
-            tokio::task::spawn_blocking(move || {
+            let cookies_bytes = tokio::task::spawn_blocking(move || {
                 let _permit = limit_resume.try_acquire().ok();
-                let session_dir = storage.session_dir(&sid).map_err(|e| e.to_string())?;
 
+                // 1. Extract files (CPU intensive)
+                let snapshot_files = Self::extract_files_from_snapshot(&compressed_clone)?;
+
+                // 2. Verify hashes (CPU intensive)
+                Self::verify_snapshot_payload(&manifest_clone, &snapshot_files)?;
+
+                // 3. Rehydrate storage (IO intensive)
+                let session_dir = storage.session_dir(&sid).map_err(|e| e.to_string())?;
                 for filename in manifest_clone.checksums.keys() {
                     // localStorage
                     if let Some(rest) = filename.strip_prefix("localstorage/") {
                         let hash = rest.strip_suffix(".json").ok_or("invalid ls filename")?;
-                        let json_bytes = snapshot_files_clone
-                            .get(filename)
-                            .cloned()
-                            .ok_or_else(|| format!("snapshot missing file: {}", filename))?;
-                        if json_bytes.is_empty() {
-                            continue;
-                        }
+                        let json_bytes = snapshot_files.get(filename).cloned().ok_or_else(|| {
+                            format!("snapshot missing file: {}", filename)
+                        })?;
+                        if json_bytes.is_empty() { continue; }
 
-                        let kv_map: HashMap<String, String> =
-                            serde_json::from_slice(&json_bytes)
-                                .map_err(|e| format!("localstorage deserialise: {}", e))?;
+                        let kv_map: HashMap<String, String> = serde_json::from_slice(&json_bytes)
+                            .map_err(|e| format!("localstorage deserialise: {}", e))?;
 
                         let ls_dir = session_dir.join("localstorage");
                         std::fs::create_dir_all(&ls_dir).map_err(|e| e.to_string())?;
@@ -682,21 +669,16 @@ impl EngineAdapter {
                             .map_err(|e| e.to_string())?;
                         db.clear().map_err(|e| e.to_string())?;
                         for (k, v) in &kv_map {
-                            db.insert(k.as_bytes(), v.as_bytes())
-                                .map_err(|e| e.to_string())?;
+                            db.insert(k.as_bytes(), v.as_bytes()).map_err(|e| e.to_string())?;
                         }
-                        db.flush().map_err(|e| e.to_string())?;
                     }
                     // IndexedDB
                     else if let Some(rest) = filename.strip_prefix("indexeddb/") {
                         let hash = rest.strip_suffix(".sqlite").ok_or("invalid idb filename")?;
-                        let sqlite_bytes = snapshot_files_clone
-                            .get(filename)
-                            .cloned()
-                            .ok_or_else(|| format!("snapshot missing file: {}", filename))?;
-                        if sqlite_bytes.is_empty() {
-                            continue;
-                        }
+                        let sqlite_bytes = snapshot_files.get(filename).cloned().ok_or_else(|| {
+                            format!("snapshot missing file: {}", filename)
+                        })?;
+                        if sqlite_bytes.is_empty() { continue; }
 
                         let idb_dir = session_dir.join("indexeddb");
                         std::fs::create_dir_all(&idb_dir).map_err(|e| e.to_string())?;
@@ -704,10 +686,21 @@ impl EngineAdapter {
                             .map_err(|e| e.to_string())?;
                     }
                 }
-                Ok::<_, String>(())
+
+                // Return cookies for async rehydration
+                Ok::<_, String>(snapshot_files.get("cookies.bin").cloned())
             })
             .await
             .map_err(|e| e.to_string())??;
+
+            // 4. Rehydrate cookies (requires async mutex)
+            if let Some(bytes) = cookies_bytes {
+                if !bytes.is_empty() {
+                    let store = cookie_store::serde::json::load_all(BufReader::new(Cursor::new(&bytes)))
+                        .map_err(|e| format!("cookie deserialise: {}", e))?;
+                    *self.cookie_store.lock().await = store;
+                }
+            }
 
             self.broker
                 .set_state(session_id, SessionState::Running)

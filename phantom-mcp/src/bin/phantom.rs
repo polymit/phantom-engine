@@ -3,8 +3,20 @@ use std::{env, sync::Arc};
 use phantom_mcp::{telemetry, EngineAdapter, McpServer};
 use tokio::net::TcpListener;
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // 1. Initialize V8 Platform on the MAIN OS THREAD (Blueprint D-38)
+    // This MUST happen before any worker threads (Tokio) are spawned.
+    phantom_js::init_v8_platform();
+
+    // 2. Build and run the Tokio runtime
+    let rt = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()?;
+
+    rt.block_on(run())
+}
+
+async fn run() -> Result<(), Box<dyn std::error::Error>> {
     telemetry::init();
 
     let bind_addr = env::var("PHANTOM_BIND_ADDR").unwrap_or_else(|_| "0.0.0.0:8080".to_string());

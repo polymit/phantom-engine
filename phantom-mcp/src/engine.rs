@@ -655,13 +655,17 @@ impl EngineAdapter {
                     // localStorage
                     if let Some(rest) = filename.strip_prefix("localstorage/") {
                         let hash = rest.strip_suffix(".json").ok_or("invalid ls filename")?;
-                        let json_bytes = snapshot_files.get(filename).cloned().ok_or_else(|| {
-                            format!("snapshot missing file: {}", filename)
-                        })?;
-                        if json_bytes.is_empty() { continue; }
+                        let json_bytes = snapshot_files
+                            .get(filename)
+                            .cloned()
+                            .ok_or_else(|| format!("snapshot missing file: {}", filename))?;
+                        if json_bytes.is_empty() {
+                            continue;
+                        }
 
-                        let kv_map: HashMap<String, String> = serde_json::from_slice(&json_bytes)
-                            .map_err(|e| format!("localstorage deserialise: {}", e))?;
+                        let kv_map: HashMap<String, String> =
+                            serde_json::from_slice(&json_bytes)
+                                .map_err(|e| format!("localstorage deserialise: {}", e))?;
 
                         let ls_dir = session_dir.join("localstorage");
                         std::fs::create_dir_all(&ls_dir).map_err(|e| e.to_string())?;
@@ -669,16 +673,20 @@ impl EngineAdapter {
                             .map_err(|e| e.to_string())?;
                         db.clear().map_err(|e| e.to_string())?;
                         for (k, v) in &kv_map {
-                            db.insert(k.as_bytes(), v.as_bytes()).map_err(|e| e.to_string())?;
+                            db.insert(k.as_bytes(), v.as_bytes())
+                                .map_err(|e| e.to_string())?;
                         }
                     }
                     // IndexedDB
                     else if let Some(rest) = filename.strip_prefix("indexeddb/") {
                         let hash = rest.strip_suffix(".sqlite").ok_or("invalid idb filename")?;
-                        let sqlite_bytes = snapshot_files.get(filename).cloned().ok_or_else(|| {
-                            format!("snapshot missing file: {}", filename)
-                        })?;
-                        if sqlite_bytes.is_empty() { continue; }
+                        let sqlite_bytes = snapshot_files
+                            .get(filename)
+                            .cloned()
+                            .ok_or_else(|| format!("snapshot missing file: {}", filename))?;
+                        if sqlite_bytes.is_empty() {
+                            continue;
+                        }
 
                         let idb_dir = session_dir.join("indexeddb");
                         std::fs::create_dir_all(&idb_dir).map_err(|e| e.to_string())?;
@@ -696,8 +704,9 @@ impl EngineAdapter {
             // 4. Rehydrate cookies (requires async mutex)
             if let Some(bytes) = cookies_bytes {
                 if !bytes.is_empty() {
-                    let store = cookie_store::serde::json::load_all(BufReader::new(Cursor::new(&bytes)))
-                        .map_err(|e| format!("cookie deserialise: {}", e))?;
+                    let store =
+                        cookie_store::serde::json::load_all(BufReader::new(Cursor::new(&bytes)))
+                            .map_err(|e| format!("cookie deserialise: {}", e))?;
                     *self.cookie_store.lock().await = store;
                 }
             }

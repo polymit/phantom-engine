@@ -14,7 +14,7 @@ fn render_cct(marker: &str) -> String {
     let html = format!(
         "<html><body style='width: 1280px; height: 720px;'><h1>{marker}</h1></body></html>"
     );
-    let page = process_html(&html, "data:text/html,scale", 1280.0, 720.0)
+    let page = process_html(&html, "data:text/html,scale", 1280.0, 720.0, Vec::new())
         .expect("fixture HTML should parse");
     HeadlessSerializer::serialise(
         &page,

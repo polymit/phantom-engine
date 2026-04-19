@@ -41,7 +41,14 @@ const INTEGRATION_HTML: &str = r#"<!DOCTYPE html>
 async fn setup_with_page() -> (Arc<EngineAdapter>, McpServer) {
     let adapter =
         Arc::new(EngineAdapter::new(5, 0, 5, 0, phantom_session::ResourceBudget::default()).await);
-    let page = process_html(INTEGRATION_HTML, "https://local.test/login", 1280.0, 720.0).unwrap();
+    let page = process_html(
+        INTEGRATION_HTML,
+        "https://local.test/login",
+        1280.0,
+        720.0,
+        Vec::new(),
+    )
+    .unwrap();
     adapter.store_page(SessionPage::new(
         page.tree,
         "https://local.test/login".to_string(),
@@ -376,7 +383,7 @@ async fn phase3_selective_mode_on_large_page() {
         ));
     }
     html.push_str("</body></html>");
-    let page = process_html(&html, "https://large.test", 1280.0, 720.0).unwrap();
+    let page = process_html(&html, "https://large.test", 1280.0, 720.0, Vec::new()).unwrap();
     adapter.store_page(SessionPage::new(
         page.tree,
         "https://large.test".to_string(),

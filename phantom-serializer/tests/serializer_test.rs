@@ -32,7 +32,7 @@ mod tests {
                     </form>
                 </main>
             </body></html>"#,
-            "https://example.com", 1280.0, 720.0
+            "https://example.com", 1280.0, 720.0, Vec::new()
         ).unwrap();
 
         let config = SerialiserConfig {
@@ -54,7 +54,7 @@ mod tests {
     #[test]
     fn test_serialise_performance_1000_nodes() {
         let html = make_page(200);
-        let page = process_html(&html, "https://bench.test", 1280.0, 720.0).unwrap();
+        let page = process_html(&html, "https://bench.test", 1280.0, 720.0, Vec::new()).unwrap();
 
         let config = SerialiserConfig {
             url: "https://bench.test".to_string(),
@@ -87,6 +87,7 @@ mod tests {
             "https://example.com",
             1280.0,
             720.0,
+            Vec::new(),
         )
         .unwrap();
 
@@ -132,6 +133,7 @@ mod tests {
             "https://count.test",
             1280.0,
             720.0,
+            Vec::new(),
         )
         .unwrap();
 
@@ -167,6 +169,7 @@ mod tests {
             "https://landmark.test",
             1280.0,
             720.0,
+            Vec::new(),
         )
         .unwrap();
 
@@ -192,6 +195,7 @@ mod tests {
             "https://escape.test",
             1280.0,
             720.0,
+            Vec::new(),
         )
         .unwrap();
 
@@ -234,7 +238,7 @@ mod tests {
                     </form>
                 </main>
             </body></html>"#,
-            "https://example.com", 1280.0, 720.0
+            "https://example.com", 1280.0, 720.0, Vec::new()
         ).unwrap();
 
         let config = SerialiserConfig {
@@ -253,7 +257,7 @@ mod tests {
     fn test_page_header_format() {
         let page = process_html(
             "<html><body style='width: 1280px; height: 720px;'><p style='width: 100px; height: 20px;'>Hello</p></body></html>",
-            "https://test.com", 1280.0, 720.0
+            "https://test.com", 1280.0, 720.0, Vec::new()
         ).unwrap();
 
         let config = SerialiserConfig {
@@ -279,6 +283,7 @@ mod tests {
             "https://example.com",
             1280.0,
             720.0,
+            Vec::new(),
         )
         .unwrap();
         let config = SerialiserConfig {
@@ -297,7 +302,7 @@ mod tests {
     fn test_serialise_performance_detailed() {
         use std::time::Instant;
         let html = make_page(200);
-        let page = process_html(&html, "https://perf.test", 1280.0, 720.0).unwrap();
+        let page = process_html(&html, "https://perf.test", 1280.0, 720.0, Vec::new()).unwrap();
         let config = SerialiserConfig {
             url: "https://perf.test".to_string(),
             ..Default::default()

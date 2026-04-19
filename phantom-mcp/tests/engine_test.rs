@@ -154,6 +154,7 @@ async fn scene_graph_after_store_returns_valid_cct() {
         "https://test.local",
         1280.0,
         720.0,
+        Vec::new(),
     )
     .expect("process_html must not fail");
 
@@ -208,6 +209,7 @@ async fn scene_graph_selective_mode_accepted() {
         "https://login.test",
         1280.0,
         720.0,
+        Vec::new(),
     )
     .unwrap();
     adapter.store_page(SessionPage::new(
@@ -257,6 +259,7 @@ async fn scene_graph_scroll_params_accepted() {
         "https://scroll.test",
         1280.0,
         720.0,
+        Vec::new(),
     )
     .unwrap();
     adapter.store_page(SessionPage::new(
@@ -321,6 +324,7 @@ async fn scene_graph_cct_header_contains_correct_url() {
         "https://specific-url.test/path",
         1280.0,
         720.0,
+        Vec::new(),
     )
     .unwrap();
     adapter.store_page(SessionPage::new(
@@ -361,6 +365,7 @@ async fn scene_graph_uses_stored_viewport_dimensions() {
         "https://viewport.test",
         1000.0,
         600.0,
+        Vec::new(),
     )
     .unwrap();
     adapter.store_page(SessionPage::with_viewport(
@@ -438,6 +443,7 @@ async fn click_nonexistent_selector_returns_element_not_found() {
         "https://click.test",
         1280.0,
         720.0,
+        Vec::new(),
     )
     .unwrap();
     adapter.store_page(SessionPage::new(
@@ -483,6 +489,7 @@ async fn click_existing_button_returns_success() {
         "https://click.test",
         1280.0,
         720.0,
+        Vec::new(),
     )
     .unwrap();
     adapter.store_page(SessionPage::new(
@@ -553,6 +560,7 @@ async fn click_defaults_to_element_center() {
         "https://click.test",
         1280.0,
         720.0,
+        Vec::new(),
     )
     .unwrap();
     adapter.store_page(SessionPage::new(
@@ -587,6 +595,7 @@ async fn click_missing_selector_param_returns_error() {
         "https://click.test",
         1280.0,
         720.0,
+        Vec::new(),
     )
     .unwrap();
     adapter.store_page(SessionPage::new(
@@ -618,6 +627,7 @@ async fn click_selector_with_single_quote_does_not_panic() {
         "https://click.test",
         1280.0,
         720.0,
+        Vec::new(),
     )
     .unwrap();
     adapter.store_page(SessionPage::new(
@@ -653,6 +663,7 @@ async fn type_nonexistent_selector_returns_element_not_found() {
         "https://type.test",
         1280.0,
         720.0,
+        Vec::new(),
     )
     .unwrap();
     adapter.store_page(SessionPage::new(
@@ -688,6 +699,7 @@ async fn type_input_updates_value_and_persists_for_evaluate() {
         "https://type.test",
         1280.0,
         720.0,
+        Vec::new(),
     )
     .unwrap();
     adapter.store_page(SessionPage::new(
@@ -753,6 +765,7 @@ async fn type_updates_original_tab_after_switch() {
         "https://tab-a.type.test",
         1280.0,
         720.0,
+        Vec::new(),
     )
     .unwrap();
     adapter.store_page(SessionPage::new(
@@ -769,6 +782,7 @@ async fn type_updates_original_tab_after_switch() {
         "https://tab-b.type.test",
         1280.0,
         720.0,
+        Vec::new(),
     )
     .unwrap();
     adapter.store_page(SessionPage::new(
@@ -863,6 +877,7 @@ async fn evaluate_arithmetic_returns_number() {
         "https://eval.test",
         1280.0,
         720.0,
+        Vec::new(),
     )
     .unwrap();
     adapter.store_page(SessionPage::new(
@@ -909,6 +924,7 @@ async fn evaluate_string_result_has_string_type() {
         "https://eval.test",
         1280.0,
         720.0,
+        Vec::new(),
     )
     .unwrap();
     adapter.store_page(SessionPage::new(
@@ -951,6 +967,7 @@ async fn evaluate_object_result_returns_json_object() {
         "https://eval.test",
         1280.0,
         720.0,
+        Vec::new(),
     )
     .unwrap();
     adapter.store_page(SessionPage::new(
@@ -1089,6 +1106,7 @@ async fn tab_switch_changes_scene_graph_context() {
         "https://tab1.test",
         1280.0,
         720.0,
+        Vec::new(),
     )
     .unwrap();
     adapter.store_page(SessionPage::new(
@@ -1108,6 +1126,7 @@ async fn tab_switch_changes_scene_graph_context() {
         "https://tab2.test",
         1280.0,
         720.0,
+        Vec::new(),
     )
     .unwrap();
     adapter.store_page(SessionPage::new(
@@ -1243,6 +1262,7 @@ async fn tab_close_keeps_active_page_and_store_in_sync() {
         "https://sync-tab-1.test",
         1280.0,
         720.0,
+        Vec::new(),
     )
     .unwrap();
     adapter.store_page(SessionPage::new(
@@ -1259,6 +1279,7 @@ async fn tab_close_keeps_active_page_and_store_in_sync() {
         "https://sync-tab-2.test",
         1280.0,
         720.0,
+        Vec::new(),
     )
     .unwrap();
     adapter.store_page(SessionPage::new(
@@ -1311,6 +1332,7 @@ async fn stale_navigation_key_does_not_reinsert_closed_tab_page() {
         "https://race-tab-2.test",
         1280.0,
         720.0,
+        Vec::new(),
     )
     .unwrap();
     let stored = adapter.store_page_if_current(

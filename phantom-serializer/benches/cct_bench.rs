@@ -38,7 +38,7 @@ fn make_page_html(node_count: usize) -> String {
 
 fn bench_cct_full_1000_nodes(c: &mut Criterion) {
     let html = make_page_html(1000);
-    let page = process_html(&html, "https://bench.full", 1280.0, 720.0)
+    let page = process_html(&html, "https://bench.full", 1280.0, 720.0, Vec::new())
         .expect("benchmark page parse should succeed");
     let config = SerialiserConfig {
         url: "https://bench.full".to_string(),
@@ -64,7 +64,7 @@ fn bench_cct_full_1000_nodes(c: &mut Criterion) {
 
 fn bench_cct_selective_1000_nodes(c: &mut Criterion) {
     let html = make_page_html(1000);
-    let page = process_html(&html, "https://bench.selective", 1280.0, 720.0)
+    let page = process_html(&html, "https://bench.selective", 1280.0, 720.0, Vec::new())
         .expect("benchmark page parse should succeed");
     let config = SerialiserConfig {
         url: "https://bench.selective".to_string(),
@@ -99,7 +99,7 @@ fn bench_cct_selective_1000_nodes(c: &mut Criterion) {
 
 fn bench_cct_delta_10_mutations(c: &mut Criterion) {
     let html = make_page_html(32);
-    let page = process_html(&html, "https://bench.delta", 1280.0, 720.0)
+    let page = process_html(&html, "https://bench.delta", 1280.0, 720.0, Vec::new())
         .expect("benchmark page parse should succeed");
     let root = page
         .tree

@@ -34,7 +34,7 @@ mod tests {
             </html>
         "#;
 
-        let result = process_html(html, "https://example.com", 1280.0, 720.0);
+        let result = process_html(html, "https://example.com", 1280.0, 720.0, Vec::new());
         assert!(result.is_ok());
         let page = result.unwrap();
         assert!(page.tree.document_root.is_some());
@@ -51,7 +51,7 @@ mod tests {
             </body></html>
         "#;
 
-        let page = process_html(html, "https://test.com", 1280.0, 720.0)
+        let page = process_html(html, "https://test.com", 1280.0, 720.0, Vec::new())
             .expect("pipeline should not fail");
 
         assert!(page.tree.document_root.is_some());
@@ -104,7 +104,7 @@ mod tests {
         let html = make_large_page(333); // 333 divs × 3 nodes each ≈ 1000 nodes
 
         let start = Instant::now();
-        let result = process_html(&html, "https://bench.test", 1280.0, 720.0);
+        let result = process_html(&html, "https://bench.test", 1280.0, 720.0, Vec::new());
         let elapsed = start.elapsed();
 
         assert!(result.is_ok(), "Pipeline failed: {:?}", result.err());
@@ -128,13 +128,13 @@ mod tests {
     fn test_pipeline_malformed_html() {
         // Must not panic on malformed input
         let html = "<div><p>unclosed <span>tags everywhere";
-        let result = process_html(html, "https://broken.com", 1280.0, 720.0);
+        let result = process_html(html, "https://broken.com", 1280.0, 720.0, Vec::new());
         assert!(result.is_ok());
     }
 
     #[test]
     fn test_pipeline_empty_page() {
-        let result = process_html("", "https://empty.com", 1280.0, 720.0);
+        let result = process_html("", "https://empty.com", 1280.0, 720.0, Vec::new());
         assert!(result.is_ok());
     }
 
@@ -148,7 +148,8 @@ mod tests {
             </body></html>
         "#;
 
-        let page = process_html(html, "https://visibility.test", 1280.0, 720.0).unwrap();
+        let page =
+            process_html(html, "https://visibility.test", 1280.0, 720.0, Vec::new()).unwrap();
         let parent_id = page.tree.get_element_by_id("parent").unwrap();
         let child_id = page.tree.get_element_by_id("child").unwrap();
 
@@ -177,7 +178,7 @@ mod tests {
             </body></html>
         "#;
 
-        let page = process_html(html, "https://zero-size.test", 1280.0, 720.0).unwrap();
+        let page = process_html(html, "https://zero-size.test", 1280.0, 720.0, Vec::new()).unwrap();
         let zero_id = page.tree.get_element_by_id("zero").unwrap();
         assert!(
             !page
@@ -198,7 +199,7 @@ mod tests {
             </body></html>
         "#;
 
-        let page = process_html(html, "https://offscreen.test", 1280.0, 720.0).unwrap();
+        let page = process_html(html, "https://offscreen.test", 1280.0, 720.0, Vec::new()).unwrap();
         let below_fold_id = page.tree.get_element_by_id("below-fold").unwrap();
         assert!(
             !page
@@ -222,7 +223,8 @@ mod tests {
             </body></html>
         "#;
 
-        let page = process_html(html, "https://nested-offset.test", 170.0, 120.0).unwrap();
+        let page =
+            process_html(html, "https://nested-offset.test", 170.0, 120.0, Vec::new()).unwrap();
         let target = page.tree.get_element_by_id("target").unwrap();
         assert!(
             page.tree
@@ -241,7 +243,8 @@ mod tests {
             </body></html>
         "#;
 
-        let page = process_html(html, "https://percent-size.test", 400.0, 120.0).unwrap();
+        let page =
+            process_html(html, "https://percent-size.test", 400.0, 120.0, Vec::new()).unwrap();
         let pct = page.tree.get_element_by_id("pct").unwrap();
         let bounds = page.layout_map.get(&pct).unwrap();
 
@@ -268,7 +271,7 @@ mod tests {
             </body></html>
         "#;
 
-        let page = process_html(html, "https://display.test", 1280.0, 720.0).unwrap();
+        let page = process_html(html, "https://display.test", 1280.0, 720.0, Vec::new()).unwrap();
         let parent_id = page.tree.get_element_by_id("parent").unwrap();
         let child_id = page.tree.get_element_by_id("child").unwrap();
 
@@ -294,7 +297,7 @@ mod tests {
             </body></html>
         "#;
 
-        let page = process_html(html, "https://nested.test", 1280.0, 720.0).unwrap();
+        let page = process_html(html, "https://nested.test", 1280.0, 720.0, Vec::new()).unwrap();
         let gp = page.tree.get_element_by_id("grandparent").unwrap();
         let p = page.tree.get_element_by_id("parent").unwrap();
         let c = page.tree.get_element_by_id("child").unwrap();
@@ -323,7 +326,8 @@ mod tests {
             </body></html>
         "#;
 
-        let page = process_html(html, "https://text-layout.test", 1280.0, 720.0).unwrap();
+        let page =
+            process_html(html, "https://text-layout.test", 1280.0, 720.0, Vec::new()).unwrap();
         let wrapper = page.tree.get_element_by_id("wrapper").unwrap();
         let bounds = page.layout_map.get(&wrapper).unwrap();
 

@@ -189,14 +189,50 @@ pub async fn navigate(
         let viewport_height = config.viewport_height;
         let task_hint = config.task_hint.clone();
 
+        // 1. Initial parse to find external stylesheets
+        let tree = phantom_core::parser::parse_html(&html);
+        let mut external_css_urls = Vec::new();
+        if let Some(root) = tree.document_root {
+            collect_external_css_links(&tree, root, &final_url, &mut external_css_urls);
+        }
+
+        // 2. Fetch external CSS concurrently
+        let mut external_css = Vec::new();
+        if !external_css_urls.is_empty() {
+            let mut fetch_tasks = Vec::new();
+            for css_url in external_css_urls {
+                let client = client.clone();
+                let max_bytes = config.max_network_bytes;
+                fetch_tasks.push(tokio::spawn(async move {
+                    client.fetch(&css_url, max_bytes).await
+                }));
+            }
+
+            for task in fetch_tasks {
+                if let Ok(Ok(resp)) = task.await {
+                    if resp.status == 200 {
+                        if let Ok(css_text) = decode_body(&resp) {
+                            external_css.push(css_text);
+                        }
+                    }
+                }
+            }
+        }
+
         let (tree, cct, node_count, pipeline_ms) = tokio::task::spawn_blocking(move || {
             let pipeline_start = std::time::Instant::now();
 
-            let page = process_html(&html, &final_url_clone, viewport_width, viewport_height)
-                .map_err(|e| NavigationError::Pipeline {
-                    url: final_url_clone.clone(),
-                    source: e,
-                })?;
+            let page = process_html(
+                &html,
+                &final_url_clone,
+                viewport_width,
+                viewport_height,
+                external_css,
+            )
+            .map_err(|e| NavigationError::Pipeline {
+                url: final_url_clone.clone(),
+                source: e,
+            })?;
 
             let serialiser_mode = if task_hint.is_some() {
                 SerialiserMode::Selective
@@ -240,6 +276,39 @@ pub async fn navigate(
             tree,
             pipeline_ms: Some(pipeline_ms),
         });
+    }
+}
+
+fn collect_external_css_links(
+    tree: &phantom_core::DomTree,
+    node_id: phantom_core::NodeId,
+    base_url: &str,
+    urls: &mut Vec<String>,
+) {
+    if let Some(node) = tree.get(node_id) {
+        if let phantom_core::dom::NodeData::Element {
+            tag_name,
+            attributes,
+        } = &node.data
+        {
+            if tag_name.eq_ignore_ascii_case("link")
+                && attributes
+                    .get("rel")
+                    .is_some_and(|r| r.eq_ignore_ascii_case("stylesheet"))
+            {
+                if let Some(href) = attributes.get("href") {
+                    if let Ok(base) = Url::parse(base_url) {
+                        if let Ok(resolved) = base.join(href) {
+                            urls.push(resolved.to_string());
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    for child in node_id.children(&tree.arena) {
+        collect_external_css_links(tree, child, base_url, urls);
     }
 }
 

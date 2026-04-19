@@ -191,7 +191,7 @@ mod tests {
                 </div>
             </body></html>
         "#;
-        let page = process_html(html, "https://z.test", 1280.0, 720.0).unwrap();
+        let page = process_html(html, "https://z.test", 1280.0, 720.0, Vec::new()).unwrap();
         let viewport = ViewportBounds::new(0.0, 0.0, 1280.0, 720.0);
         let geo = crate::geometry::extract_geometry(&page.tree, &page.layout_map, &viewport);
         let z = resolve_zindex(&page.tree, &geo);

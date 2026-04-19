@@ -300,6 +300,7 @@ async fn test_element_value_getter_setter_for_form_controls() {
         "https://type.test",
         1280.0,
         720.0,
+        Vec::new(),
     )
     .expect("html parse must succeed");
 
@@ -348,6 +349,7 @@ async fn test_element_is_content_editable_and_text_content_setter() {
         "https://type.test",
         1280.0,
         720.0,
+        Vec::new(),
     )
     .expect("html parse must succeed");
 

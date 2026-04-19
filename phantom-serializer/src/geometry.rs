@@ -80,7 +80,7 @@ mod tests {
                 </div>
             </body></html>
         "#;
-        let page = process_html(html, "https://geometry.test", 1280.0, 720.0).unwrap();
+        let page = process_html(html, "https://geometry.test", 1280.0, 720.0, Vec::new()).unwrap();
         let viewport = ViewportBounds::new(0.0, 1100.0, 1280.0, 200.0);
         let map = extract_geometry(&page.tree, &page.layout_map, &viewport);
 

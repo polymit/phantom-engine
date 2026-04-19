@@ -40,6 +40,7 @@ async fn phase2_full_pipeline_tier1() {
         "https://app.example.com/login",
         1280.0,
         720.0,
+        Vec::new(),
     )
     .expect("HTML parsing must not fail");
 

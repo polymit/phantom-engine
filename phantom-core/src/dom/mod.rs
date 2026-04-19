@@ -6,7 +6,8 @@ pub use self::node::{
     AriaRole, Display, DomNode, EventListenerType, NodeData, PointerEvents, SizeValue, Visibility,
 };
 pub use self::sink::DomSink;
-use indextree::{Arena, NodeId};
+use indextree::Arena;
+pub use indextree::NodeId;
 use std::num::NonZeroUsize;
 
 /// The live DOM tree produced by the HTML parser.

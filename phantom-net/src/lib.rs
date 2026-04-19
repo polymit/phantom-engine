@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::sync::RwLock;
+use std::sync::{Arc, RwLock};
 use std::time::Instant;
 
 use url::Url;
@@ -47,9 +47,10 @@ struct AltSvcCacheEntry {
 ///
 /// The real client will hold h2/h3 implementations; this type currently
 /// tracks Alt-Svc state and chooses which transport to use per authority.
+#[derive(Clone)]
 pub struct SmartNetworkClient {
     persona_id: String,
-    alt_svc_cache: RwLock<HashMap<String, AltSvcCacheEntry>>,
+    alt_svc_cache: Arc<RwLock<HashMap<String, AltSvcCacheEntry>>>,
     client: Client,
     pub max_network_bytes: Option<usize>,
 }
@@ -73,7 +74,7 @@ impl SmartNetworkClient {
     pub fn new(persona_id: impl Into<String>) -> Self {
         Self {
             persona_id: persona_id.into(),
-            alt_svc_cache: RwLock::new(HashMap::new()),
+            alt_svc_cache: Arc::new(RwLock::new(HashMap::new())),
             client: Client::new(),
             max_network_bytes: None,
         }
@@ -106,7 +107,7 @@ impl SmartNetworkClient {
 
         Self {
             persona_id: format!("{:?}", persona.chrome_version),
-            alt_svc_cache: RwLock::new(HashMap::new()),
+            alt_svc_cache: Arc::new(RwLock::new(HashMap::new())),
             client,
             max_network_bytes: None,
         }

@@ -505,6 +505,7 @@ impl EngineAdapter {
 
             // Session cookies have no Expires/Max-Age — serde's Serialize impl
             // filters them out. cookie_store::serde::json preserves them.
+            let s1 = Instant::now();
             let cookies_json = {
                 let store = self.cookie_store.lock().await;
                 let mut buf = Vec::new();
@@ -512,28 +513,33 @@ impl EngineAdapter {
                     .map_err(|e| e.to_string())?;
                 buf
             }; // tokio Mutex guard dropped here
+            tracing::info!("suspend: cookies took {}ms", s1.elapsed().as_millis());
 
             // STEP 2 — Collect localStorage from disk
             let storage2 = self.storage.clone();
             let sid2 = session_id_str.clone();
             let limit2 = self.blocking_limit.clone();
+            let s2 = Instant::now();
             let local_storage = tokio::task::spawn_blocking(move || {
                 let _permit = limit2.try_acquire().ok();
                 collect_localstorage(&sid2, &storage2)
             })
             .await
             .map_err(|e| e.to_string())?;
+            tracing::info!("suspend: localstorage took {}ms", s2.elapsed().as_millis());
 
             // STEP 3 — Collect IndexedDB bytes
             let storage3 = self.storage.clone();
             let sid3 = session_id_str.clone();
             let limit3 = self.blocking_limit.clone();
+            let s3 = Instant::now();
             let indexeddb = tokio::task::spawn_blocking(move || {
                 let _permit = limit3.try_acquire().ok();
                 collect_indexeddb(&sid3, &storage3)
             })
             .await
             .map_err(|e| e.to_string())?;
+            tracing::info!("suspend: indexeddb took {}ms", s3.elapsed().as_millis());
 
             // STEP 4 — Build snapshot
             let data = phantom_storage::snapshot::SnapshotData {
@@ -545,6 +551,7 @@ impl EngineAdapter {
                 cache_meta: None,
             };
             let limit4 = self.blocking_limit.clone();
+            let s4 = Instant::now();
             let compressed = tokio::task::spawn_blocking(move || {
                 let _permit = limit4.try_acquire().ok();
                 phantom_storage::snapshot::build_snapshot(&data)
@@ -552,6 +559,10 @@ impl EngineAdapter {
             .await
             .map_err(|e| e.to_string())?
             .map_err(|e| e.to_string())?;
+            tracing::info!(
+                "suspend: build_snapshot took {}ms",
+                s4.elapsed().as_millis()
+            );
 
             // STEP 5 — Write to disk
             let timestamp = SystemTime::now()
@@ -572,9 +583,11 @@ impl EngineAdapter {
 
             let path =
                 session_dir.join(format!("snapshot-{}-{}.tar.zst", session_id_str, timestamp));
+            let s5 = Instant::now();
             tokio::fs::write(&path, &compressed)
                 .await
                 .map_err(|e| e.to_string())?;
+            tracing::info!("suspend: write took {}ms", s5.elapsed().as_millis());
 
             metrics::STORAGE_QUOTA_USED_BYTES.set(compressed.len() as i64);
 

@@ -269,6 +269,7 @@ async fn test_authenticated_session_lifecycle() {
         &format!("{}/dashboard", origin),
         1280.0,
         720.0,
+        Vec::new(),
     )
     .expect("parse dashboard HTML");
     adapter.store_page(SessionPage::new(
@@ -464,6 +465,7 @@ async fn test_cct_serialization_authenticated() {
         "https://dashboard.example.com/home",
         1280.0,
         720.0,
+        Vec::new(),
     )
     .expect("parse dashboard HTML");
 

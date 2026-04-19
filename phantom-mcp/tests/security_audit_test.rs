@@ -34,8 +34,8 @@ fn rpc_request(api_key: Option<&str>) -> Request<Body> {
 
 fn install_fixture_page(adapter: &EngineAdapter, marker: &str) {
     let html = format!("<html><body><h1>{marker}</h1></body></html>");
-    let parsed =
-        process_html(&html, "data:text/html,security", 1280.0, 720.0).expect("fixture parses");
+    let parsed = process_html(&html, "data:text/html,security", 1280.0, 720.0, Vec::new())
+        .expect("fixture parses");
     adapter.store_page(SessionPage::new(parsed.tree, parsed.url, 200));
 }
 

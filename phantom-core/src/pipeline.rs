@@ -1,4 +1,4 @@
-use crate::css::{ComputedStyle, CssEngine};
+use crate::css::{ComputedStyle, CssEngine, Stylesheet};
 use crate::dom::{Display, DomTree, NodeData, SizeValue, Visibility};
 use crate::layout::bounds::{LayoutEngine, LayoutError, LayoutMap, ViewportBounds};
 use indextree::NodeId;
@@ -27,15 +27,52 @@ pub fn process_html(
     url: &str,
     viewport_width: f32,
     viewport_height: f32,
+    external_css: Vec<String>,
 ) -> Result<ParsedPage, CoreError> {
     let mut tree = crate::parser::parse_html(html);
 
     // Pass 1: CSS parsing and initial visibility
     if let Some(root) = tree.document_root {
-        apply_css_pass(&mut tree, root, None, false);
+        let mut stylesheet = Stylesheet::default();
+        // Add external CSS first (lowest priority)
+        for css in external_css {
+            let external = Stylesheet::parse(&css);
+            stylesheet.rules.extend(external.rules);
+        }
+        // Collect internal <style> tags (higher priority than external)
+        collect_stylesheets(&tree, root, &mut stylesheet);
+
+        apply_css_pass(&mut tree, root, None, false, Some(&stylesheet));
     }
 
     rebuild_page_from_tree(tree, url, viewport_width, viewport_height)
+}
+
+fn collect_stylesheets(tree: &DomTree, node_id: NodeId, stylesheet: &mut Stylesheet) {
+    if let Some(node) = tree.get(node_id) {
+        if let NodeData::Element { tag_name, .. } = &node.data {
+            if tag_name.eq_ignore_ascii_case("style") {
+                // Collect text content from children
+                let mut css_content = String::new();
+                for child_id in node_id.children(&tree.arena) {
+                    if let Some(child_node) = tree.get(child_id) {
+                        if let NodeData::Text { content } = &child_node.data {
+                            css_content.push_str(content);
+                        }
+                    }
+                }
+                if !css_content.is_empty() {
+                    let internal = Stylesheet::parse(&css_content);
+                    stylesheet.rules.extend(internal.rules);
+                }
+            }
+        }
+    }
+
+    let children: Vec<NodeId> = node_id.children(&tree.arena).collect();
+    for child in children {
+        collect_stylesheets(tree, child, stylesheet);
+    }
 }
 
 /// Rebuild layout + visibility for an existing DOM tree with computed styles.
@@ -88,6 +125,7 @@ fn apply_css_pass(
     node_id: NodeId,
     parent_style: Option<ComputedStyle>,
     ancestor_display_none: bool,
+    stylesheet: Option<&Stylesheet>,
 ) {
     let inline_style_val = tree.get(node_id).and_then(|node| {
         if let NodeData::Element { ref attributes, .. } = node.data {
@@ -97,7 +135,13 @@ fn apply_css_pass(
         }
     });
 
-    let computed = CssEngine::compute(inline_style_val.as_deref(), parent_style.as_ref());
+    let computed = CssEngine::compute(
+        inline_style_val.as_deref(),
+        parent_style.as_ref(),
+        stylesheet,
+        node_id,
+        &tree.arena,
+    );
 
     let mut currently_display_none = ancestor_display_none;
     if let Some(node) = tree.get_mut(node_id) {
@@ -121,7 +165,13 @@ fn apply_css_pass(
 
     let children: Vec<NodeId> = node_id.children(&tree.arena).collect();
     for child in children {
-        apply_css_pass(tree, child, Some(computed.clone()), currently_display_none);
+        apply_css_pass(
+            tree,
+            child,
+            Some(computed.clone()),
+            currently_display_none,
+            stylesheet,
+        );
     }
 }
 

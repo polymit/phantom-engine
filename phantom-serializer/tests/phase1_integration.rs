@@ -71,8 +71,14 @@ mod phase1_integration {
     #[test]
     fn phase1_full_pipeline() {
         let start_total = Instant::now();
-        let page = process_html(login_page(), "https://app.example.com/login", 1280.0, 720.0)
-            .expect("HTML parsing must not fail");
+        let page = process_html(
+            login_page(),
+            "https://app.example.com/login",
+            1280.0,
+            720.0,
+            Vec::new(),
+        )
+        .expect("HTML parsing must not fail");
 
         assert!(
             page.tree.document_root.is_some(),
@@ -154,8 +160,14 @@ mod phase1_integration {
 
     #[test]
     fn phase1_selective_mode_login() {
-        let page =
-            process_html(login_page(), "https://app.example.com/login", 1280.0, 720.0).unwrap();
+        let page = process_html(
+            login_page(),
+            "https://app.example.com/login",
+            1280.0,
+            720.0,
+            Vec::new(),
+        )
+        .unwrap();
 
         let config = SerialiserConfig {
             url: "https://app.example.com/login".to_string(),
@@ -206,7 +218,7 @@ mod phase1_integration {
 
         // ~1000 DOM nodes (200 divs × ~5 nodes each)
         let html = make_large_page(200);
-        let page = process_html(&html, "https://bench.test", 1280.0, 720.0).unwrap();
+        let page = process_html(&html, "https://bench.test", 1280.0, 720.0, Vec::new()).unwrap();
 
         let config = SerialiserConfig {
             url: "https://bench.test".to_string(),

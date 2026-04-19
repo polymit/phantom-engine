@@ -172,8 +172,8 @@ pub fn build_snapshot(data: &SnapshotData) -> Result<Vec<u8>, String> {
             .map_err(|e| format!("failed tar archive finalisation frame writing: {}", e))?;
     }
 
-    // 6. Final phase: Encode raw TAR with zstd level 3 logic (yielding excellent speed).
-    let compressed = zstd::encode_all(Cursor::new(&buf), 3)
+    // 6. Final phase: Encode raw TAR with zstd level 1 logic (yielding excellent speed).
+    let compressed = zstd::encode_all(Cursor::new(&buf), 1)
         .map_err(|e| format!("failed to zstd compress generated tar archive: {}", e))?;
 
     Ok(compressed)

@@ -12,7 +12,7 @@ mod tests {
                 <div style="display:none; width: 100px; height: 100px;"><span style="width: 10px; height: 10px;">Hidden</span></div>
                 <div id="vis" style="width: 100px; height: 100px;">Visible</div>
             </body></html>"#,
-            "https://test.com", 1280.0, 720.0
+            "https://test.com", 1280.0, 720.0, Vec::new()
         ).unwrap();
 
         let viewport = ViewportBounds::new(0.0, 0.0, 1280.0, 720.0);
@@ -44,7 +44,7 @@ mod tests {
             r#"<html><body style="width:1280px; height:720px;">
                 <button id="hidden-btn" style="opacity:0; width: 50px; height: 30px;">Hidden button</button>
             </body></html>"#,
-            "https://test.com", 1280.0, 720.0
+            "https://test.com", 1280.0, 720.0, Vec::new()
         ).unwrap();
 
         let viewport = ViewportBounds::new(0.0, 0.0, 1280.0, 720.0);

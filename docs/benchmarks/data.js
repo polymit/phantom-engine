@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1776581758102,
+  "lastUpdate": 1776590121184,
   "repoUrl": "https://github.com/polymit/phantom-engine",
   "entries": {
     "Benchmark": [
@@ -1427,6 +1427,90 @@ window.BENCHMARK_DATA = {
             "name": "pool_acquire_tier1",
             "value": 204092,
             "range": "± 2776",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "bb562124cfdd59b8711df5ae08ba079c859d5b3e",
+          "message": "fix(mcp): resolve V8 PKU crash and optimize resume latency\n\n- Restructured main to initialize V8 platform on primary OS thread (D-38)\n- Offloaded CPU-heavy extraction and hashing to blocking pool\n- Removed redundant manual Sled flushes to achieve sub-50ms resume",
+          "timestamp": "2026-04-19T14:42:29+05:30",
+          "tree_id": "bc2db9429f69c5443e2d34ccf9242efd0a2aecfa",
+          "url": "https://github.com/polymit/phantom-engine/commit/bb562124cfdd59b8711df5ae08ba079c859d5b3e"
+        },
+        "date": 1776590120453,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 717,
+            "range": "± 17",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 717,
+            "range": "± 6",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 611,
+            "range": "± 8",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 111,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 3221671,
+            "range": "± 98953",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3201667,
+            "range": "± 32203",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5532,
+            "range": "± 62",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3316,
+            "range": "± 57",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 202940,
+            "range": "± 2060",
             "unit": "ns/iter"
           }
         ]

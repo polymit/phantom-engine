@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1776590422951,
+  "lastUpdate": 1776610588664,
   "repoUrl": "https://github.com/polymit/phantom-engine",
   "entries": {
     "Benchmark": [
@@ -1595,6 +1595,90 @@ window.BENCHMARK_DATA = {
             "name": "pool_acquire_tier1",
             "value": 204926,
             "range": "± 1731",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "ed05e57c3c3569cc85169d4c82d8e766cef42e3b",
+          "message": "feat(core): implement CSS cascade engine and optimize suspend latency (Bug 3)\n\nImplements a production-grade CSS cascade engine and resolves performance\nbottlenecks in session suspension.\n\nCSS Cascade:\n- Implemented specificity-based resolution for internal <style> tags.\n- Updated `process_html` signature to support external CSS resources.\n- Propagated inherited styles (display, visibility, opacity) to layout.\n\nPerformance (Bug 3):\n- Reduced zstd compression level from 3 to 1 in `build_snapshot` for faster\n  session suspension (< 200ms).\n- Added detailed timing instrumentation to `EngineAdapter::suspend` for\n  bottleneck tracking.\n\nFixes performance regression in `suspend_completes_under_200ms` test.",
+          "timestamp": "2026-04-19T20:23:31+05:30",
+          "tree_id": "681a669b25f2780fa39a10f2b6770bd3a032c09a",
+          "url": "https://github.com/polymit/phantom-engine/commit/ed05e57c3c3569cc85169d4c82d8e766cef42e3b"
+        },
+        "date": 1776610588355,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 591,
+            "range": "± 12",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 598,
+            "range": "± 3",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 491,
+            "range": "± 22",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 95,
+            "range": "± 3",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 3251038,
+            "range": "± 11444",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3249778,
+            "range": "± 11292",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5173,
+            "range": "± 15",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3177,
+            "range": "± 117",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 205552,
+            "range": "± 1373",
             "unit": "ns/iter"
           }
         ]

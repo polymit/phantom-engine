@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1776529873241,
+  "lastUpdate": 1776577195258,
   "repoUrl": "https://github.com/polymit/phantom-engine",
   "entries": {
     "Benchmark": [
@@ -1259,6 +1259,90 @@ window.BENCHMARK_DATA = {
             "name": "pool_acquire_tier1",
             "value": 204961,
             "range": "± 1506",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "fbe5001724bb55d89c0d14b9403561224b3f4c35",
+          "message": "fix(security): upgrade rand to 0.9.3 and clean up workspace\n\nThis commit addresses the RUSTSEC-2026-0097 unsoundness vulnerability by\nperforming a surgical upgrade of the rand ecosystem across the workspace.\n\n- Upgraded rand to v0.9.3 and rand_distr to v0.5.0 in anti-detect, js, and net crates.\n- Refactored RngCore trait bounds and OsRng usage for compatibility with rand 0.9.\n- Renamed deprecated thread_rng() calls to rng() to align with modern Rust idioms.\n- Removed RUSTSEC-2026-0097 from audit.toml ignore list.\n- Deleted stray local target/ directories in phantom-serializer and phantom-session.\n\nVerified with cargo check --workspace and cargo audit.",
+          "timestamp": "2026-04-19T11:04:32+05:30",
+          "tree_id": "47410b872dcb96f1fd6ea32de1b95ec3701fbfae",
+          "url": "https://github.com/polymit/phantom-engine/commit/fbe5001724bb55d89c0d14b9403561224b3f4c35"
+        },
+        "date": 1776577194740,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 589,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 599,
+            "range": "± 4",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 490,
+            "range": "± 4",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 95,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 3228589,
+            "range": "± 68799",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3235319,
+            "range": "± 16419",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5437,
+            "range": "± 17",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3205,
+            "range": "± 41",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 205105,
+            "range": "± 2129",
             "unit": "ns/iter"
           }
         ]

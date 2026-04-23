@@ -38,7 +38,7 @@ enum Commands {
     /// Show server health, session counts, and circuit breaker status
     Status,
 
-    /// Navigate to a URL (accepts "example.com" or "https://example.com")
+    /// Navigate to a URL (accepts "example.com" or "<https://example.com>")
     Navigate {
         /// Target URL
         url: String,

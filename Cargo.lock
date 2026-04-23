@@ -2241,7 +2241,7 @@ checksum = "9b4f627cb1b25917193a259e49bdad08f671f8d9708acfd5fe0a8c1455d87220"
 
 [[package]]
 name = "phantom-anti-detect"
-version = "0.1.0"
+version = "0.1.1-alpha"
 dependencies = [
  "rand 0.9.4",
  "rand_distr",
@@ -2252,7 +2252,7 @@ dependencies = [
 
 [[package]]
 name = "phantom-cli"
-version = "0.1.0"
+version = "0.1.1-alpha"
 dependencies = [
  "bytes",
  "clap",
@@ -2272,7 +2272,7 @@ dependencies = [
 
 [[package]]
 name = "phantom-core"
-version = "0.1.0"
+version = "0.1.1-alpha"
 dependencies = [
  "cssparser 0.31.2",
  "cssparser 0.37.0",
@@ -2289,7 +2289,7 @@ dependencies = [
 
 [[package]]
 name = "phantom-js"
-version = "0.1.0"
+version = "0.1.1-alpha"
 dependencies = [
  "criterion",
  "crossbeam",
@@ -2312,7 +2312,7 @@ dependencies = [
 
 [[package]]
 name = "phantom-mcp"
-version = "0.1.0"
+version = "0.1.1-alpha"
 dependencies = [
  "axum",
  "cookie_store",
@@ -2348,7 +2348,7 @@ dependencies = [
 
 [[package]]
 name = "phantom-net"
-version = "0.1.0"
+version = "0.1.1-alpha"
 dependencies = [
  "encoding_rs",
  "http",
@@ -2370,7 +2370,7 @@ dependencies = [
 
 [[package]]
 name = "phantom-serializer"
-version = "0.1.0"
+version = "0.1.1-alpha"
 dependencies = [
  "criterion",
  "indextree",
@@ -2386,7 +2386,7 @@ dependencies = [
 
 [[package]]
 name = "phantom-session"
-version = "0.1.0"
+version = "0.1.1-alpha"
 dependencies = [
  "criterion",
  "crossbeam",
@@ -2398,7 +2398,7 @@ dependencies = [
 
 [[package]]
 name = "phantom-storage"
-version = "0.1.0"
+version = "0.1.1-alpha"
 dependencies = [
  "cookie_store",
  "hex",

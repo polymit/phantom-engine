@@ -8,7 +8,8 @@ members = [
     "phantom-session",
     "phantom-storage",
     "phantom-mcp",
-    "phantom-anti-detect"
+    "phantom-anti-detect",
+    "phantom-cli"
 ]
 
 [workspace.dependencies]

@@ -16,6 +16,20 @@ The entire thing speaks **JSON-RPC 2.0** over HTTP, so any agent framework that 
 
 ---
 
+## The Phantom CLI (`ph`)
+
+We now ship a native Rust CLI to make engine management and debugging effortless. Use it for setup, diagnostics, and interactive DOM inspection.
+
+```bash
+cargo install --path phantom-cli
+ph setup init
+ph interactive
+```
+
+See the [Phantom CLI README](phantom-cli/README.md) for full documentation.
+
+---
+
 ## Get started in 60 seconds
 
 ```bash

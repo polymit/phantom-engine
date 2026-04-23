@@ -6,7 +6,7 @@ services:
       dockerfile: Dockerfile
       cache_from:
         - type=gha
-    image: ghcr.io/polymit/phantom-engine:${TAG:-latest}
+    image: polymit/phantom-engine:${TAG:-latest}
     container_name: phantom-engine
     restart: unless-stopped
     ports:

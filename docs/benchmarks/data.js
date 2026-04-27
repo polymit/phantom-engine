@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1776939565043,
+  "lastUpdate": 1777271832356,
   "repoUrl": "https://github.com/polymit/phantom-engine",
   "entries": {
     "Benchmark": [
@@ -2097,6 +2097,88 @@ window.BENCHMARK_DATA = {
             "name": "pool_acquire_tier1",
             "value": 206145,
             "range": "± 1799",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "polymit",
+            "username": "polymit-hq",
+            "email": "polymit.main@gmail.com"
+          },
+          "committer": {
+            "name": "polymit",
+            "username": "polymit-hq",
+            "email": "polymit.main@gmail.com"
+          },
+          "id": "3fe9f8292b120314d726d65e607cfe18c8015f8c",
+          "message": "feat(ci): automate dual-registry release for GHCR and Docker Hub",
+          "timestamp": "2026-04-23T10:16:36Z",
+          "url": "https://github.com/polymit/phantom-engine/commit/3fe9f8292b120314d726d65e607cfe18c8015f8c"
+        },
+        "date": 1777271831906,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 581,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 591,
+            "range": "± 2",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 483,
+            "range": "± 4",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 95,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 3277630,
+            "range": "± 27554",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3259679,
+            "range": "± 24437",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5351,
+            "range": "± 15",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3166,
+            "range": "± 48",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 205370,
+            "range": "± 2437",
             "unit": "ns/iter"
           }
         ]

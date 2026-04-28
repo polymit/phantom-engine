@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1777366816183,
+  "lastUpdate": 1777369374159,
   "repoUrl": "https://github.com/polymit/phantom-engine",
   "entries": {
     "Benchmark": [
@@ -2263,6 +2263,90 @@ window.BENCHMARK_DATA = {
             "name": "pool_acquire_tier1",
             "value": 208182,
             "range": "± 1510",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "8f57d5b3c20553ab02fcb5b0080ea2e9bc8d34ae",
+          "message": "feat(cli): implement server lifecycle management commands\n\nThis commit introduces native server orchestration to the phantom-cli (ph), allowing users to manage the engine lifecycle without manual backgrounding.\n\n- Added 'up', 'down', and 'logs' subcommands for server management.\n- Implemented detached background execution with PID tracking in ~/.phantom.\n- Added log redirection and live streaming (tailing) capabilities.\n- Integrated 'which' for binary discovery and 'libc' for process signaling.\n- Professionalized the CLI README with comprehensive command documentation.",
+          "timestamp": "2026-04-28T15:07:27+05:30",
+          "tree_id": "e7b7fd5ac2b5596d45102d0aa65e412e7dd5e075",
+          "url": "https://github.com/polymit/phantom-engine/commit/8f57d5b3c20553ab02fcb5b0080ea2e9bc8d34ae"
+        },
+        "date": 1777369373857,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 586,
+            "range": "± 6",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 598,
+            "range": "± 5",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 485,
+            "range": "± 14",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 95,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 3291480,
+            "range": "± 9207",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3274225,
+            "range": "± 10133",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5415,
+            "range": "± 383",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3307,
+            "range": "± 32",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 205546,
+            "range": "± 6009",
             "unit": "ns/iter"
           }
         ]

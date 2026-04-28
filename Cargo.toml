@@ -9,7 +9,8 @@ members = [
     "phantom-storage",
     "phantom-mcp",
     "phantom-anti-detect",
-    "phantom-cli"
+    "phantom-cli",
+    "phantom-fuzzer"
 ]
 
 [workspace.dependencies]

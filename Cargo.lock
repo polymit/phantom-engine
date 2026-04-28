@@ -2288,6 +2288,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "phantom-fuzzer"
+version = "0.1.1-alpha"
+dependencies = [
+ "clap",
+ "phantom-core",
+ "rand 0.9.4",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "uuid",
+]
+
+[[package]]
 name = "phantom-js"
 version = "0.1.1-alpha"
 dependencies = [
@@ -3961,6 +3974,7 @@ checksum = "ddd74a9687298c6858e9b88ec8935ec45d22e8fd5e6394fa1bd4e99a87789c76"
 dependencies = [
  "getrandom 0.4.2",
  "js-sys",
+ "serde_core",
  "wasm-bindgen",
 ]
 

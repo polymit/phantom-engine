@@ -23,8 +23,10 @@ Thumbs.db
 /*.long-type-*.txt
 .codex
 /test_cookie.rs
+/dummy.html
 
 # Runtime storage
+storage/
 phantom-mcp/storage/
 **/cookies.bin.tmp
 **/manifest.json.tmp
@@ -32,4 +34,7 @@ phantom-mcp/storage/
 **/indexeddb/*.sqlite
 **/cache/blobs/*
 **/cache/meta.sled
+
+# Fuzzer data
+.phantom-fuzzer/
 

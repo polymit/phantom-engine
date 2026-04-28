@@ -1,78 +1,125 @@
-# Phantom CLI (`ph`) 🎮
+# Phantom CLI (`ph`)
 
-The native Rust command-line interface for the Phantom Engine. This tool provides a human-facing control layer for engine setup, diagnostics, and session management.
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE.md)
+[![Rust](https://img.shields.io/badge/rust-1.75%2B-orange.svg)](https://www.rust-lang.org)
+[![Version](https://img.shields.io/badge/version-0.1.1--alpha-green.svg)](Cargo.toml)
 
-## 🚀 Quick Start
+The native command-line interface for the **Phantom Engine**. `ph` provides a powerful, human-centric control layer for engine orchestration, real-time diagnostics, and session management.
 
-### Installation
-From the project root:
+---
+
+## 🚀 Installation
+
+Install the CLI directly from the source:
+
 ```bash
+# From the project root
 cargo install --path phantom-cli
 ```
 
-### Initial Setup
-Bootstrap your local environment (~/.phantom, .env, and cryptographic keys):
+Ensure your `~/.cargo/bin` is in your `PATH` to use the `ph` command globally.
+
+---
+
+## ⚡ Server Management
+
+Phantom CLI now includes built-in orchestration for the Phantom Engine server.
+
 ```bash
-ph setup init
+# Start the server in the background
+ph up --background
+
+# Monitor live server logs
+ph logs --follow
+
+# Gracefully shutdown the background server
+ph down
 ```
 
-### Verify Configuration
-Check if your engine and environment are wired up correctly:
-```bash
-ph setup doctor
-```
+---
 
 ## 🛠️ Usage Examples
 
-### Navigation & Interaction
+### 🧩 Environment Setup
+Prepare your local environment, generate secure keys, and initialize configurations.
+
 ```bash
-# Navigate to a URL
+# Bootstrap local directory (~/.phantom) and .env
+ph setup init
+
+# Run diagnostics to verify connectivity and keys
+ph setup doctor
+```
+
+### 🖱️ Interaction & Navigation
+Simulate human-like interactions with the engine's layout and execution pipelines.
+
+```bash
+# Navigate with automatic protocol normalization
 ph navigate google.com
 
-# Click an element
+# Trigger human-like click events on CSS selectors
 ph click "#login-button"
 
-# Type text with realistic delays
-ph type "#search" "phantom engine" --delay 50
+# Input text with realistic, randomized per-character delays
+ph type "#search-box" "phantom engine" --delay 45
 ```
 
-### Live Debugging
+### 🔍 Live Debugging & Inspection
+Stream real-time updates and inspect the internal state of the engine.
+
 ```bash
-# Open an interactive REPL shell
+# Open an interactive REPL shell for manual control
 ph interactive
 
-# Stream live DOM updates (SSE)
+# Stream live DOM mutation events via SSE
 ph watch
 
-# Inspect DOM by text query
-ph inspect "Sign In"
+# Search for specific text content within the active DOM
+ph inspect "Order Success"
 ```
 
-### Session & Cookie Management
+### 💾 Session Persistence
+Manage cookies, tabs, and compressed session snapshots.
+
 ```bash
-# List open tabs
+# List all active tab UUIDs
 ph tab list
 
-# Snapshot the current session
-ph session snapshot
+# Create a copy-on-write clone of the current session
+ph session clone
 
-# List available cookies
-ph cookies get
+# Snapshot the entire engine state to disk
+ph session snapshot
 ```
 
-## 📖 Commands Reference
+---
 
-| Command | Description |
-|---------|-------------|
-| `ping` | Check server connectivity |
-| `status` | Show server health and circuit breakers |
-| `navigate` | Load a URL in the active tab |
-| `click` | Trigger a human-like click event |
-| `type` | Input text into a selector |
-| `scene-graph` | Dump the current DOM state |
-| `interactive` | Start the REPL shell |
-| `watch` | Listen for real-time engine events |
-| `setup` | Environment diagnostics (`init`, `doctor`) |
+## ⚙️ Configuration
+
+`ph` automatically loads configurations from your `.env` file, but can be overridden via global flags:
+
+| Flag | Env Variable | Description |
+|------|--------------|-------------|
+| `--server` | `PHANTOM_BIND_ADDR` | MCP server address (default: `127.0.0.1:8080`) |
+| `--key` | `PHANTOM_API_KEY` | Your engine authentication key |
 
 ---
-*Part of the Phantom Engine v0.1 Release.*
+
+## 📖 Command Reference
+
+| Command | Subcommand | Description |
+|---------|------------|-------------|
+| `ping` | - | Verify reachability of the engine |
+| `status` | - | Show health, sessions, and circuit breaker status |
+| `up` | - | Start the engine (use `--background` for detached mode) |
+| `down` | - | Stop the background engine process |
+| `logs` | - | View engine stdout/stderr logs |
+| `tab` | `new`, `list`, `switch`, `close` | Manage browser tabs |
+| `cookies` | `get`, `set`, `clear` | Manage engine cookie store |
+| `setup` | `init`, `doctor` | Bootstrap and verify environment |
+
+---
+
+> [!NOTE]
+> This tool is part of the **Phantom Engine v0.1 Release**. 

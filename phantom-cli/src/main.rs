@@ -92,6 +92,23 @@ enum Commands {
     #[command(subcommand)]
     Setup(SetupCommands),
 
+    /// Start the Phantom server
+    Up {
+        /// Run in the background
+        #[arg(long)]
+        background: bool,
+    },
+
+    /// Stop the background Phantom server
+    Down,
+
+    /// Show server logs
+    Logs {
+        /// Stream the logs as they arrive
+        #[arg(long)]
+        follow: bool,
+    },
+
     /// Stream live DOM updates from the engine (SSE)
     Watch,
 
@@ -346,6 +363,18 @@ async fn run(command: Commands, config: &ServerConfig) -> Result<(), CliError> {
                 SetupCommands::Init => commands::setup::run_init(&cwd)?,
                 SetupCommands::Doctor => commands::setup::run_doctor(&cwd)?,
             }
+        }
+
+        Commands::Up { background } => {
+            commands::server::run_up(background)?;
+        }
+
+        Commands::Down => {
+            commands::server::run_down()?;
+        }
+
+        Commands::Logs { follow } => {
+            commands::server::run_logs(follow)?;
         }
 
         Commands::Watch => {

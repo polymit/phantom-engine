@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1777369374159,
+  "lastUpdate": 1777709273743,
   "repoUrl": "https://github.com/polymit/phantom-engine",
   "entries": {
     "Benchmark": [
@@ -2347,6 +2347,90 @@ window.BENCHMARK_DATA = {
             "name": "pool_acquire_tier1",
             "value": 205546,
             "range": "± 6009",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "e404beee247a85ece1814a00ec3dbe5f112807d5",
+          "message": "feat(orchestration): implement dynamic resource limits and interactive setup\n\n- Add dynamic CPU quota support via PHANTOM_CPU_QUOTA_MS\n- Implement configurable Tier 1 pool size via PHANTOM_QUICKJS_POOL_SIZE\n- Upgrade 'ph setup init' to interactive wizard mode\n- Integrate native .env loading into the MCP server\n- Synchronize workspace crates to version v0.1.2-alpha\n- Comprehensive documentation update for phantom-cli",
+          "timestamp": "2026-05-02T13:32:21+05:30",
+          "tree_id": "d8df4ed44f81d3287d847506c1e06b5b3cb91748",
+          "url": "https://github.com/polymit/phantom-engine/commit/e404beee247a85ece1814a00ec3dbe5f112807d5"
+        },
+        "date": 1777709272939,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 579,
+            "range": "± 28",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 591,
+            "range": "± 3",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 484,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 94,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 3299198,
+            "range": "± 76345",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3307651,
+            "range": "± 12464",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5472,
+            "range": "± 34",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3245,
+            "range": "± 39",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 206433,
+            "range": "± 1348",
             "unit": "ns/iter"
           }
         ]

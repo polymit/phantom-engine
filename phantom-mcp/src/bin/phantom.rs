@@ -17,6 +17,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 async fn run() -> Result<(), Box<dyn std::error::Error>> {
+    dotenvy::dotenv().ok();
     telemetry::init();
 
     let bind_addr = env::var("PHANTOM_BIND_ADDR").unwrap_or_else(|_| "0.0.0.0:8080".to_string());
@@ -34,7 +35,21 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
         .and_then(|v| v.parse::<usize>().ok())
         .unwrap_or(1000);
 
-    let adapter = Arc::new(EngineAdapter::new_default().await);
+    let cpu_quota_ms = env::var("PHANTOM_CPU_QUOTA_MS")
+        .ok()
+        .and_then(|v| v.parse::<u64>().ok())
+        .unwrap_or(1000);
+    let quickjs_pool_size = env::var("PHANTOM_QUICKJS_POOL_SIZE")
+        .ok()
+        .and_then(|v| v.parse::<usize>().ok())
+        .unwrap_or(5);
+
+    let budget = phantom_session::ResourceBudget {
+        max_cpu_ms_per_sec: cpu_quota_ms,
+        ..Default::default()
+    };
+
+    let adapter = Arc::new(EngineAdapter::new(quickjs_pool_size, 0, 5, 0, budget).await);
     let server = McpServer::new_with_adapter_full(api_key, adapter, rate_limit, session_limit);
     let app = server.router();
 

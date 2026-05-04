@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1777711282463,
+  "lastUpdate": 1777877341693,
   "repoUrl": "https://github.com/polymit/phantom-engine",
   "entries": {
     "Benchmark": [
@@ -2599,6 +2599,88 @@ window.BENCHMARK_DATA = {
             "name": "pool_acquire_tier1",
             "value": 156006,
             "range": "± 724",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "polymit",
+            "username": "polymit-hq",
+            "email": "polymit.main@gmail.com"
+          },
+          "committer": {
+            "name": "polymit",
+            "username": "polymit-hq",
+            "email": "polymit.main@gmail.com"
+          },
+          "id": "804f9979d21a5fd172520df714008b348cdada08",
+          "message": "fix(deps): upgrade grid to v1.0.1 to resolve integer overflow\n\nResolves a critical vulnerability in the grid crate where an integer\noverflow in expand_rows() could result in Undefined Behavior through\nsafe API calls. This is a transitive dependency of taffy.\n\nFixes GHSA-38c5-483c-4qqp",
+          "timestamp": "2026-05-02T08:36:22Z",
+          "url": "https://github.com/polymit/phantom-engine/commit/804f9979d21a5fd172520df714008b348cdada08"
+        },
+        "date": 1777877341179,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 580,
+            "range": "± 18",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 593,
+            "range": "± 2",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 486,
+            "range": "± 6",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 94,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 3295377,
+            "range": "± 81528",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3286116,
+            "range": "± 10145",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5455,
+            "range": "± 35",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3243,
+            "range": "± 24",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 206631,
+            "range": "± 5066",
             "unit": "ns/iter"
           }
         ]

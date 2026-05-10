@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1777877341693,
+  "lastUpdate": 1778412599937,
   "repoUrl": "https://github.com/polymit/phantom-engine",
   "entries": {
     "Benchmark": [
@@ -2681,6 +2681,90 @@ window.BENCHMARK_DATA = {
             "name": "pool_acquire_tier1",
             "value": 206631,
             "range": "± 5066",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "67acc62d8134ea7c383ced2ed74f9538e5a00b04",
+          "message": "feat(net): integrate Quik transport and bump to v0.2.0-alpha\n\nImplements the proprietary Quik transport layer for Chrome 134 parity.\nSynchronizes all workspace crates to v0.2.0-alpha.",
+          "timestamp": "2026-05-10T16:54:32+05:30",
+          "tree_id": "7a9d67dffbe06a5ef46aabba616e4b115fd4a0ce",
+          "url": "https://github.com/polymit/phantom-engine/commit/67acc62d8134ea7c383ced2ed74f9538e5a00b04"
+        },
+        "date": 1778412599659,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 702,
+            "range": "± 7",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 710,
+            "range": "± 3",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 611,
+            "range": "± 7",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 102,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 3216430,
+            "range": "± 9688",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3224902,
+            "range": "± 88677",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5532,
+            "range": "± 36",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3388,
+            "range": "± 76",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 202140,
+            "range": "± 1687",
             "unit": "ns/iter"
           }
         ]

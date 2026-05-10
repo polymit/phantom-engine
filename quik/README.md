@@ -1,7 +1,7 @@
 # Quik: High-Fidelity Transport Layer
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Built for Phantom](https://img.shields.io/badge/Phantom%20Engine-v0.3-black.svg)]()
+[![Built for Phantom](https://img.shields.io/badge/Phantom%20Engine-v0.2.0--alpha-black.svg)]()
 
 **Quik** is a high-performance, precision-engineered HTTP client developed and maintained by the **Phantom Engine Team**. Designed from the ground up for absolute network identity parity, Quik serves as the core transport layer for the Phantom ecosystem, bypassing advanced anti-automation heuristics through exact browser replication.
 

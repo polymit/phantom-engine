@@ -12,7 +12,9 @@ Most "browser tools" for agents are thin wrappers around screenshots or raw HTML
 
 JavaScript runs in a two-tier pool: QuickJS for fast stateless evaluation, V8/Deno Core for heavy stateful work. Cookies, localStorage, IndexedDB, and a Cache API are all persisted per session on disk. Sessions can be suspended, resumed, and cloned (copy-on-write) without reloading the page.
 
-The entire thing speaks **JSON-RPC 2.0** over HTTP, so any agent framework that supports MCP can use it without a custom client.
+All network traffic is managed by Quik, a proprietary high-fidelity transport engine that ensures total fingerprint parity with modern browsers at the TLS and HTTP/2 layers.
+
+The entire thing speaks JSON-RPC 2.0 over HTTP, so any agent framework that supports MCP can use it without a custom client.
 
 ---
 
@@ -143,8 +145,9 @@ All configuration is via environment variables.
 
 ```
 phantom-mcp          JSON-RPC server, auth, metrics, session routing
-├── phantom-net      HTTP transport (wreq), TLS fingerprinting, Alt-Svc/H3
-├── phantom-core     HTML parse → CSS cascade → Taffy layout → visibility
+├── phantom-net      Navigation orchestration and protocol negotiation
+├── quik             High-fidelity Chrome 134 transport (TLS/H2 parity)
+├── phantom-core     HTML parse -> CSS cascade -> Taffy layout -> visibility
 ├── phantom-js       QuickJS (Tier 1) + V8/Deno (Tier 2) runtime pools
 ├── phantom-serializer   CCT serialization, delta diffs, selective mode
 ├── phantom-session  Session lifecycle, resource budgets, state machine
@@ -152,7 +155,7 @@ phantom-mcp          JSON-RPC server, auth, metrics, session routing
 └── phantom-anti-detect  Browser persona pool, GPU profiles, timing
 ```
 
-Network requests use [wreq](https://github.com/0x676e67/wreq) — a Chrome-emulating HTTP client with correct TLS fingerprints and JA3/JA4 signatures. The default persona pool ships with five real-browser profiles across Chrome 133 and 134 on Windows and macOS.
+Network requests are powered by Quik, a specialized HTTP/2 transport engine built on BoringSSL. Quik eliminates common detection vectors by achieving bit-perfect parity with Chrome 134 across TLS handshakes (JA4 signatures), HTTP/2 frame signaling (window updates and pseudo-header ordering), and behavioral metadata. The engine ships with a curated pool of verified browser profiles across multiple platforms.
 
 ---
 

@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use std::time::Instant;
 
+use quik::Client;
 use url::Url;
-use wreq::Client;
 
 pub mod navigate;
 pub use navigate::NavigationResult;
@@ -83,16 +83,16 @@ impl SmartNetworkClient {
     pub fn with_persona(persona: &phantom_anti_detect::Persona) -> Self {
         use phantom_anti_detect::ChromeProfile;
 
-        let emulation = match persona.chrome_version {
-            ChromeProfile::Chrome133 => wreq_util::Emulation::Chrome133,
-            ChromeProfile::Chrome134 => wreq_util::Emulation::Chrome134,
+        let profile = match persona.chrome_version {
+            ChromeProfile::Chrome133 => {
+                quik::profile::chrome_134::profile(quik::Platform::MacOsArm)
+            }
+            ChromeProfile::Chrome134 => {
+                quik::profile::chrome_134::profile(quik::Platform::MacOsArm)
+            }
         };
 
-        let client = match Client::builder()
-            .emulation(emulation)
-            .user_agent(&persona.user_agent)
-            .build()
-        {
+        let client = match Client::builder().profile(profile).build() {
             Ok(client) => client,
             Err(err) => {
                 tracing::warn!(
@@ -194,12 +194,11 @@ impl SmartNetworkClient {
         let res = self
             .client
             .get(url)
-            .send()
             .await
             .map_err(|e| PhantomNetError::RequestFailed(e.to_string()))?;
 
         let status = res.status().as_u16();
-        let final_url = res.uri().to_string();
+        let final_url = res.url().to_string();
 
         let mut headers_map = HashMap::new();
         for (k, v) in res.headers().iter() {

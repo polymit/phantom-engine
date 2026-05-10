@@ -1,12 +1,11 @@
 [package]
 name    = "phantom-net"
-version = "0.1.2-alpha"
+version     = "0.2.0-alpha"
 edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
-wreq      = { version = "=6.0.0-rc.28", features = ["prefix-symbols"] }
-wreq-util = "=3.0.0-rc.10"
+quik = { path = "../quik" }
 rand      = "0.9.3"
 rand_distr = "0.5.0"
 v8 = "=147.1.0"

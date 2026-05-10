@@ -10,7 +10,8 @@ members = [
     "phantom-mcp",
     "phantom-anti-detect",
     "phantom-cli",
-    "phantom-fuzzer"
+    "phantom-fuzzer",
+    "quik"
 ]
 
 [workspace.dependencies]

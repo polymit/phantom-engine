@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1778517281288,
+  "lastUpdate": 1778518695862,
   "repoUrl": "https://github.com/polymit/phantom-engine",
   "entries": {
     "Benchmark": [
@@ -3099,6 +3099,90 @@ window.BENCHMARK_DATA = {
             "name": "pool_acquire_tier1",
             "value": 208520,
             "range": "± 2307",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "255144fbea53652a85e234bb22e023e40dfebfc2",
+          "message": "feat(quik): implement Gzip/Deflate decompression support",
+          "timestamp": "2026-05-11T22:22:15+05:30",
+          "tree_id": "8f9bd07b1a2a2a896e7065ae4e617f46563ffcd2",
+          "url": "https://github.com/polymit/phantom-engine/commit/255144fbea53652a85e234bb22e023e40dfebfc2"
+        },
+        "date": 1778518695370,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 586,
+            "range": "± 3",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 589,
+            "range": "± 7",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 486,
+            "range": "± 3",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 95,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 3256181,
+            "range": "± 86944",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3249164,
+            "range": "± 17963",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5495,
+            "range": "± 175",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3279,
+            "range": "± 113",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 207719,
+            "range": "± 1839",
             "unit": "ns/iter"
           }
         ]

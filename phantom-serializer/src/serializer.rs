@@ -58,12 +58,18 @@ impl HeadlessSerializer {
     pub fn serialise(page: &ParsedPage, config: &SerialiserConfig) -> String {
         let mut buffer = BUFFER_POOL.acquire();
 
-        let viewport = ViewportBounds::new(
-            config.scroll_x,
-            config.scroll_y,
-            config.viewport_width,
-            config.viewport_height,
-        );
+        // In Full mode, use a document-spanning viewport so off-screen nodes
+        // are included. Selective mode retains viewport clipping for efficiency.
+        let viewport = if config.mode == SerialiserMode::Full {
+            ViewportBounds::new(0.0, 0.0, config.viewport_width, f32::MAX)
+        } else {
+            ViewportBounds::new(
+                config.scroll_x,
+                config.scroll_y,
+                config.viewport_width,
+                config.viewport_height,
+            )
+        };
 
         let vis_map = compute_visibility(&page.tree, &page.layout_map, &viewport);
         let geo_map = extract_geometry(&page.tree, &page.layout_map, &viewport);

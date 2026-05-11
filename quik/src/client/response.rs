@@ -1,6 +1,8 @@
 use bytes::Bytes;
 use http2::RecvStream;
 use std::io::Read;
+use flate2::read::GzDecoder;
+use flate2::read::ZlibDecoder;
 
 use crate::error::{Error, Result};
 
@@ -59,10 +61,17 @@ impl Response {
                 let decoded = zstd::decode_all(&data[..])?;
                 Ok(Bytes::from(decoded))
             }
-            "gzip" | "deflate" => {
-                // For simplicity, we could add flate2 later if needed.
-                // Chrome 134 prefers br and zstd.
-                Ok(Bytes::from(data))
+            "gzip" => {
+                let mut decoder = GzDecoder::new(&data[..]);
+                let mut decoded = Vec::new();
+                decoder.read_to_end(&mut decoded)?;
+                Ok(Bytes::from(decoded))
+            }
+            "deflate" => {
+                let mut decoder = ZlibDecoder::new(&data[..]);
+                let mut decoded = Vec::new();
+                decoder.read_to_end(&mut decoded)?;
+                Ok(Bytes::from(decoded))
             }
             _ => Ok(Bytes::from(data)),
         }

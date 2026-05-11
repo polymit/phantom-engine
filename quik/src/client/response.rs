@@ -1,8 +1,8 @@
 use bytes::Bytes;
-use http2::RecvStream;
-use std::io::Read;
 use flate2::read::GzDecoder;
 use flate2::read::ZlibDecoder;
+use http2::RecvStream;
+use std::io::Read;
 
 use crate::error::{Error, Result};
 

@@ -43,37 +43,35 @@ impl Response {
             data.extend_from_slice(chunk.as_ref());
         }
 
-        // Decompression logic
+        // Decompression logic — normalize to lowercase and trim whitespace
+        // to handle real-world variations like "BR", " gzip", "x-gzip".
         let encoding = self
             .headers()
             .get(http::header::CONTENT_ENCODING)
             .and_then(|h| h.to_str().ok())
-            .unwrap_or("");
+            .map(|s| s.trim().to_ascii_lowercase())
+            .unwrap_or_default();
 
-        match encoding {
-            "br" => {
-                let mut decoder = brotli_decompressor::Decompressor::new(&data[..], 4096);
-                let mut decoded = Vec::new();
-                decoder.read_to_end(&mut decoded)?;
-                Ok(Bytes::from(decoded))
-            }
-            "zstd" => {
-                let decoded = zstd::decode_all(&data[..])?;
-                Ok(Bytes::from(decoded))
-            }
-            "gzip" => {
-                let mut decoder = GzDecoder::new(&data[..]);
-                let mut decoded = Vec::new();
-                decoder.read_to_end(&mut decoded)?;
-                Ok(Bytes::from(decoded))
-            }
-            "deflate" => {
-                let mut decoder = ZlibDecoder::new(&data[..]);
-                let mut decoded = Vec::new();
-                decoder.read_to_end(&mut decoded)?;
-                Ok(Bytes::from(decoded))
-            }
-            _ => Ok(Bytes::from(data)),
+        if encoding.contains("br") {
+            let mut decoder = brotli_decompressor::Decompressor::new(&data[..], 4096);
+            let mut decoded = Vec::new();
+            decoder.read_to_end(&mut decoded)?;
+            Ok(Bytes::from(decoded))
+        } else if encoding.contains("zstd") {
+            let decoded = zstd::decode_all(&data[..])?;
+            Ok(Bytes::from(decoded))
+        } else if encoding.contains("gzip") {
+            let mut decoder = GzDecoder::new(&data[..]);
+            let mut decoded = Vec::new();
+            decoder.read_to_end(&mut decoded)?;
+            Ok(Bytes::from(decoded))
+        } else if encoding.contains("deflate") {
+            let mut decoder = ZlibDecoder::new(&data[..]);
+            let mut decoded = Vec::new();
+            decoder.read_to_end(&mut decoded)?;
+            Ok(Bytes::from(decoded))
+        } else {
+            Ok(Bytes::from(data))
         }
     }
 

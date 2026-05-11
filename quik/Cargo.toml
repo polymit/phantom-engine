@@ -28,7 +28,6 @@ cookie_store = "0.21"
 socket2   = "0.5"
 dashmap   = "5"
 thiserror = "2"
-anyhow    = "1"
 tracing   = "0.1"
 
 # Serialization

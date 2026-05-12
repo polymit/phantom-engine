@@ -21,9 +21,10 @@ Thumbs.db
 /test_*.rs
 /run_*.rs
 /*.long-type-*.txt
-.codex
+.codex  
 /test_cookie.rs
 /dummy.html
+*.txt  
 
 # Runtime storage
 storage/
@@ -37,4 +38,5 @@ phantom-mcp/storage/
 
 # Fuzzer data
 .phantom-fuzzer/
+
 

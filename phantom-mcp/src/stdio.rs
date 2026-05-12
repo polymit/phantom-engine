@@ -55,9 +55,18 @@ impl StdioState {
                     .ok()
                     .and_then(|v| v.parse().ok())
                     .unwrap_or(5);
-                let budget = phantom_session::ResourceBudget::default();
 
-                tracing::info!("initialising engine (first tool call)");
+                let cpu_quota_ms = std::env::var("PHANTOM_CPU_QUOTA_MS")
+                    .ok()
+                    .and_then(|v| v.parse().ok())
+                    .unwrap_or(5000); // Higher default for Stdio (5s)
+
+                let budget = phantom_session::ResourceBudget {
+                    max_cpu_ms_per_sec: cpu_quota_ms,
+                    ..phantom_session::ResourceBudget::default()
+                };
+
+                tracing::info!(cpu_quota = %cpu_quota_ms, "initialising engine (first tool call)");
                 Arc::new(
                     EngineAdapter::new_with_storage(qjs_pool, 0, v8_pool, 0, budget, &storage_dir)
                         .await,
@@ -67,7 +76,18 @@ impl StdioState {
 
         let server = self
             .server
-            .get_or_init(|| async { McpServer::new_with_adapter(None, adapter.clone()) })
+            .get_or_init(|| async {
+                let rate_limit = std::env::var("PHANTOM_RATE_LIMIT")
+                    .ok()
+                    .and_then(|v| v.parse::<u32>().ok())
+                    .unwrap_or(100);
+                let session_limit = std::env::var("PHANTOM_SESSION_LIMIT")
+                    .ok()
+                    .and_then(|v| v.parse::<usize>().ok())
+                    .unwrap_or(1000);
+
+                McpServer::new_with_adapter_full(None, adapter.clone(), rate_limit, session_limit)
+            })
             .await;
 
         (adapter, server)

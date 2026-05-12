@@ -2340,7 +2340,7 @@ checksum = "9b4f627cb1b25917193a259e49bdad08f671f8d9708acfd5fe0a8c1455d87220"
 
 [[package]]
 name = "phantom-anti-detect"
-version = "0.2.0-alpha"
+version = "0.2.1-alpha"
 dependencies = [
  "rand 0.9.4",
  "rand_distr",
@@ -2350,7 +2350,7 @@ dependencies = [
 
 [[package]]
 name = "phantom-cli"
-version = "0.2.0-alpha"
+version = "0.2.1-alpha"
 dependencies = [
  "bytes",
  "clap",
@@ -2372,7 +2372,7 @@ dependencies = [
 
 [[package]]
 name = "phantom-core"
-version = "0.2.0-alpha"
+version = "0.2.1-alpha"
 dependencies = [
  "cssparser 0.31.2",
  "cssparser 0.37.0",
@@ -2389,7 +2389,7 @@ dependencies = [
 
 [[package]]
 name = "phantom-fuzzer"
-version = "0.2.0-alpha"
+version = "0.2.1-alpha"
 dependencies = [
  "clap",
  "phantom-core",
@@ -2402,7 +2402,7 @@ dependencies = [
 
 [[package]]
 name = "phantom-js"
-version = "0.2.0-alpha"
+version = "0.2.1-alpha"
 dependencies = [
  "criterion",
  "crossbeam",
@@ -2425,7 +2425,7 @@ dependencies = [
 
 [[package]]
 name = "phantom-mcp"
-version = "0.2.0-alpha"
+version = "0.2.1-alpha"
 dependencies = [
  "axum",
  "cookie_store 0.22.1",
@@ -2483,7 +2483,7 @@ dependencies = [
 
 [[package]]
 name = "phantom-serializer"
-version = "0.2.0-alpha"
+version = "0.2.1-alpha"
 dependencies = [
  "criterion",
  "indextree",
@@ -2499,7 +2499,7 @@ dependencies = [
 
 [[package]]
 name = "phantom-session"
-version = "0.2.0-alpha"
+version = "0.2.1-alpha"
 dependencies = [
  "criterion",
  "crossbeam",
@@ -2511,7 +2511,7 @@ dependencies = [
 
 [[package]]
 name = "phantom-storage"
-version = "0.2.0-alpha"
+version = "0.2.1-alpha"
 dependencies = [
  "cookie_store 0.22.1",
  "hex",
@@ -4605,9 +4605,9 @@ dependencies = [
 
 [[package]]
 name = "zerofrom"
-version = "0.1.7"
+version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "69faa1f2a1ea75661980b013019ed6687ed0e83d069bc1114e2cc74c6c04c4df"
+checksum = "0ec05a11813ea801ff6d75110ad09cd0824ddba17dfe17128ea0d5f68e6c5272"
 dependencies = [
  "zerofrom-derive",
 ]

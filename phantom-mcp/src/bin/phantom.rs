@@ -43,13 +43,28 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
         .ok()
         .and_then(|v| v.parse::<usize>().ok())
         .unwrap_or(5);
+    let v8_pool_size = env::var("PHANTOM_V8_POOL_SIZE")
+        .ok()
+        .and_then(|v| v.parse::<usize>().ok())
+        .unwrap_or(5);
+    let storage_dir = env::var("PHANTOM_STORAGE_DIR").unwrap_or_else(|_| "./storage".to_string());
 
     let budget = phantom_session::ResourceBudget {
         max_cpu_ms_per_sec: cpu_quota_ms,
         ..Default::default()
     };
 
-    let adapter = Arc::new(EngineAdapter::new(quickjs_pool_size, 0, 5, 0, budget).await);
+    let adapter = Arc::new(
+        EngineAdapter::new_with_storage(
+            quickjs_pool_size,
+            0,
+            v8_pool_size,
+            0,
+            budget,
+            &storage_dir,
+        )
+        .await,
+    );
     let server = McpServer::new_with_adapter_full(api_key, adapter, rate_limit, session_limit);
     let app = server.router();
 

@@ -11,7 +11,7 @@ use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, Env
 pub fn init() {
     let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
 
-    let format = std::env::var("LOG_FORMAT").unwrap_or_else(|_| "compact".to_string());
+    let format = std::env::var("PHANTOM_LOG_FORMAT").unwrap_or_else(|_| "compact".to_string());
 
     let base_subscriber = tracing_subscriber::registry().with(env_filter);
 

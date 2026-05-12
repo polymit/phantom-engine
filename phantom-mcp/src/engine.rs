@@ -168,6 +168,18 @@ impl EngineAdapter {
         t2_pre: usize,
         budget: ResourceBudget,
     ) -> Self {
+        Self::new_with_storage(t1_max, t1_pre, t2_max, t2_pre, budget, "./storage").await
+    }
+
+    /// Construct with explicit pool sizes and a custom storage directory.
+    pub async fn new_with_storage(
+        t1_max: usize,
+        t1_pre: usize,
+        t2_max: usize,
+        t2_pre: usize,
+        budget: ResourceBudget,
+        storage_dir: &str,
+    ) -> Self {
         let mut persona_pool = PersonaPool::default_pool();
         let first_persona = persona_pool.next_persona();
         let persona_id = first_persona.user_agent.clone();
@@ -195,7 +207,7 @@ impl EngineAdapter {
             page_store: Arc::new(Mutex::new(HashMap::new())),
             active_page_key: Arc::new(Mutex::new(None)),
             tab_store: Arc::new(RwLock::new(TabStore::default())),
-            storage: phantom_storage::SessionStorageManager::new("./storage"),
+            storage: phantom_storage::SessionStorageManager::new(storage_dir),
             session_uuid,
             cookie_store: Arc::new(tokio::sync::Mutex::new(cookie_store::CookieStore::default())),
             delta_tx,

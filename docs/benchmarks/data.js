@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1778607104895,
+  "lastUpdate": 1778609995087,
   "repoUrl": "https://github.com/polymit/phantom-engine",
   "entries": {
     "Benchmark": [
@@ -3855,6 +3855,90 @@ window.BENCHMARK_DATA = {
             "name": "pool_acquire_tier1",
             "value": 206965,
             "range": "± 1151",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "470e58af923952de55f981bbfb2c180562a9d82f",
+          "message": "fix(mcp): ensure Stdio mode respects all .env resource limits\n\n- Synchronized StdioState with HTTP mode environment variable handling\n- Added support for PHANTOM_SESSION_LIMIT and PHANTOM_RATE_LIMIT\n- Updated PHANTOM_CPU_QUOTA_MS handling with a 5s default for Stdio\n- Switched to McpServer::new_with_adapter_full to apply session/rate limits\n- Verified .env loading via dotenvy::dotenv() in the stdio loop",
+          "timestamp": "2026-05-12T23:44:58+05:30",
+          "tree_id": "8477b1c297dc0e2f6594e395c40b2553c7513b5e",
+          "url": "https://github.com/polymit/phantom-engine/commit/470e58af923952de55f981bbfb2c180562a9d82f"
+        },
+        "date": 1778609994130,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 572,
+            "range": "± 15",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 577,
+            "range": "± 9",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 468,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 83,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 4757769,
+            "range": "± 23775",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 2505289,
+            "range": "± 12150",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 4142,
+            "range": "± 54",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 2593,
+            "range": "± 45",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 155460,
+            "range": "± 775",
             "unit": "ns/iter"
           }
         ]

@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1778603290083,
+  "lastUpdate": 1778607104895,
   "repoUrl": "https://github.com/polymit/phantom-engine",
   "entries": {
     "Benchmark": [
@@ -3771,6 +3771,90 @@ window.BENCHMARK_DATA = {
             "name": "pool_acquire_tier1",
             "value": 203158,
             "range": "± 4783",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "2fe278c2fc149aeb29e37a70b1e6638d707968a8",
+          "message": "feat(mcp): add native Stdio transport for MCP agent integration\n\nImplement a Zero-Noise Stdio transport that enables direct integration\nwith Claude Code, Codex CLI, Cline, and 13+ other MCP-compatible agent\nframeworks via stdin/stdout JSON-RPC.\n\nKey design decisions:\n- V8 platform init is deferred until the first tools/call arrives,\n  keeping the initialize handshake under 100ms to avoid host timeouts\n- All tracing output routes to stderr via init_stdio(), ensuring zero\n  contamination of the stdout JSON-RPC stream\n- Tool dispatch reuses the existing handle_request pipeline, so HTTP\n  and Stdio modes share identical tool behavior\n\nNew files:\n- phantom-mcp/src/stdio.rs: NDJSON read loop, MCP protocol handling\n  (initialize, tools/list, tools/call), lazy engine init via OnceCell,\n  and full inputSchema definitions for all 15 browser tools\n\nModified files:\n- phantom-mcp/src/bin/phantom.rs: --stdio flag detection, branching\n  between HTTP (eager V8) and Stdio (deferred V8) entry points\n- phantom-mcp/src/telemetry.rs: new init_stdio() for stderr-only output\n- phantom-mcp/src/lib.rs: register stdio module\n- README.md: rewrite as quickstart guide, document Stdio mode, fix\n  incorrect tool method names in the MCP tools table",
+          "timestamp": "2026-05-12T22:57:33+05:30",
+          "tree_id": "1a0a9e6b38c079482f0b998adedbc4cc8556445d",
+          "url": "https://github.com/polymit/phantom-engine/commit/2fe278c2fc149aeb29e37a70b1e6638d707968a8"
+        },
+        "date": 1778607103697,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 588,
+            "range": "± 12",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 595,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 494,
+            "range": "± 7",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 92,
+            "range": "± 13",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 6165263,
+            "range": "± 139297",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3269382,
+            "range": "± 18906",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5344,
+            "range": "± 28",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3269,
+            "range": "± 76",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 206965,
+            "range": "± 1151",
             "unit": "ns/iter"
           }
         ]

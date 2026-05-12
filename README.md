@@ -40,7 +40,7 @@ docker run -d \
   -p 8080:8080 \
   -e PHANTOM_API_KEY=your-secret-key \
   -v phantom-data:/data \
-  polymit/phantom:latest
+  polymit/phantom-engine:latest
 
 # Health check
 curl http://localhost:8080/health
@@ -59,8 +59,8 @@ Point your MCP client at `http://localhost:8080/rpc` with header `X-API-Key: you
 | CCT full serialization (1,000 nodes) | 4.67 ms | ~50–200 ms (CDP snapshot) |
 | CCT selective serialization (1,000 nodes) | 4.69 ms | ~50–200 ms |
 | Delta mutation (10 nodes) | 8.46 µs | not supported natively |
-| QuickJS session creation | 1.56 µs | ~500 ms–2 s (cold start) |
-| V8 session creation | 1.57 µs | ~500 ms–2 s (cold start) |
+| QuickJS session allocation | 1.56 µs | ~500 ms–2 s (cold start) |
+| V8 session allocation | 1.57 µs | ~500 ms–2 s (cold start) |
 | Suspend / resume | 121.07 ns | not supported natively |
 
 ---
@@ -131,12 +131,12 @@ All configuration is via environment variables.
 |----------|---------|-------------|
 | `PHANTOM_API_KEY` | *(required)* | Bearer token for all RPC requests |
 | `PHANTOM_BIND_ADDR` | `0.0.0.0:8080` | Listen address |
-| `PHANTOM_STORAGE_DIR` | `/data/storage` | Session persistence root |
+| `PHANTOM_STORAGE_DIR` | `./storage` | Session persistence root |
 | `PHANTOM_SESSION_LIMIT` | `1000` | Max concurrent sessions |
 | `PHANTOM_RATE_LIMIT` | `100` | Requests per minute per key |
-| `PHANTOM_QUICKJS_POOL_SIZE` | `10` | QuickJS runtime pool size |
+| `PHANTOM_QUICKJS_POOL_SIZE` | `5` | QuickJS runtime pool size |
 | `PHANTOM_V8_POOL_SIZE` | `5` | V8 runtime pool size |
-| `PHANTOM_LOG_FORMAT` | `json` | `json` or `pretty` |
+| `PHANTOM_LOG_FORMAT` | `compact` | `json`, `pretty`, or `compact` |
 | `RUST_LOG` | `phantom=info` | Log level filter |
 
 ---

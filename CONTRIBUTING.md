@@ -65,11 +65,11 @@ A **circuit breaker** (`phantom-js/src/circuit_breaker.rs`) sits in front of bot
 
 JavaScript shims (`phantom-js/js/`) polyfill browser APIs that headless environments lack: `EventTarget`, `Location`, `MutationObserver`, `fetch`, and various `window.*` properties.
 
-### Network layer (`phantom-net/`)
+### Network layer (`phantom-net/` + `quik/`)
 
-HTTP is handled by `wreq` — not `reqwest`. This is intentional and non-negotiable. `wreq` emulates Chrome's TLS fingerprint (JA3/JA4), ALPN negotiation, and HTTP/2 settings frames. This makes Phantom Engine's network requests indistinguishable from a real browser to bot-detection systems. `reqwest`, `hyper-rustls`, and `native-tls` are explicitly banned in `deny.toml` because they produce detectable TLS fingerprints.
+HTTP is handled by Quik — a proprietary, high-fidelity transport engine built on BoringSSL. This is intentional and non-negotiable. Quik achieves bit-perfect parity with Chrome 134 across TLS handshakes (JA4 signatures), HTTP/2 frame signaling (SETTINGS, WINDOW_UPDATE, pseudo-header ordering), and HPACK compression sensitivity. This makes Phantom Engine's network requests indistinguishable from a real browser to bot-detection systems. `reqwest`, `hyper-rustls`, `native-tls`, and `wreq` are explicitly banned in `deny.toml` because they produce detectable TLS fingerprints.
 
-The `SmartNetworkClient` also tracks `Alt-Svc` headers to upgrade connections to HTTP/3 where available, and supports per-persona client construction so TLS fingerprints stay consistent with the JS-level `User-Agent`.
+The `SmartNetworkClient` in `phantom-net` orchestrates navigation on top of Quik, handling redirect chains, `Alt-Svc` upgrades, and per-persona client construction so TLS fingerprints stay consistent with the JS-level `User-Agent`.
 
 ### Anti-detection (`phantom-anti-detect/`)
 
@@ -121,7 +121,7 @@ Prometheus metrics (`phantom-mcp/src/metrics.rs`) and structured tracing (`phant
 
 - All versions must be pinned with `=` in `Cargo.toml`. No floating versions.
 - New dependencies must be reviewed against `deny.toml`. If you need to add a ban exception, explain why in the PR.
-- Never add `reqwest`, `rquest`, `native-tls`, `openssl-sys`, or `rusty_v8`. These are banned for technical reasons (TLS fingerprinting, symbol conflicts) that are not negotiable.
+- Never add `reqwest`, `rquest`, `wreq`, `native-tls`, or `openssl-sys`. These are banned for technical reasons (TLS fingerprinting, symbol conflicts) that are not negotiable.
 - Prefer crates already in the dependency graph over new ones.
 
 ### Tests

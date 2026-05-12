@@ -1,5 +1,6 @@
 pub mod engine;
 pub mod metrics;
+pub mod stdio;
 pub mod telemetry;
 pub mod tools;
 

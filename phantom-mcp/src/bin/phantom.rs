@@ -4,19 +4,35 @@ use phantom_mcp::{telemetry, EngineAdapter, McpServer};
 use tokio::net::TcpListener;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // 1. Initialize V8 Platform on the MAIN OS THREAD (Blueprint D-38)
-    // This MUST happen before any worker threads (Tokio) are spawned.
-    phantom_js::init_v8_platform();
+    let stdio_mode = env::args().any(|a| a == "--stdio");
 
-    // 2. Build and run the Tokio runtime
-    let rt = tokio::runtime::Builder::new_multi_thread()
-        .enable_all()
-        .build()?;
+    if stdio_mode {
+        // Stdio mode: V8 initialisation is deferred until the first
+        // tools/call arrives (see stdio::StdioState::ensure_ready).
+        // This keeps the `initialize` handshake under 100ms.
+        let rt = tokio::runtime::Builder::new_multi_thread()
+            .enable_all()
+            .build()?;
 
-    rt.block_on(run())
+        // Telemetry must go to stderr — stdout is reserved for JSON-RPC.
+        rt.block_on(async {
+            telemetry::init_stdio();
+            phantom_mcp::stdio::run_stdio_loop().await
+        })
+    } else {
+        // HTTP mode: initialise V8 eagerly on the main thread (Blueprint D-38).
+        phantom_mcp::engine::init_v8();
+
+        let rt = tokio::runtime::Builder::new_multi_thread()
+            .enable_all()
+            .build()?;
+
+        rt.block_on(run_http())
+    }
 }
 
-async fn run() -> Result<(), Box<dyn std::error::Error>> {
+/// HTTP/SSE server — the original transport mode.
+async fn run_http() -> Result<(), Box<dyn std::error::Error>> {
     dotenvy::dotenv().ok();
     telemetry::init();
 

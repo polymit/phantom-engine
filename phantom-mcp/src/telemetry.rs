@@ -30,6 +30,20 @@ pub fn init() {
     }
 }
 
+/// Stdio-safe telemetry: ALL output goes to stderr.
+///
+/// MCP Stdio transport reserves stdout exclusively for JSON-RPC frames.
+/// Any stray byte on stdout corrupts the protocol stream and causes the
+/// host agent (Claude Code, Codex, Cline, etc.) to disconnect immediately.
+pub fn init_stdio() {
+    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+
+    tracing_subscriber::registry()
+        .with(env_filter)
+        .with(fmt::layer().compact().with_writer(std::io::stderr))
+        .init();
+}
+
 pub fn init_test() {
     let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("debug"));
 

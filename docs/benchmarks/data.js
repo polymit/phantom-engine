@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1778650353193,
+  "lastUpdate": 1778651349087,
   "repoUrl": "https://github.com/polymit/phantom-engine",
   "entries": {
     "Benchmark": [
@@ -4107,6 +4107,90 @@ window.BENCHMARK_DATA = {
             "name": "pool_acquire_tier1",
             "value": 205542,
             "range": "± 1704",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "1ba4fac6a4e11a1834b048df7e021eaf8580ea7b",
+          "message": "test(budget): expect session preservation on resource limit exceed\n\nFollowing the resilience updates in v0.2.2-alpha, exceeding a resource\nbudget (heap, network, or CPU) no longer destroys the entire session.\n\nThis commit updates 'budget_exceeded_preserves_session' to assert that\nthe session remains active and retrievable after a budget error.",
+          "timestamp": "2026-05-13T11:16:12+05:30",
+          "tree_id": "0eb359cba633522d9c27322722f20c6e9bd17fe1",
+          "url": "https://github.com/polymit/phantom-engine/commit/1ba4fac6a4e11a1834b048df7e021eaf8580ea7b"
+        },
+        "date": 1778651348728,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 705,
+            "range": "± 2",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 709,
+            "range": "± 3",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 605,
+            "range": "± 8",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 102,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 6189013,
+            "range": "± 40044",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3336388,
+            "range": "± 24860",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5577,
+            "range": "± 32",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3363,
+            "range": "± 24",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 204516,
+            "range": "± 1129",
             "unit": "ns/iter"
           }
         ]

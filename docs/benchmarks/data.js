@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1778688580133,
+  "lastUpdate": 1778688659585,
   "repoUrl": "https://github.com/polymit/phantom-engine",
   "entries": {
     "Benchmark": [
@@ -4443,6 +4443,90 @@ window.BENCHMARK_DATA = {
             "name": "pool_acquire_tier1",
             "value": 206715,
             "range": "± 7265",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "b00b4a456e13f43e2d4b4410c999ac594c3e497f",
+          "message": "docs(quik): finalize client module documentation and formatting\n\n- Complete docstrings for connector, pool, and request injection.\n- Format ALPS settings data for better readability.",
+          "timestamp": "2026-05-13T21:37:40+05:30",
+          "tree_id": "437b9ae0cb12f757b1008670700148cff115819d",
+          "url": "https://github.com/polymit/phantom-engine/commit/b00b4a456e13f43e2d4b4410c999ac594c3e497f"
+        },
+        "date": 1778688659236,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 582,
+            "range": "± 21",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 590,
+            "range": "± 2",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 487,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 94,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 6109585,
+            "range": "± 28215",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3320155,
+            "range": "± 10329",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5224,
+            "range": "± 17",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3236,
+            "range": "± 24",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 205740,
+            "range": "± 950",
             "unit": "ns/iter"
           }
         ]

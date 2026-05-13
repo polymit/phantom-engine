@@ -58,7 +58,8 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           auto-push: true
           gh-pages-branch: main
-          benchmark-name: "Phantom Engine Performance Firewall"
+          name: "Phantom Engine Performance Firewall"
+          skip-fetch-gh-pages: true
           alert-threshold: "110%"
           comment-on-alert: true
           fail-on-alert: false

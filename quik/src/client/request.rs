@@ -34,7 +34,7 @@ pub fn inject_chrome_headers(
     if let Ok(val) = HeaderValue::from_str(&profile.headers.user_agent) {
         headers.insert(USER_AGENT, val);
     }
-    
+
     // Exact Chrome 134 Accept string including avif, webp, and signed-exchange.
     headers.insert(ACCEPT, HeaderValue::from_static("text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"));
 

@@ -41,13 +41,11 @@ impl Default for Client {
 impl Client {
     /// Creates a new `Client` with a default Chrome 134 macOS profile.
     pub fn new() -> Self {
-        Self::builder().build().unwrap_or_else(|_| {
-            Client {
-                pool: Arc::new(Mutex::new(HashMap::new())),
-                profile: crate::profile::chrome_134::profile(Platform::MacOsArm),
-                proxy: None,
-                cookie_store: Arc::new(RwLock::new(CookieStore::default())),
-            }
+        Self::builder().build().unwrap_or_else(|_| Client {
+            pool: Arc::new(Mutex::new(HashMap::new())),
+            profile: crate::profile::chrome_134::profile(Platform::MacOsArm),
+            proxy: None,
+            cookie_store: Arc::new(RwLock::new(CookieStore::default())),
         })
     }
 
@@ -95,7 +93,7 @@ impl Client {
                 .host_str()
                 .ok_or_else(|| Error::InvalidUrl("missing host".to_string()))?;
             let port = parsed_url.port().unwrap_or(443);
-            
+
             // Build a unique pool key considering the proxy and target origin.
             let proxy_prefix = self
                 .proxy
@@ -215,7 +213,9 @@ impl Client {
             return Ok(response);
         }
 
-        Err(Error::Connect(std::io::Error::other("Redirect limit exceeded (max 10)")))
+        Err(Error::Connect(std::io::Error::other(
+            "Redirect limit exceeded (max 10)",
+        )))
     }
 
     /// Dials a new connection following the profile's transport constraints.

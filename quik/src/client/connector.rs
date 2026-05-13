@@ -63,10 +63,7 @@ pub async fn connect(
             // Chrome 134 ALPS H2 settings:
             // ID 1: 65536, ID 2: 0, ID 4: 6291456, ID 6: 262144
             let alps_data: [u8; 24] = [
-                0, 1, 0, 1, 0, 0,
-                0, 2, 0, 0, 0, 0,
-                0, 4, 0, 96, 0, 0,
-                0, 6, 0, 4, 0, 0,
+                0, 1, 0, 1, 0, 0, 0, 2, 0, 0, 0, 0, 0, 4, 0, 96, 0, 0, 0, 6, 0, 4, 0, 0,
             ];
 
             boring_sys::SSL_add_application_settings(

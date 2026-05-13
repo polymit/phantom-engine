@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1778688331937,
+  "lastUpdate": 1778688580133,
   "repoUrl": "https://github.com/polymit/phantom-engine",
   "entries": {
     "Benchmark": [
@@ -4359,6 +4359,90 @@ window.BENCHMARK_DATA = {
             "name": "pool_acquire_tier1",
             "value": 206854,
             "range": "± 2078",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "a472d1920793801d8d3f63f0a81d9c704c812345",
+          "message": "docs: implement multi-crate documentation hub with premium landing page",
+          "timestamp": "2026-05-13T21:36:31+05:30",
+          "tree_id": "5807bd37e32ed3a25906d1184f62c9f45c7d4f8a",
+          "url": "https://github.com/polymit/phantom-engine/commit/a472d1920793801d8d3f63f0a81d9c704c812345"
+        },
+        "date": 1778688579779,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 584,
+            "range": "± 3",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 593,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 485,
+            "range": "± 6",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 95,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 6106320,
+            "range": "± 47449",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3334980,
+            "range": "± 63351",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5360,
+            "range": "± 43",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3289,
+            "range": "± 33",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 206715,
+            "range": "± 7265",
             "unit": "ns/iter"
           }
         ]

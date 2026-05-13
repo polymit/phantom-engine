@@ -52,7 +52,7 @@ impl Response {
         let mut data = Vec::new();
 
         while let Some(chunk) = body_stream.data().await {
-            let chunk = chunk.map_err(|e| Error::Http2(e))?;
+            let chunk = chunk.map_err(Error::Http2)?;
             data.extend_from_slice(chunk.as_ref());
         }
 
@@ -88,12 +88,14 @@ impl Response {
     /// Collects the body and decodes it as a UTF-8 string.
     pub async fn text(self) -> Result<String> {
         let bytes = self.bytes().await?;
-        String::from_utf8(bytes.to_vec()).map_err(|e| Error::Connect(std::io::Error::other(e.to_string())))
+        String::from_utf8(bytes.to_vec())
+            .map_err(|e| Error::Connect(std::io::Error::other(e.to_string())))
     }
 
     /// Collects the body and decodes it as JSON.
     pub async fn json<T: serde::de::DeserializeOwned>(self) -> Result<T> {
         let bytes = self.bytes().await?;
-        serde_json::from_slice(&bytes).map_err(|e| Error::Connect(std::io::Error::other(e.to_string())))
+        serde_json::from_slice(&bytes)
+            .map_err(|e| Error::Connect(std::io::Error::other(e.to_string())))
     }
 }

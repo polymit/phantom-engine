@@ -1,14 +1,38 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="refresh" content="0; url=quik/index.html">
-    <title>Redirecting to Quik Documentation</title>
-    <script type="text/javascript">
-        window.location.href = "quik/index.html";
-    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phantom Engine | Technical Hub</title>
+    <style>
+        body {
+            background: #000;
+            color: #fff;
+            font-family: monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        h1 { font-size: 1.5rem; margin-bottom: 2rem; }
+        .links { display: flex; gap: 2rem; }
+        a {
+            color: #fff;
+            text-decoration: none;
+            border: 1px solid #333;
+            padding: 0.5rem 1rem;
+            transition: background 0.2s;
+        }
+        a:hover { background: #222; border-color: #555; }
+    </style>
 </head>
 <body>
-    <p>If you are not redirected automatically, follow this <a href="quik/index.html">link to Quik Documentation</a>.</p>
+    <h1>PHANTOM ENGINE | TECHNICAL HUB</h1>
+    <div class="links">
+        <a href="quik/index.html">TECHNICAL DOCUMENTATION</a>
+        <a href="benchmarks/index.html">PERFORMANCE HISTORY</a>
+    </div>
 </body>
 </html>

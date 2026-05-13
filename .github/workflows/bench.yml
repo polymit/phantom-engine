@@ -57,6 +57,8 @@ jobs:
           output-file-path: bench_output.txt
           github-token: ${{ secrets.GITHUB_TOKEN }}
           auto-push: true
+          gh-pages-branch: main
+          benchmark-name: "Phantom Engine Performance Firewall"
           alert-threshold: "110%"
           comment-on-alert: true
           fail-on-alert: false

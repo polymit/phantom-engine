@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1778687657496,
+  "lastUpdate": 1778688331937,
   "repoUrl": "https://github.com/polymit/phantom-engine",
   "entries": {
     "Benchmark": [
@@ -4275,6 +4275,90 @@ window.BENCHMARK_DATA = {
             "name": "pool_acquire_tier1",
             "value": 206730,
             "range": "± 1602",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "28ce86e14d6948f746861c0c4e5122614d897a75",
+          "message": "docs(quik): relocate documentation to root /docs and fix clippy warnings\n\n- Move documentation to repository root for GitHub Pages compatibility.\n- Fix redundant_closure clippy warning in response.rs body collection.",
+          "timestamp": "2026-05-13T21:32:36+05:30",
+          "tree_id": "a39454819f91df510a11621efd8fbe1d79227e71",
+          "url": "https://github.com/polymit/phantom-engine/commit/28ce86e14d6948f746861c0c4e5122614d897a75"
+        },
+        "date": 1778688331593,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 586,
+            "range": "± 15",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 594,
+            "range": "± 3",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 486,
+            "range": "± 2",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 100,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 6165700,
+            "range": "± 62510",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3359077,
+            "range": "± 21754",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5473,
+            "range": "± 14",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3248,
+            "range": "± 24",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 206854,
+            "range": "± 2078",
             "unit": "ns/iter"
           }
         ]

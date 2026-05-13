@@ -1,15 +1,213 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Quik: High-Fidelity Transport Layer"><title>quik - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="quik" data-themes="" data-resource-suffix="" data-rustdoc-version="1.96.0-nightly (03749d625 2026-03-14)" data-channel="nightly" data-search-js="search-63369b7b.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../static.files/storage-41dd4d93.js"></script><script defer src="../crates.js"></script><script defer src="../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../static.files/favicon-044be391.svg"></head><body class="rustdoc mod crate"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><rustdoc-topbar><h2><a href="#">Crate quik</a></h2></rustdoc-topbar><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../quik/index.html">quik</a><span class="version">0.1.0</span></h2></div><div class="sidebar-elems"><ul class="block"><li><a id="all-types" href="all.html">All Items</a></li></ul><section id="rustdoc-toc"><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#quik-high-fidelity-transport-layer" title="Quik: High-Fidelity Transport Layer">Quik: High-Fidelity Transport Layer</a><ul><li><a href="#core-capabilities" title="Core Capabilities">Core Capabilities</a></li></ul></li></ul><h3><a href="#reexports">Crate Items</a></h3><ul class="block"><li><a href="#reexports" title="Re-exports">Re-exports</a></li><li><a href="#modules" title="Modules">Modules</a></li></ul></section><div id="rustdoc-modnav"></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1>Crate <span>quik</span>&nbsp;<button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../src/quik/lib.rs.html#1-31">Source</a> </span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><h2 id="quik-high-fidelity-transport-layer"><a class="doc-anchor" href="#quik-high-fidelity-transport-layer">§</a>Quik: High-Fidelity Transport Layer</h2>
-<p><code>quik</code> is a specialized HTTP transport engine designed for absolute network identity parity
-with Google Chrome. Unlike general-purpose HTTP clients, <code>quik</code> provides low-level control
-over the entire protocol stack—from TLS handshakes to HTTP/2 frame signaling—to ensure
-that every network interaction is indistinguishable from a real browser.</p>
-<h3 id="core-capabilities"><a class="doc-anchor" href="#core-capabilities">§</a>Core Capabilities</h3>
-<ul>
-<li><strong>TLS Identity</strong>: Uses BoringSSL to replicate Chrome’s ClientHello, including GREASE,
-extension permutation, and post-quantum key shares.</li>
-<li><strong>H2 Parity</strong>: Enforces specific SETTINGS order, pseudo-header sequences, and connection
-window deltas to match Chromium’s behavioral fingerprints.</li>
-<li><strong>Stealth Navigation</strong>: Manages request context metadata (sec-fetch headers) and HPACK
-sensitivity to bypass advanced anti-automation heuristics.</li>
-</ul>
-</div></details><h2 id="reexports" class="section-header">Re-exports<a href="#reexports" class="anchor">§</a></h2><dl class="item-table reexports"><dt id="reexport.connect"><code>pub use crate::client::<a class="fn" href="client/fn.connect.html" title="fn quik::client::connect">connect</a>;</code></dt><dt id="reexport.Client"><code>pub use crate::client::<a class="struct" href="client/struct.Client.html" title="struct quik::client::Client">Client</a>;</code></dt><dt id="reexport.Response"><code>pub use crate::client::<a class="struct" href="client/struct.Response.html" title="struct quik::client::Response">Response</a>;</code></dt><dt id="reexport.Error"><code>pub use crate::error::<a class="enum" href="error/enum.Error.html" title="enum quik::error::Error">Error</a>;</code></dt><dt id="reexport.Result"><code>pub use crate::error::<a class="type" href="error/type.Result.html" title="type quik::error::Result">Result</a>;</code></dt><dt id="reexport.AKAMAI_FINGERPRINT"><code>pub use crate::profile::chrome_134::<a class="constant" href="profile/chrome_134/constant.AKAMAI_FINGERPRINT.html" title="constant quik::profile::chrome_134::AKAMAI_FINGERPRINT">AKAMAI_FINGERPRINT</a>;</code></dt><dt id="reexport.JA3_HASH"><code>pub use crate::profile::chrome_134::<a class="constant" href="profile/chrome_134/constant.JA3_HASH.html" title="constant quik::profile::chrome_134::JA3_HASH">JA3_HASH</a>;</code></dt><dt id="reexport.ChromeProfile"><code>pub use crate::profile::<a class="struct" href="profile/struct.ChromeProfile.html" title="struct quik::profile::ChromeProfile">ChromeProfile</a>;</code></dt><dt id="reexport.Platform"><code>pub use crate::profile::<a class="enum" href="profile/enum.Platform.html" title="enum quik::profile::Platform">Platform</a>;</code></dt></dl><h2 id="modules" class="section-header">Modules<a href="#modules" class="anchor">§</a></h2><dl class="item-table"><dt><a class="mod" href="client/index.html" title="mod quik::client">client</a></dt><dt><a class="mod" href="error/index.html" title="mod quik::error">error</a></dt><dd>Unified error surface for the <code>quik</code> transport stack.</dd><dt><a class="mod" href="profile/index.html" title="mod quik::profile">profile</a></dt><dd>Data-only definitions for Chrome transport identities.</dd></dl></section></div></main></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phantom Engine | Documentation Hub</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #050505;
+            --accent-color: #00f2ff;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: 'Outfit', sans-serif;
+            overflow-x: hidden;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Background Glow Animation */
+        .glow {
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(0, 242, 255, 0.15) 0%, rgba(0, 242, 255, 0) 70%);
+            border-radius: 50%;
+            filter: blur(80px);
+            z-index: -1;
+            animation: pulse 10s infinite alternate;
+        }
+
+        @keyframes pulse {
+            0% { transform: translate(-50%, -50%) scale(1); }
+            100% { transform: translate(-40%, -45%) scale(1.2); }
+        }
+
+        .container {
+            max-width: 900px;
+            width: 90%;
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        h1 {
+            font-size: 4rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            letter-spacing: -2px;
+            background: linear-gradient(135deg, #fff 0%, #00f2ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p.subtitle {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            margin-bottom: 4rem;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            line-height: 1.6;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            width: 100%;
+        }
+
+        .card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 40px;
+            text-align: left;
+            text-decoration: none;
+            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        .card:hover {
+            transform: translateY(-10px);
+            border-color: var(--accent-color);
+            box-shadow: 0 20px 40px rgba(0, 242, 255, 0.1);
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(0, 242, 255, 0.1) 0%, transparent 100%);
+            opacity: 0;
+            transition: opacity 0.4s;
+        }
+
+        .card:hover::before {
+            opacity: 1;
+        }
+
+        .card h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .card p {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+            line-height: 1.5;
+        }
+
+        .card .badge {
+            display: inline-block;
+            padding: 6px 12px;
+            background: rgba(0, 242, 255, 0.1);
+            color: var(--accent-color);
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            font-family: 'JetBrains Mono', monospace;
+            margin-bottom: 1.5rem;
+        }
+
+        .btn-text {
+            color: var(--accent-color);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-text::after {
+            content: '→';
+            transition: transform 0.3s;
+        }
+
+        .card:hover .btn-text::after {
+            transform: translateX(5px);
+        }
+
+        footer {
+            margin-top: 6rem;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #00ff88;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+            box-shadow: 0 0 10px #00ff88;
+        }
+    </style>
+</head>
+<body>
+    <div class="glow"></div>
+    
+    <div class="container">
+        <h1>Phantom Engine</h1>
+        <p class="subtitle">High-fidelity network orchestration and agentic browser transport documentation.</p>
+
+        <div class="grid">
+            <a href="quik/index.html" class="card">
+                <div class="badge">TRANSPORT LAYER</div>
+                <h2>Quik Crate</h2>
+                <p>Proprietary Chrome 134 identity engine. Handles TLS fingerprinting, H2 signaling, and stealth navigation.</p>
+                <div class="btn-text">Explore Specs</div>
+            </a>
+
+            <div class="card" style="opacity: 0.6; cursor: not-allowed;">
+                <div class="badge" style="background: rgba(255, 255, 255, 0.05); color: #888;">ORCHESTRATION</div>
+                <h2>Phantom-Net</h2>
+                <p>High-level navigation client. Manages Alt-Svc negotiation and engine-wide network state.</p>
+                <div class="btn-text" style="color: #888;">Coming Soon</div>
+            </div>
+        </div>
+
+        <footer>
+            <span class="status-dot"></span> IDENTITY PARITY: CHROME 134.0.0.0
+        </footer>
+    </div>
+</body>
+</html>

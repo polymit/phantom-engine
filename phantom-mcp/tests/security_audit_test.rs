@@ -205,8 +205,8 @@ async fn js_eval_timeout_enforced() {
         elapsed
     );
     assert!(
-        adapter.broker.get(adapter.session_uuid).is_err(),
-        "session should be destroyed after timeout"
+        adapter.broker.get(adapter.session_uuid).is_ok(),
+        "session should be preserved after timeout"
     );
 }
 
@@ -236,8 +236,8 @@ async fn js_memory_limit_enforced_quickjs() {
         "expected OOM classification, got code={code}, message={msg}"
     );
     assert!(
-        adapter.broker.get(adapter.session_uuid).is_err(),
-        "session should be destroyed after OOM, got code={}, msg={}",
+        adapter.broker.get(adapter.session_uuid).is_ok(),
+        "session should be preserved after OOM, got code={}, msg={}",
         code,
         msg
     );

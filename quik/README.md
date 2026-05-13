@@ -1,63 +1,51 @@
-# Quik: High-Fidelity Transport Layer
+# Quik Transport Layer
 
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Built for Phantom](https://img.shields.io/badge/Phantom%20Engine-v0.2.0--alpha-black.svg)]()
+`quik` is a high-fidelity HTTP transport engine designed for absolute network identity parity with Google Chrome 134. It serves as the foundational networking stack for the [Phantom Engine](https://github.com/polymit/phantom-engine), providing the low-level byte control necessary to bypass modern anti-automation and fingerprinting heuristics.
 
-**Quik** is a high-performance, precision-engineered HTTP client developed and maintained by the **Phantom Engine Team**. Designed from the ground up for absolute network identity parity, Quik serves as the core transport layer for the Phantom ecosystem, bypassing advanced anti-automation heuristics through exact browser replication.
+Unlike generalized HTTP clients, `quik` is built to be indistinguishable from a standard browser at every layer of the networking stack—from TLS handshake permutation to HTTP/2 frame signaling.
 
-## Overview
+## Key Features
 
-Unlike generalized HTTP libraries, Quik does not compromise on network identity. By controlling the entire network stack from the TCP socket up to the HPACK encoder, Quik achieves **100% cryptographic and behavioral parity** with Google Chrome. 
+- **Full Chrome 134 Identity**: Replicates the exact TLS and HTTP/2 fingerprints of Chrome 134, including JA3, JA4, and Akamai-specific markers.
+- **BoringSSL Integration**: Leverages BoringSSL for advanced handshake control, including ECH GREASE, certificate compression (Brotli), and specific signature algorithm ordering.
+- **Post-Quantum Security**: Implements the Chrome-identical `X25519MLKEM768` hybrid key exchange group.
+- **Precise H2 Signaling**: Enforces Chromium's exact HTTP/2 SETTINGS frame order, initial window deltas, and pseudo-header sequences (`m,a,s,p`).
+- **Stealth Navigation Engine**: Automates the mutation of `sec-fetch-*` metadata and priority headers during complex redirect flows.
+- **Advanced HPACK Management**: Explicitly marks sensitive headers (like cookies and authorization) as "Never Indexed" to mirror Chromium's security and fingerprinting behavior.
 
-This enables automated systems, researchers, and agentic workflows to interact with heavily protected web infrastructure (e.g., Cloudflare, Akamai, Datadome) without triggering network-layer anomalies.
+## Documentation
 
-## Core Architecture
+Comprehensive technical documentation, including safety contracts and architecture deep-dives, is available at:
+**[https://polymit.github.io/phantom-engine/quik/index.html](https://polymit.github.io/phantom-engine/quik/index.html)**
 
-Quik achieves its fingerprint accuracy by replacing standard networking abstractions with surgical, byte-level implementations:
+## Usage
 
-*   **BoringSSL v4 Backend**: Direct FFI bindings to Google's BoringSSL, enabling exact replication of Chrome's TLS ClientHello, including ECH GREASE, Post-Quantum Key Shares (`X25519Kyber768Draft00`), and ALPS binary payloads.
-*   **Deterministic HTTP/2 Engine**: Built on a customized `http2` protocol implementation to guarantee exact pseudo-header ordering (`m,a,s,p`) and identical `SETTINGS` frame sequences.
-*   **Stealth Redirect Engine**: A fully stateful navigation manager that processes 301/302 redirects by adhering strictly to Chromium's cross-origin mutation rules (managing `sec-fetch-site` states and dropping `sec-fetch-user` appropriately).
-*   **HPACK Literal Enforcement**: Integrated session persistence (`cookie_store`) paired with dynamic HPACK sensitivity tagging to prevent Cloudflare from detecting agents via dynamic table state analysis.
-*   **End-to-End Tunneling**: Native support for pre-handshake SOCKS5 and HTTP CONNECT proxy dialing, ensuring the Server Name Indication (SNI) and TLS fingerprints remain perfectly encrypted and uncompromised.
-
-## Integration & Usage
-
-Quik provides a thread-safe, high-level connection pool designed as a direct replacement for traditional HTTP clients.
+`quik` is designed to be used as part of the Phantom Engine ecosystem. It provides a stateful `Client` that handles connection pooling, cookie management, and automated redirects.
 
 ```rust
-use quik::{Client, Proxy};
+use quik::{Client, Result};
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Optional: Configure residential proxy routing
-    let proxy = Proxy::parse("socks5://127.0.0.1:9050")?;
-
-    // Instantiate the Client with a guaranteed Chrome 134 identity
-    let client = Client::builder()
-        .proxy(proxy)
-        .build()?;
-
-    // Execute navigation. The client automatically handles connection pooling, 
-    // cookie persistence, and stealth-optimized redirect chains.
-    let response = client.get("https://tls.peet.ws/api/all").await?;
-
-    println!("Status: {}", response.status());
-    let body = response.bytes().await?;
+async fn main() -> Result<()> {
+    let client = Client::new();
+    let response = client.get("https://example.com").await?;
     
+    println!("Status: {}", response.status());
+    let body = response.body().await?;
     Ok(())
 }
 ```
 
+## Part of Phantom Engine
+
+This crate is a core component of the **Phantom Engine** project. It works in conjunction with `phantom-net` and `phantom-session` to provide a complete, stealth-optimized browsing environment.
+
 ## Contributing
 
-Quik is a critical component of the Phantom Engine ecosystem. Contributions must strictly adhere to the project's behavioral parity constraints. Any modifications to the TLS handshake, frame ordering, or header sequencing must be validated against the `chrome_134` integration test suite to ensure the Akamai and JA4 fingerprints remain pristine.
+We welcome contributions that improve the fidelity of the transport layer or add support for newer Chrome versions. Please refer to the [CONTRIBUTING.md](https://github.com/polymit/phantom-engine/blob/main/CONTRIBUTING.md) at the repository root for our contribution guidelines and code of conduct.
 
 ## License
 
-Copyright © 2026 Phantom Engine Team.
+Copyright © 2026 Polymit.
 
-This project is licensed under the **Apache License, Version 2.0**. 
-You may not use this file except in compliance with the License. You may obtain a copy of the License at [http://www.apache.org/licenses/LICENSE-2.0](http://www.apache.org/licenses/LICENSE-2.0).
-
-Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at [http://www.apache.org/licenses/LICENSE-2.0](http://www.apache.org/licenses/LICENSE-2.0).

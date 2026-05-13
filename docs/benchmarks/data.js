@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1778609995087,
+  "lastUpdate": 1778649501829,
   "repoUrl": "https://github.com/polymit/phantom-engine",
   "entries": {
     "Benchmark": [
@@ -3939,6 +3939,90 @@ window.BENCHMARK_DATA = {
             "name": "pool_acquire_tier1",
             "value": 155460,
             "range": "± 775",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "78549c7f39ea50908027708981b6e1616e5abfb2",
+          "message": "chore(release): bump version to v0.2.2-alpha\n\nThe Stdio & Stability Update\n\n- Fixed Zero-Node Scene Graph bug in visibility calculation\n- Prevented cascading session invalidation on QuickJS OOM/Timeout\n- Fixed storage permission denied (os error 13) by updating .env.example\n- Overhauled tool descriptions to establish Agent-Engine trust\n- Bumped workspace versions to v0.2.2-alpha",
+          "timestamp": "2026-05-13T10:42:41+05:30",
+          "tree_id": "c61ecebdb882a0caec2f0a1dc2ec3f51124d2d34",
+          "url": "https://github.com/polymit/phantom-engine/commit/78549c7f39ea50908027708981b6e1616e5abfb2"
+        },
+        "date": 1778649501474,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 714,
+            "range": "± 4",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 721,
+            "range": "± 2",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 602,
+            "range": "± 18",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 102,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 6256736,
+            "range": "± 243306",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3345528,
+            "range": "± 27500",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5476,
+            "range": "± 19",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3335,
+            "range": "± 52",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 205075,
+            "range": "± 847",
             "unit": "ns/iter"
           }
         ]

@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1778649501829,
+  "lastUpdate": 1778650353193,
   "repoUrl": "https://github.com/polymit/phantom-engine",
   "entries": {
     "Benchmark": [
@@ -4023,6 +4023,90 @@ window.BENCHMARK_DATA = {
             "name": "pool_acquire_tier1",
             "value": 205075,
             "range": "± 847",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "2ae542035e58a3e09349270151ac2b17dbddbf89",
+          "message": "test(security): expect session preservation on timeout and OOM\n\nThe previous tests asserted that the Phantom Engine would destroy the entire session\nupon a QuickJS OOM or timeout. Following the new resilience updates, the engine now\nisolates the QuickJS runtime crash and preserves the core session state.\n\nThis commit updates the assertions in js_eval_timeout_enforced and\njs_memory_limit_enforced_quickjs to expect .is_ok() instead of .is_err()\non the session broker.\n\nAdditionally, removes the temporary CHANGELOG.md file from the repository root.",
+          "timestamp": "2026-05-13T10:59:43+05:30",
+          "tree_id": "890335ae0127ec0a027764f8b55581033395f8ab",
+          "url": "https://github.com/polymit/phantom-engine/commit/2ae542035e58a3e09349270151ac2b17dbddbf89"
+        },
+        "date": 1778650352908,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 583,
+            "range": "± 3",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 591,
+            "range": "± 2",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 485,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 95,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 6384870,
+            "range": "± 142502",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3416697,
+            "range": "± 103631",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5391,
+            "range": "± 20",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3281,
+            "range": "± 276",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 205542,
+            "range": "± 1704",
             "unit": "ns/iter"
           }
         ]

@@ -1,30 +1,48 @@
-//! Unified error type for the entire crate.
+//! Unified error surface for the `quik` transport stack.
 //!
-//! Every transport layer in `quik` reports through this one boundary: TLS
-//! setup, HTTP/2 handshake, connection I/O, and fingerprint verification.
-//! The session layer above this crate needs one stable error surface so it
-//! can pool connections, rotate identities, and report drift without
-//! guessing which subsystem produced the failure.
+//! Every layer in the engine—TLS negotiation, HTTP/2 signaling, and proxy
+//! handshakes—reports through this boundary. A stable error surface is essential
+//! for higher-level session management to perform connection pooling, identity
+//! rotation, and retry logic without inspecting subsystem-specific internals.
 
 use thiserror::Error;
 
+/// Errors that can occur during high-fidelity transport operations.
 #[derive(Debug, Error)]
 pub enum Error {
-    // `boring::error::ErrorStack` wraps BoringSSL's internal error queue and
-    // is the canonical error returned from any `SSL_CTX_*` call.
+    /// Failure during the construction of the BoringSSL context.
+    ///
+    /// This usually indicates an invalid cipher list or unsupported curve
+    /// configuration in the profile.
     #[error("failed to build TLS connector: {0}")]
     TlsBuild(#[from] boring::error::ErrorStack),
-    // The `tokio-boring` handshake error can be complex; we wrap it here.
+
+    /// Failure during the TLS handshake with the remote peer.
+    ///
+    /// These errors often stem from peer-side fingerprint validation or
+    /// mismatches in the ClientHello permutation.
     #[error("TLS handshake failed: {0}")]
     TlsHandshake(#[from] tokio_boring::HandshakeError<tokio::net::TcpStream>),
-    // The `http2` fork may return non-standard error codes for SETTINGS frame
-    // mismatches; always log the raw string.
+
+    /// Failure during the HTTP/2 handshake or frame signaling.
+    ///
+    /// The `http2` crate returns specific errors for SETTINGS violations
+    /// or stream reset events that deviate from the expected profile.
     #[error("http/2 handshake failed: {0}")]
     Http2(#[from] http2::Error),
+
+    /// Standard I/O failure during connection establishment or data transfer.
     #[error("connection failed: {0}")]
     Connect(#[from] std::io::Error),
+
+    /// Fingerprint verification failed against a reference validator.
+    ///
+    /// This occurs when the actual wire behavior (JA3/JA4/Akamai) drifts
+    /// from the constants defined in the identity profile.
     #[error("fingerprint verification failed: {0}")]
     Verify(String),
+
+    /// The provided URL is malformed or uses an unsupported scheme.
     #[error("invalid url: {0}")]
     InvalidUrl(String),
 }

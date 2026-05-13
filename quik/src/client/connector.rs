@@ -11,13 +11,24 @@ use crate::http2::configure_builder;
 use crate::profile::ChromeProfile;
 use crate::tls::build_connector;
 
-/// A single Chrome 134-identical network connection.
+/// Represents an established HTTP/2 connection with a fixed Chrome identity.
+///
+/// This structure holds the active H2 request handle and the profile used
+/// to establish the connection, ensuring that all requests on this stream
+/// adhere to the same behavioral constraints.
 pub struct QuikConnection {
+    /// The handle used to initiate new H2 streams.
     pub h2: SendRequest<Bytes>,
+    /// The profile used for TLS and H2 handshake parity.
     pub profile: ChromeProfile,
 }
 
-/// Orchestrates the TCP → TLS → H2 connection pipeline.
+/// Establishes a new network connection following the Chrome transport pipeline.
+///
+/// 1. **Proxy/TCP**: Dials the target host (optionally via a SOCKS5/HTTP tunnel).
+/// 2. **TLS Handshake**: Performs a BoringSSL handshake with ClientHello permutation.
+/// 3. **ALPS/ECH**: Injects per-connection application settings and ECH GREASE.
+/// 4. **H2 Handshake**: Negotiates the HTTP/2 session with Chrome-identical SETTINGS.
 pub async fn connect(
     host: &str,
     port: u16,
@@ -25,30 +36,37 @@ pub async fn connect(
     profile: &ChromeProfile,
     proxy: Option<&Proxy>,
 ) -> Result<QuikConnection> {
+    // Stage 1: Establish raw TCP transport.
     let tcp = if let Some(p) = proxy {
         dial_proxy(p, host, port).await?
     } else {
         TcpStream::connect(addr).await?
     };
 
+    // Stage 2: Configure the TLS connector.
     let connector = build_connector(&profile.tls)?;
     let mut config = connector.configure()?;
 
-    // Request OCSP status (extension status_request)
+    // Request OCSP stapling to match Chrome's certificate verification behavior.
     config.set_status_type(boring::ssl::StatusType::OCSP)?;
 
+    // Stage 3: Per-connection FFI for advanced Chrome features.
     let ssl_ptr = config.as_ptr();
+
+    // SAFETY: The `ssl_ptr` is valid for the duration of the configuration phase.
+    // We pass valid pointers for the ALPN protocol "h2" and the static ALPS buffer.
     unsafe {
         if profile.tls.enable_ech_grease {
             boring_sys::SSL_set_enable_ech_grease(ssl_ptr, 1);
         }
         if profile.tls.alps_enabled {
-            // Chrome 134 ALPS H2 settings: 1:65536, 2:0, 4:6291456, 6:262144
+            // Chrome 134 ALPS H2 settings:
+            // ID 1: 65536, ID 2: 0, ID 4: 6291456, ID 6: 262144
             let alps_data: [u8; 24] = [
-                0, 1, 0, 1, 0, 0, // 1: 65536
-                0, 2, 0, 0, 0, 0, // 2: 0
-                0, 4, 0, 96, 0, 0, // 4: 6291456
-                0, 6, 0, 4, 0, 0, // 6: 262144
+                0, 1, 0, 1, 0, 0,
+                0, 2, 0, 0, 0, 0,
+                0, 4, 0, 96, 0, 0,
+                0, 6, 0, 4, 0, 0,
             ];
 
             boring_sys::SSL_add_application_settings(
@@ -61,6 +79,7 @@ pub async fn connect(
         }
     }
 
+    // Stage 4: TLS handshake.
     let tls_stream = tokio_boring::connect(config, host, tcp)
         .await
         .map_err(|e| {
@@ -68,11 +87,14 @@ pub async fn connect(
             e
         })?;
 
+    // Stage 5: HTTP/2 handshake.
     let mut h2_builder = http2::client::Builder::new();
     configure_builder(&mut h2_builder, &profile.h2);
 
     let (h2, connection) = h2_builder.handshake(tls_stream).await?;
 
+    // Drive the connection in the background. If this task terminates,
+    // the H2 session is considered dead.
     tokio::spawn(async move {
         if let Err(e) = connection.await {
             tracing::error!("HTTP/2 connection driver failed: {:?}", e);
@@ -86,7 +108,7 @@ pub async fn connect(
 }
 
 impl QuikConnection {
-    /// Sends a pre-constructed HTTP request with the Chrome identity connection.
+    /// Dispatches an HTTP request over the established H2 session.
     pub async fn send(
         &mut self,
         request: http::Request<()>,

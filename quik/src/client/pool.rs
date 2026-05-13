@@ -14,13 +14,21 @@ use bytes::Bytes;
 use cookie_store::CookieStore;
 use std::sync::RwLock;
 
-/// A high-level, pooling HTTP client with Chrome 134 identity.
-/// This is designed to be a drop-in replacement for `wreq::Client`.
+/// A stateful, pooling HTTP client that enforces Chrome 134 identity.
+///
+/// The `Client` manages a pool of established HTTP/2 connections, a persistent
+/// cookie jar, and an automated redirect engine. It is designed to replace
+/// standard HTTP clients in environments where network fingerprinting must be
+/// avoided.
 #[derive(Clone)]
 pub struct Client {
+    /// A synchronized pool of active H2 connections keyed by their origin and proxy.
     pool: Arc<Mutex<HashMap<String, QuikConnection>>>,
+    /// The canonical identity profile used for all transport-layer operations.
     profile: ChromeProfile,
+    /// An optional proxy used for all outbound connections.
     proxy: Option<Proxy>,
+    /// A synchronized cookie jar shared across all requests.
     pub cookie_store: Arc<RwLock<CookieStore>>,
 }
 
@@ -31,11 +39,9 @@ impl Default for Client {
 }
 
 impl Client {
-    /// Creates a new Client with a default Chrome 134 Mac profile.
+    /// Creates a new `Client` with a default Chrome 134 macOS profile.
     pub fn new() -> Self {
         Self::builder().build().unwrap_or_else(|_| {
-            // This should only fail if the system state is extremely corrupted.
-            // We use a fallback that is technically unreachable but satisfies clippy.
             Client {
                 pool: Arc::new(Mutex::new(HashMap::new())),
                 profile: crate::profile::chrome_134::profile(Platform::MacOsArm),
@@ -45,21 +51,30 @@ impl Client {
         })
     }
 
-    /// Returns a builder to configure the client.
+    /// Returns a builder to configure a specialized `Client` instance.
     pub fn builder() -> ClientBuilder {
         ClientBuilder::default()
     }
 
-    /// Performs a GET request, automatically following up to 10 redirects stealthily.
+    /// Executes a GET request and follows redirects stealthily.
     pub async fn get(&self, url: &str) -> Result<Response> {
         self.execute_with_redirects("GET", url, None).await
     }
 
-    /// Performs a POST request, automatically following up to 10 redirects stealthily.
+    /// Executes a POST request and follows redirects stealthily.
     pub async fn post(&self, url: &str, body: Bytes) -> Result<Response> {
         self.execute_with_redirects("POST", url, Some(body)).await
     }
 
+    /// Core request execution engine with automated, stateful redirect handling.
+    ///
+    /// This method implements a Chrome-identical redirect state machine:
+    /// 1. **Sec-Fetch-Site Evolution**: Calculates origin relationships (same-origin, cross-site)
+    ///    across hops.
+    /// 2. **Header Mutation**: Strips `sec-fetch-user` and `upgrade-insecure-requests`
+    ///    after the first hop.
+    /// 3. **Method Rotation**: Mutates POST to GET for 301/302/303 status codes.
+    /// 4. **Connection Reuse**: Efficiently retrieves or dials connections based on target origin.
     async fn execute_with_redirects(
         &self,
         initial_method: &str,
@@ -80,6 +95,8 @@ impl Client {
                 .host_str()
                 .ok_or_else(|| Error::InvalidUrl("missing host".to_string()))?;
             let port = parsed_url.port().unwrap_or(443);
+            
+            // Build a unique pool key considering the proxy and target origin.
             let proxy_prefix = self
                 .proxy
                 .as_ref()
@@ -91,6 +108,7 @@ impl Client {
 
             let key = format!("{}{}:{}", proxy_prefix, authority, port);
 
+            // Extract relevant cookies for the current target URL.
             let cookie_header = {
                 let store = self
                     .cookie_store
@@ -108,7 +126,6 @@ impl Client {
                 }
             };
 
-            // Build Request
             let mut request = http::Request::builder()
                 .method(current_method.as_str())
                 .uri(parsed_url.as_str())
@@ -121,7 +138,7 @@ impl Client {
                 }
             }
 
-            // Inject Chrome Headers with dynamic sec-fetch states
+            // Injects Chrome-identical headers, handling dynamic Sec-Fetch and Priority states.
             let is_initial = hop == 0;
             inject_chrome_headers(
                 request.headers_mut(),
@@ -130,7 +147,7 @@ impl Client {
                 is_initial,
             );
 
-            // Fetch or create connection
+            // Connection acquisition logic.
             let conn = {
                 let mut pool = self.pool.lock().map_err(|_| {
                     Error::Connect(std::io::Error::other("connection pool poisoned"))
@@ -139,6 +156,7 @@ impl Client {
             };
 
             let mut h2_client = if let Some(mut c) = conn {
+                // Verify if the pooled connection is still active and ready for a new stream.
                 match c.h2.ready().await {
                     Ok(h2) => {
                         c.h2 = h2;
@@ -152,12 +170,11 @@ impl Client {
 
             let mut response = h2_client.send(request, current_body.clone()).await?;
 
-            // Store connection for reuse
+            // Return the connection to the pool for potential reuse.
             if let Ok(mut pool) = self.pool.lock() {
                 pool.insert(key, h2_client);
             }
 
-            // Store cookies
             self.store_cookies(&response, &parsed_url);
 
             let status = response.status();
@@ -168,7 +185,7 @@ impl Client {
                         .join(loc_str)
                         .map_err(|e| Error::InvalidUrl(e.to_string()))?;
 
-                    // State mutations
+                    // Redirect Mutation: Rotate POST to GET on standard redirects.
                     if status == http::StatusCode::MOVED_PERMANENTLY
                         || status == http::StatusCode::FOUND
                         || status == http::StatusCode::SEE_OTHER
@@ -177,6 +194,7 @@ impl Client {
                         current_body = None;
                     }
 
+                    // sec-fetch-site computation: Once cross-site, always cross-site.
                     if !is_cross_site {
                         if next_url.origin() == parsed_url.origin() {
                             sec_fetch_site = "same-origin".to_string();
@@ -197,9 +215,10 @@ impl Client {
             return Ok(response);
         }
 
-        Err(Error::Connect(std::io::Error::other("Too many redirects")))
+        Err(Error::Connect(std::io::Error::other("Redirect limit exceeded (max 10)")))
     }
 
+    /// Dials a new connection following the profile's transport constraints.
     async fn dial(
         &self,
         authority: &str,
@@ -214,6 +233,7 @@ impl Client {
         connect(authority, port, addr, profile, self.proxy.as_ref()).await
     }
 
+    /// Persists `Set-Cookie` headers from a response into the synchronized cookie store.
     fn store_cookies(&self, resp: &Response, url: &Url) {
         if let Ok(mut store) = self.cookie_store.write() {
             for v in resp.headers().get_all("set-cookie").iter() {
@@ -223,10 +243,9 @@ impl Client {
             }
         }
     }
-
-    // Add post() and other methods as needed to match wreq...
 }
 
+/// A builder for constructing a `Client` with specific identity and transport settings.
 #[derive(Default)]
 pub struct ClientBuilder {
     profile: Option<ChromeProfile>,
@@ -235,21 +254,25 @@ pub struct ClientBuilder {
 }
 
 impl ClientBuilder {
+    /// Sets the Chrome identity profile.
     pub fn profile(mut self, profile: ChromeProfile) -> Self {
         self.profile = Some(profile);
         self
     }
 
+    /// Configures an outbound proxy.
     pub fn proxy(mut self, proxy: Proxy) -> Self {
         self.proxy = Some(proxy);
         self
     }
 
+    /// Provides a pre-existing synchronized cookie store.
     pub fn cookie_store(mut self, store: Arc<RwLock<CookieStore>>) -> Self {
         self.cookie_store = Some(store);
         self
     }
 
+    /// Finalizes the configuration and constructs a `Client`.
     pub fn build(self) -> Result<Client> {
         let profile = self
             .profile

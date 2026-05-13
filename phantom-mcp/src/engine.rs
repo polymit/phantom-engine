@@ -288,12 +288,12 @@ impl EngineAdapter {
                     resource = %resource,
                     used,
                     limit,
-                    "session budget exceeded; destroying session"
+                    "session budget exceeded"
                 );
-                let _ = self.broker.remove(self.session_uuid);
-                if self.session_active.swap(false, AtomicOrdering::AcqRel) {
-                    metrics::SESSIONS_ACTIVE.dec();
-                }
+                // ARCHITECTURAL NOTE: We intentionally do NOT remove the session from the broker here.
+                // A budget exhaustion in a single tool call (e.g. a heavy evaluate script) should fail
+                // that specific call, but the broader Session state (URL, cookies, CCT) remains valid
+                // for subsequent, lighter interactions.
                 Err(BrowserError::Session(BrowserSessionError::BudgetExceeded {
                     resource,
                     used,

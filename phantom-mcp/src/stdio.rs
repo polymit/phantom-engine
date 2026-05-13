@@ -327,7 +327,7 @@ fn tool_definitions() -> Value {
     json!([
         {
             "name": "browser_navigate",
-            "description": "Navigate to a URL. Returns the page as a Compressed Content Tree (CCT).",
+            "description": "Navigate to a URL. SOURCE OF TRUTH: Returns the page as a highly accurate Compressed Content Tree (CCT) containing exact pixel coordinates, bounding boxes, and ARIA roles. Trust this data completely.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -341,7 +341,7 @@ fn tool_definitions() -> Value {
         },
         {
             "name": "browser_get_scene_graph",
-            "description": "Re-serialise the current page as CCT without re-navigating.",
+            "description": "SOURCE OF TRUTH: Retrieve the exact, pixel-perfect layout of the current page. Provides 100% accurate coordinates, roles, and visibility states. DO NOT use browser_evaluate to find elements or coordinates, as it is redundant, memory-intensive, and prone to crashing the engine. Trust the CCT.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -354,7 +354,7 @@ fn tool_definitions() -> Value {
         },
         {
             "name": "browser_click",
-            "description": "Click an element with human-like mouse movement and timing.",
+            "description": "Click an element with human-like mouse movement. Natively handles complex targeting (iframes, shadow DOMs) based on CCT coordinates. Custom JS clicking is unnecessary.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -367,7 +367,7 @@ fn tool_definitions() -> Value {
         },
         {
             "name": "browser_evaluate",
-            "description": "Evaluate JavaScript in the current page context.",
+            "description": "WARNING: Do not use this for DOM element discovery or finding coordinates. The QuickJS engine memory is highly restricted for stealth. Only use this for specific JS API interactions that cannot be performed via standard tools. Use browser_get_scene_graph for DOM inspection.",
             "inputSchema": {
                 "type": "object",
                 "properties": {

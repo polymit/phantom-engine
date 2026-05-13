@@ -74,21 +74,26 @@ fn process_node_visibility(
             continue;
         };
 
-        let visible = match &dom_node.data {
-            NodeData::Document => true,
-            NodeData::Comment { .. } => false,
-            NodeData::Text { content } => !content.trim().is_empty(),
+        let (visible, hides_children) = match &dom_node.data {
+            NodeData::Document => (true, false),
+            NodeData::Comment { .. } => (false, false),
+            NodeData::Text { content } => (!content.trim().is_empty(), false),
             NodeData::Element { .. } => {
+                let c1 = dom_node.computed_display != Display::None;
+                let c3 = dom_node.computed_opacity > 0.0;
+
+                // A parent only forcibly hides its children if it has display:none or opacity:0.
+                // It does NOT hide children just because its own width/height are 0 (e.g., un-cleared floats).
+                let hides_children = !c1 || !c3;
+
                 if let Some(bounds) = layout_map.get(&node_id) {
-                    let c1 = dom_node.computed_display != Display::None;
                     let c2 = dom_node.computed_visibility != Visibility::Hidden;
-                    let c3 = dom_node.computed_opacity > 0.0;
                     let c4 = bounds.width > 0.0;
                     let c5 = bounds.height > 0.0;
                     let c6 = bounds.intersects(viewport);
-                    c1 && c2 && c3 && c4 && c5 && c6
+                    (c1 && c2 && c3 && c4 && c5 && c6, hides_children)
                 } else {
-                    false
+                    (false, hides_children)
                 }
             }
         };
@@ -98,7 +103,7 @@ fn process_node_visibility(
         let mut children: Vec<_> = node_id.children(&tree.arena).collect();
         children.reverse();
         for child in children {
-            stack.push((child, visible));
+            stack.push((child, !hides_children));
         }
     }
 }

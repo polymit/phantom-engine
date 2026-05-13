@@ -1,0 +1,4872 @@
+window.BENCHMARK_DATA = {
+  "lastUpdate": 1778691695166,
+  "repoUrl": "https://github.com/polymit/phantom-engine",
+  "entries": {
+    "Benchmark": [
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "fc0eb5ac97273d886dcb6ebbea6faaddd71f385a",
+          "message": "fix(docker): scale down resource limits for CI runner compatibility\n\n- Reduce CPU limit from 8 to 4 to match GitHub Actions hardware.\n- Reduce memory limit from 32G to 6G to stay within runner RAM limits.\n- This allows the 'Full Scale Test' to start without being killed by the Docker daemon.",
+          "timestamp": "2026-04-18T14:31:18+05:30",
+          "tree_id": "e1d00b578f029158f9ef72674b0454f11322a509",
+          "url": "https://github.com/polymit/phantom-engine/commit/fc0eb5ac97273d886dcb6ebbea6faaddd71f385a"
+        },
+        "date": 1776503205225,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 594,
+            "range": "± 3",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 601,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 492,
+            "range": "± 2",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 95,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 3252409,
+            "range": "± 20835",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3261994,
+            "range": "± 122608",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5441,
+            "range": "± 23",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3162,
+            "range": "± 60",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 205355,
+            "range": "± 1148",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "6542879ae5f27fb32c806a574e457c9143bab894",
+          "message": "refactor(ci): move scale test to host and cleanup docker execution\n\n- Run internal scale_full_1000 test on the host before Docker build.\n- Remove failing 'cargo test' execution from the slim production container.\n- Ensure the engine logic is verified before spending time on the Docker build.",
+          "timestamp": "2026-04-18T14:56:30+05:30",
+          "tree_id": "8ba01547f27e54c72e9f2a00a76d33d22452b6b2",
+          "url": "https://github.com/polymit/phantom-engine/commit/6542879ae5f27fb32c806a574e457c9143bab894"
+        },
+        "date": 1776504560804,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 593,
+            "range": "± 2",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 597,
+            "range": "± 2",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 491,
+            "range": "± 27",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 95,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 3279970,
+            "range": "± 26535",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3271417,
+            "range": "± 29520",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5435,
+            "range": "± 27",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3131,
+            "range": "± 36",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 204252,
+            "range": "± 2028",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "3310ebe74e94b9db8a1937d10d90033ec1c4529b",
+          "message": "fix(ci): increase rate limits for scale testing\n\n- Set PHANTOM_RATE_LIMIT to 1,000,000 in CI to allow high-concurrency k6 tests.\n- Set PHANTOM_SESSION_LIMIT to 2,000 to ensure the 1,000 session test has headroom.",
+          "timestamp": "2026-04-18T15:11:23+05:30",
+          "tree_id": "d9175afca43b2a0248f1aaa2db65687ab053ac01",
+          "url": "https://github.com/polymit/phantom-engine/commit/3310ebe74e94b9db8a1937d10d90033ec1c4529b"
+        },
+        "date": 1776505463480,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 561,
+            "range": "± 9",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 557,
+            "range": "± 9",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 468,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 81,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 2532972,
+            "range": "± 103220",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 2514758,
+            "range": "± 79482",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 4109,
+            "range": "± 13",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 2536,
+            "range": "± 38",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 158990,
+            "range": "± 1214",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "54110ec302678c8af36d1f3c51d12b598ccb6d1f",
+          "message": "refactor(ci): merge docker build and test into single job\n\n- Merge 'docker-build' and 'scale-test-full' into one job.\n- Use 'load: true' to test the image locally without pushing to the registry.\n- Set 'push' to be conditional on tags (v*).\n- This prevents publishing packages on manual runs while still keeping full test coverage.",
+          "timestamp": "2026-04-18T15:35:57+05:30",
+          "tree_id": "549b9b692dab2c9c35294edcdcfd42197450f876",
+          "url": "https://github.com/polymit/phantom-engine/commit/54110ec302678c8af36d1f3c51d12b598ccb6d1f"
+        },
+        "date": 1776506927437,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 590,
+            "range": "± 2",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 597,
+            "range": "± 2",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 490,
+            "range": "± 3",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 95,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 3321873,
+            "range": "± 187084",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3319020,
+            "range": "± 95607",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5591,
+            "range": "± 52",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3213,
+            "range": "± 24",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 205584,
+            "range": "± 1856",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "e39be444ed90fd39899cae0082825f631beab255",
+          "message": "fix(engine): link environment variables to limits and increase CPU budget for testing\n\n- Enable PHANTOM_RATE_LIMIT and PHANTOM_SESSION_LIMIT in phantom-mcp server.\n- Refactor McpServer for dynamic limits and updated health reporting.\n- Increase max_cpu_ms_per_sec to 1000ms in phantom-session (NOTE: This increase is temporary and intended for high-scale CI load testing to prevent false budget failures).",
+          "timestamp": "2026-04-18T16:22:36+05:30",
+          "tree_id": "bacebe70a0041e66aaa5546d1fd0c176493bd33f",
+          "url": "https://github.com/polymit/phantom-engine/commit/e39be444ed90fd39899cae0082825f631beab255"
+        },
+        "date": 1776509727676,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 426,
+            "range": "± 3",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 438,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 345,
+            "range": "± 6",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 92,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 3050676,
+            "range": "± 63585",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3090722,
+            "range": "± 10289",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5373,
+            "range": "± 10",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3104,
+            "range": "± 17",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 0,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 218079,
+            "range": "± 2703",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "054cd5378a83afcfde1962e9c63f3a96d85dbf4c",
+          "message": "fix(ci): rename job and pin TAG to current SHA\n\n- Renamed job to 'Build + Full Scale Test (1000 Sessions)'.\n- Explicitly passed TAG env var to docker compose to ensure the fresh build is used.",
+          "timestamp": "2026-04-18T16:42:00+05:30",
+          "tree_id": "693ae4b8e4e84f1827b464a3bd3df2acb3dca653",
+          "url": "https://github.com/polymit/phantom-engine/commit/054cd5378a83afcfde1962e9c63f3a96d85dbf4c"
+        },
+        "date": 1776510888742,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 594,
+            "range": "± 3",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 604,
+            "range": "± 2",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 491,
+            "range": "± 7",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 95,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 3299653,
+            "range": "± 26401",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3294055,
+            "range": "± 11985",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5419,
+            "range": "± 18",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3160,
+            "range": "± 40",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 205428,
+            "range": "± 2578",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "046b2b1ba03634b08282c52fcf7c36e01a1587ba",
+          "message": "fix(deploy): make docker-compose image tag dynamic\n\n- Change hardcoded ':latest' to 'latest' to allow CI to test fresh builds.\n- Increase default rate limit to 100,000 to prevent local test bottleneck.",
+          "timestamp": "2026-04-18T16:59:26+05:30",
+          "tree_id": "fbd5e7004df108ae16b715640abd5845facea6c9",
+          "url": "https://github.com/polymit/phantom-engine/commit/046b2b1ba03634b08282c52fcf7c36e01a1587ba"
+        },
+        "date": 1776511950326,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 558,
+            "range": "± 2",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 562,
+            "range": "± 8",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 466,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 80,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 2500247,
+            "range": "± 11299",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 2494564,
+            "range": "± 10120",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 4190,
+            "range": "± 8",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 2549,
+            "range": "± 36",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 155298,
+            "range": "± 563",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "0eaf1c28b6623a9b30617393557f8b22e568ee32",
+          "message": "fix(deploy): align environment variable names with engine code\n\n- Change PHANTOM_RATE_LIMIT_PER_HOUR to PHANTOM_RATE_LIMIT in docker-compose.yml.\n- This ensures the engine correctly reads the limit from the environment.",
+          "timestamp": "2026-04-18T17:01:45+05:30",
+          "tree_id": "2c9cffc8d1a0de839869da424983a4b786165fc0",
+          "url": "https://github.com/polymit/phantom-engine/commit/0eaf1c28b6623a9b30617393557f8b22e568ee32"
+        },
+        "date": 1776512075719,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 429,
+            "range": "± 28",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 440,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 353,
+            "range": "± 5",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 92,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 3105817,
+            "range": "± 58196",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3145032,
+            "range": "± 52800",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5434,
+            "range": "± 24",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3217,
+            "range": "± 14",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 0,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 218282,
+            "range": "± 1282",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "843ea6676482a53048a46e3be4d904670b9c7100",
+          "message": "fix(ci): harden prometheus metrics verification\n\n- Added retry logic (10 attempts, 5s interval) for Prometheus queries.\n- Improved Python parsing to handle non-JSON or error responses gracefully.\n- Added direct engine metrics check for easier debugging of scrape issues.",
+          "timestamp": "2026-04-18T20:35:01+05:30",
+          "tree_id": "b2a3c1ec719457cc8a6d460e99f5dd6c04af0711",
+          "url": "https://github.com/polymit/phantom-engine/commit/843ea6676482a53048a46e3be4d904670b9c7100"
+        },
+        "date": 1776524869356,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 605,
+            "range": "± 2",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 616,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 491,
+            "range": "± 4",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 95,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 3290385,
+            "range": "± 20832",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3276237,
+            "range": "± 16703",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5498,
+            "range": "± 79",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3249,
+            "range": "± 36",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 206444,
+            "range": "± 1851",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "af190cddbfca391a76e4af0ddf2b7c83ea3a8271",
+          "message": "ci: trigger scale test run",
+          "timestamp": "2026-04-18T20:57:09+05:30",
+          "tree_id": "ab00177bff704b5b016dfc91cbf0bdaf85c43853",
+          "url": "https://github.com/polymit/phantom-engine/commit/af190cddbfca391a76e4af0ddf2b7c83ea3a8271"
+        },
+        "date": 1776526197314,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 590,
+            "range": "± 4",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 597,
+            "range": "± 4",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 491,
+            "range": "± 4",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 95,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 3242534,
+            "range": "± 33459",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3228585,
+            "range": "± 86060",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5450,
+            "range": "± 20",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3174,
+            "range": "± 16",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 204521,
+            "range": "± 1640",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "167a4944809f59cca45a06bcf9a776c71ff936e3",
+          "message": "ci: cleanup temporary trigger",
+          "timestamp": "2026-04-18T20:58:15+05:30",
+          "tree_id": "b2a3c1ec719457cc8a6d460e99f5dd6c04af0711",
+          "url": "https://github.com/polymit/phantom-engine/commit/167a4944809f59cca45a06bcf9a776c71ff936e3"
+        },
+        "date": 1776526256494,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 711,
+            "range": "± 20",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 717,
+            "range": "± 3",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 602,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 102,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 3228971,
+            "range": "± 16204",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3227433,
+            "range": "± 14684",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5498,
+            "range": "± 26",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3272,
+            "range": "± 15",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 202331,
+            "range": "± 1835",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "e41498c0c019f0253f9b7ccc08cd0a482e9518e6",
+          "message": "fix(ci): fix yaml syntax error in metrics verification",
+          "timestamp": "2026-04-18T21:01:56+05:30",
+          "tree_id": "c29a73937b9af1d4b10131a52d79d311012c79c8",
+          "url": "https://github.com/polymit/phantom-engine/commit/e41498c0c019f0253f9b7ccc08cd0a482e9518e6"
+        },
+        "date": 1776526484601,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 596,
+            "range": "± 2",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 610,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 491,
+            "range": "± 5",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 99,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 3245388,
+            "range": "± 18988",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3234803,
+            "range": "± 10531",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5408,
+            "range": "± 19",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3184,
+            "range": "± 34",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 206470,
+            "range": "± 1346",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "48689430da9f57127477dcb0e3c5c1e894aca66d",
+          "message": "fix(ci): final robust metrics verification using python one-liner",
+          "timestamp": "2026-04-18T21:25:19+05:30",
+          "tree_id": "5efda9141db41870bedde7904fdbd76a31936910",
+          "url": "https://github.com/polymit/phantom-engine/commit/48689430da9f57127477dcb0e3c5c1e894aca66d"
+        },
+        "date": 1776527887371,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 706,
+            "range": "± 8",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 710,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 607,
+            "range": "± 2",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 102,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 3234171,
+            "range": "± 11990",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3239034,
+            "range": "± 22234",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5462,
+            "range": "± 50",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3256,
+            "range": "± 76",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 202526,
+            "range": "± 1495",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "3f9e21e43773aeb91f0f876e43c59ba9981afce3",
+          "message": "chore: remove duplicate target folder and update gitignore\n\n- Deleted local target folder in phantom-js.\n- Updated .gitignore to recursively ignore all target directories.",
+          "timestamp": "2026-04-18T21:57:22+05:30",
+          "tree_id": "65b045e2435d741183072593f4b91995bf7ce861",
+          "url": "https://github.com/polymit/phantom-engine/commit/3f9e21e43773aeb91f0f876e43c59ba9981afce3"
+        },
+        "date": 1776529809239,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 594,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 599,
+            "range": "± 6",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 491,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 95,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 3276521,
+            "range": "± 70637",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3256651,
+            "range": "± 18685",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5375,
+            "range": "± 27",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3334,
+            "range": "± 15",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 206222,
+            "range": "± 4016",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "a8fa22079ec805deb5d339537427fe0e47d5d9f5",
+          "message": "chore: make target ignore recursive in .gitignore",
+          "timestamp": "2026-04-18T21:58:22+05:30",
+          "tree_id": "bb06a17f5b70a39cb881bd990e730db7eaf72bc6",
+          "url": "https://github.com/polymit/phantom-engine/commit/a8fa22079ec805deb5d339537427fe0e47d5d9f5"
+        },
+        "date": 1776529872653,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 593,
+            "range": "± 2",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 597,
+            "range": "± 5",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 494,
+            "range": "± 16",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 94,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 3273086,
+            "range": "± 18329",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3291221,
+            "range": "± 82173",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5542,
+            "range": "± 34",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3279,
+            "range": "± 12",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 204961,
+            "range": "± 1506",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "fbe5001724bb55d89c0d14b9403561224b3f4c35",
+          "message": "fix(security): upgrade rand to 0.9.3 and clean up workspace\n\nThis commit addresses the RUSTSEC-2026-0097 unsoundness vulnerability by\nperforming a surgical upgrade of the rand ecosystem across the workspace.\n\n- Upgraded rand to v0.9.3 and rand_distr to v0.5.0 in anti-detect, js, and net crates.\n- Refactored RngCore trait bounds and OsRng usage for compatibility with rand 0.9.\n- Renamed deprecated thread_rng() calls to rng() to align with modern Rust idioms.\n- Removed RUSTSEC-2026-0097 from audit.toml ignore list.\n- Deleted stray local target/ directories in phantom-serializer and phantom-session.\n\nVerified with cargo check --workspace and cargo audit.",
+          "timestamp": "2026-04-19T11:04:32+05:30",
+          "tree_id": "47410b872dcb96f1fd6ea32de1b95ec3701fbfae",
+          "url": "https://github.com/polymit/phantom-engine/commit/fbe5001724bb55d89c0d14b9403561224b3f4c35"
+        },
+        "date": 1776577194740,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 589,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 599,
+            "range": "± 4",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 490,
+            "range": "± 4",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 95,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 3228589,
+            "range": "± 68799",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3235319,
+            "range": "± 16419",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5437,
+            "range": "± 17",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3205,
+            "range": "± 41",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 205105,
+            "range": "± 2129",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "f5b802a19b0c9ba154fea5adf40c9adb1618c31c",
+          "message": "fix(test): resolve rand 0.9 compatibility in workspace tests\n\nThis commit resolves the remaining compilation and policy issues\nfrom the rand 0.9.3 upgrade.\n\n- Replaced OsRng with rand::random() in phantom-net tests and integration tests.\n- Aligned MockStepRng with rand 0.9 RngCore trait (removed try_fill_bytes).\n- Removed stale RUSTSEC-2026-0097 ignore rule from deny.toml.\n- Verified zero-warning state across all workspace targets.\n\nFixes build failures in phantom-net and phantom-anti-detect tests.",
+          "timestamp": "2026-04-19T12:23:10+05:30",
+          "tree_id": "5b170fcaaa194f525041a31eaadd62ce217537ad",
+          "url": "https://github.com/polymit/phantom-engine/commit/f5b802a19b0c9ba154fea5adf40c9adb1618c31c"
+        },
+        "date": 1776581757805,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 595,
+            "range": "± 5",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 601,
+            "range": "± 6",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 490,
+            "range": "± 4",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 95,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 3249467,
+            "range": "± 27490",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3245575,
+            "range": "± 15992",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5367,
+            "range": "± 23",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3148,
+            "range": "± 8",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 204092,
+            "range": "± 2776",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "bb562124cfdd59b8711df5ae08ba079c859d5b3e",
+          "message": "fix(mcp): resolve V8 PKU crash and optimize resume latency\n\n- Restructured main to initialize V8 platform on primary OS thread (D-38)\n- Offloaded CPU-heavy extraction and hashing to blocking pool\n- Removed redundant manual Sled flushes to achieve sub-50ms resume",
+          "timestamp": "2026-04-19T14:42:29+05:30",
+          "tree_id": "bc2db9429f69c5443e2d34ccf9242efd0a2aecfa",
+          "url": "https://github.com/polymit/phantom-engine/commit/bb562124cfdd59b8711df5ae08ba079c859d5b3e"
+        },
+        "date": 1776590120453,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 717,
+            "range": "± 17",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 717,
+            "range": "± 6",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 611,
+            "range": "± 8",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 111,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 3221671,
+            "range": "± 98953",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3201667,
+            "range": "± 32203",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5532,
+            "range": "± 62",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3316,
+            "range": "± 57",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 202940,
+            "range": "± 2060",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "1df98dadcab35de445e520b5211dd71f1f6b0330",
+          "message": "chore: apply workspace-wide formatting",
+          "timestamp": "2026-04-19T14:47:36+05:30",
+          "tree_id": "b01b42891a3ebe0e45332a9bd428871483aee60b",
+          "url": "https://github.com/polymit/phantom-engine/commit/1df98dadcab35de445e520b5211dd71f1f6b0330"
+        },
+        "date": 1776590422644,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 590,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 597,
+            "range": "± 3",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 490,
+            "range": "± 21",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 95,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 3249518,
+            "range": "± 16358",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3227801,
+            "range": "± 88098",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5450,
+            "range": "± 62",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3213,
+            "range": "± 21",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 204926,
+            "range": "± 1731",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "ed05e57c3c3569cc85169d4c82d8e766cef42e3b",
+          "message": "feat(core): implement CSS cascade engine and optimize suspend latency (Bug 3)\n\nImplements a production-grade CSS cascade engine and resolves performance\nbottlenecks in session suspension.\n\nCSS Cascade:\n- Implemented specificity-based resolution for internal <style> tags.\n- Updated `process_html` signature to support external CSS resources.\n- Propagated inherited styles (display, visibility, opacity) to layout.\n\nPerformance (Bug 3):\n- Reduced zstd compression level from 3 to 1 in `build_snapshot` for faster\n  session suspension (< 200ms).\n- Added detailed timing instrumentation to `EngineAdapter::suspend` for\n  bottleneck tracking.\n\nFixes performance regression in `suspend_completes_under_200ms` test.",
+          "timestamp": "2026-04-19T20:23:31+05:30",
+          "tree_id": "681a669b25f2780fa39a10f2b6770bd3a032c09a",
+          "url": "https://github.com/polymit/phantom-engine/commit/ed05e57c3c3569cc85169d4c82d8e766cef42e3b"
+        },
+        "date": 1776610588355,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 591,
+            "range": "± 12",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 598,
+            "range": "± 3",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 491,
+            "range": "± 22",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 95,
+            "range": "± 3",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 3251038,
+            "range": "± 11444",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3249778,
+            "range": "± 11292",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5173,
+            "range": "± 15",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3177,
+            "range": "± 117",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 205552,
+            "range": "± 1373",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "ba283706bb9170547930bf61c91d4b74bb0ca117",
+          "message": "release:v0.1.0-alpha",
+          "timestamp": "2026-04-20T09:58:37+05:30",
+          "tree_id": "ba0ecc74b7ff426338de2c4c66d2dfde53f4b878",
+          "url": "https://github.com/polymit/phantom-engine/commit/ba283706bb9170547930bf61c91d4b74bb0ca117"
+        },
+        "date": 1776659489364,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 592,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 599,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 491,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 95,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 3276423,
+            "range": "± 39551",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3268678,
+            "range": "± 85590",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5273,
+            "range": "± 41",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3287,
+            "range": "± 39",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 206725,
+            "range": "± 2294",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "polymit",
+            "username": "polymit-hq",
+            "email": "polymit.main@gmail.com"
+          },
+          "committer": {
+            "name": "polymit",
+            "username": "polymit-hq",
+            "email": "polymit.main@gmail.com"
+          },
+          "id": "ba283706bb9170547930bf61c91d4b74bb0ca117",
+          "message": "release:v0.1.0-alpha",
+          "timestamp": "2026-04-20T04:28:37Z",
+          "url": "https://github.com/polymit/phantom-engine/commit/ba283706bb9170547930bf61c91d4b74bb0ca117"
+        },
+        "date": 1776666301324,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 590,
+            "range": "± 31",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 598,
+            "range": "± 9",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 490,
+            "range": "± 9",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 95,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 3217344,
+            "range": "± 68806",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3215011,
+            "range": "± 11857",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5298,
+            "range": "± 37",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3251,
+            "range": "± 38",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 204004,
+            "range": "± 1847",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "a2484145374c04abc2c23bc9cfe8a693c058ffff",
+          "message": "fix(ci): resolve documentation link warnings and sync lockfile",
+          "timestamp": "2026-04-23T14:58:28+05:30",
+          "tree_id": "2fd535752ca60f2df283d2bd74ad907818c35f54",
+          "url": "https://github.com/polymit/phantom-engine/commit/a2484145374c04abc2c23bc9cfe8a693c058ffff"
+        },
+        "date": 1776936836333,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 579,
+            "range": "± 4",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 588,
+            "range": "± 3",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 484,
+            "range": "± 8",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 93,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 3266126,
+            "range": "± 38859",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3260453,
+            "range": "± 15112",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5405,
+            "range": "± 14",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3252,
+            "range": "± 61",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 207100,
+            "range": "± 1200",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "35bf713060c8dda2dead98c7978ff4d6e3156b76",
+          "message": "chore(ci): add release image workflow for GHCR",
+          "timestamp": "2026-04-23T15:24:05+05:30",
+          "tree_id": "9d8ed988227596e77290ae31afd8de36e2908be4",
+          "url": "https://github.com/polymit/phantom-engine/commit/35bf713060c8dda2dead98c7978ff4d6e3156b76"
+        },
+        "date": 1776938213034,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 579,
+            "range": "± 2",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 590,
+            "range": "± 2",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 481,
+            "range": "± 14",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 95,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 3252275,
+            "range": "± 33329",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3249751,
+            "range": "± 133388",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5344,
+            "range": "± 13",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3161,
+            "range": "± 51",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 205396,
+            "range": "± 2224",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "3fe9f8292b120314d726d65e607cfe18c8015f8c",
+          "message": "feat(ci): automate dual-registry release for GHCR and Docker Hub",
+          "timestamp": "2026-04-23T15:46:36+05:30",
+          "tree_id": "df01a89501606ee1faf6590b9cff4858cdd44aad",
+          "url": "https://github.com/polymit/phantom-engine/commit/3fe9f8292b120314d726d65e607cfe18c8015f8c"
+        },
+        "date": 1776939564448,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 589,
+            "range": "± 4",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 595,
+            "range": "± 3",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 480,
+            "range": "± 11",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 95,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 3255171,
+            "range": "± 198227",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3231420,
+            "range": "± 155714",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5336,
+            "range": "± 67",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3158,
+            "range": "± 12",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 206145,
+            "range": "± 1799",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "polymit",
+            "username": "polymit-hq",
+            "email": "polymit.main@gmail.com"
+          },
+          "committer": {
+            "name": "polymit",
+            "username": "polymit-hq",
+            "email": "polymit.main@gmail.com"
+          },
+          "id": "3fe9f8292b120314d726d65e607cfe18c8015f8c",
+          "message": "feat(ci): automate dual-registry release for GHCR and Docker Hub",
+          "timestamp": "2026-04-23T10:16:36Z",
+          "url": "https://github.com/polymit/phantom-engine/commit/3fe9f8292b120314d726d65e607cfe18c8015f8c"
+        },
+        "date": 1777271831906,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 581,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 591,
+            "range": "± 2",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 483,
+            "range": "± 4",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 95,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 3277630,
+            "range": "± 27554",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3259679,
+            "range": "± 24437",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5351,
+            "range": "± 15",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3166,
+            "range": "± 48",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 205370,
+            "range": "± 2437",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "9f68d0562dd4935fa751b41d6afd1fec5403584f",
+          "message": "feat: add phantom-fuzzer crate and orchestration scripts\n\nThis commit introduces the structural fuzzing pipeline for the Phantom Engine:\n\n- Added phantom-fuzzer crate for generating mutation and grammar-based chaos plans.\n- Added fuzz-orchestrator.py to automate payload delivery and JSON-RPC storm execution.",
+          "timestamp": "2026-04-28T14:22:32+05:30",
+          "tree_id": "12ea729dd844250820bbd9684cc28981616f6679",
+          "url": "https://github.com/polymit/phantom-engine/commit/9f68d0562dd4935fa751b41d6afd1fec5403584f"
+        },
+        "date": 1777366815880,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 584,
+            "range": "± 5",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 594,
+            "range": "± 2",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 491,
+            "range": "± 14",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 95,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 3273808,
+            "range": "± 14941",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3247129,
+            "range": "± 18514",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5336,
+            "range": "± 34",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3115,
+            "range": "± 65",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 208182,
+            "range": "± 1510",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "8f57d5b3c20553ab02fcb5b0080ea2e9bc8d34ae",
+          "message": "feat(cli): implement server lifecycle management commands\n\nThis commit introduces native server orchestration to the phantom-cli (ph), allowing users to manage the engine lifecycle without manual backgrounding.\n\n- Added 'up', 'down', and 'logs' subcommands for server management.\n- Implemented detached background execution with PID tracking in ~/.phantom.\n- Added log redirection and live streaming (tailing) capabilities.\n- Integrated 'which' for binary discovery and 'libc' for process signaling.\n- Professionalized the CLI README with comprehensive command documentation.",
+          "timestamp": "2026-04-28T15:07:27+05:30",
+          "tree_id": "e7b7fd5ac2b5596d45102d0aa65e412e7dd5e075",
+          "url": "https://github.com/polymit/phantom-engine/commit/8f57d5b3c20553ab02fcb5b0080ea2e9bc8d34ae"
+        },
+        "date": 1777369373857,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 586,
+            "range": "± 6",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 598,
+            "range": "± 5",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 485,
+            "range": "± 14",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 95,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 3291480,
+            "range": "± 9207",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3274225,
+            "range": "± 10133",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5415,
+            "range": "± 383",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3307,
+            "range": "± 32",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 205546,
+            "range": "± 6009",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "e404beee247a85ece1814a00ec3dbe5f112807d5",
+          "message": "feat(orchestration): implement dynamic resource limits and interactive setup\n\n- Add dynamic CPU quota support via PHANTOM_CPU_QUOTA_MS\n- Implement configurable Tier 1 pool size via PHANTOM_QUICKJS_POOL_SIZE\n- Upgrade 'ph setup init' to interactive wizard mode\n- Integrate native .env loading into the MCP server\n- Synchronize workspace crates to version v0.1.2-alpha\n- Comprehensive documentation update for phantom-cli",
+          "timestamp": "2026-05-02T13:32:21+05:30",
+          "tree_id": "d8df4ed44f81d3287d847506c1e06b5b3cb91748",
+          "url": "https://github.com/polymit/phantom-engine/commit/e404beee247a85ece1814a00ec3dbe5f112807d5"
+        },
+        "date": 1777709272939,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 579,
+            "range": "± 28",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 591,
+            "range": "± 3",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 484,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 94,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 3299198,
+            "range": "± 76345",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3307651,
+            "range": "± 12464",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5472,
+            "range": "± 34",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3245,
+            "range": "± 39",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 206433,
+            "range": "± 1348",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "4826adcd558fb49f2e3fd4c36be73d7ac5605483",
+          "message": "docs(release): remove local changelog after github publication",
+          "timestamp": "2026-05-02T13:35:24+05:30",
+          "tree_id": "2d5b93af0d2efce4d1fed82c367ea01d7a2ff4fc",
+          "url": "https://github.com/polymit/phantom-engine/commit/4826adcd558fb49f2e3fd4c36be73d7ac5605483"
+        },
+        "date": 1777709449352,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 579,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 592,
+            "range": "± 2",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 484,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 91,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 3289692,
+            "range": "± 11532",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3259502,
+            "range": "± 84355",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5435,
+            "range": "± 26",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3150,
+            "range": "± 152",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 203961,
+            "range": "± 1656",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "804f9979d21a5fd172520df714008b348cdada08",
+          "message": "fix(deps): upgrade grid to v1.0.1 to resolve integer overflow\n\nResolves a critical vulnerability in the grid crate where an integer\noverflow in expand_rows() could result in Undefined Behavior through\nsafe API calls. This is a transitive dependency of taffy.\n\nFixes GHSA-38c5-483c-4qqp",
+          "timestamp": "2026-05-02T14:06:22+05:30",
+          "tree_id": "53aa4e4c37662c20f83a629c87b81cb186626b17",
+          "url": "https://github.com/polymit/phantom-engine/commit/804f9979d21a5fd172520df714008b348cdada08"
+        },
+        "date": 1777711281380,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 560,
+            "range": "± 24",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 564,
+            "range": "± 5",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 468,
+            "range": "± 8",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 79,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 2528612,
+            "range": "± 80602",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 2556622,
+            "range": "± 32301",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 4184,
+            "range": "± 77",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 2524,
+            "range": "± 75",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 156006,
+            "range": "± 724",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "polymit",
+            "username": "polymit-hq",
+            "email": "polymit.main@gmail.com"
+          },
+          "committer": {
+            "name": "polymit",
+            "username": "polymit-hq",
+            "email": "polymit.main@gmail.com"
+          },
+          "id": "804f9979d21a5fd172520df714008b348cdada08",
+          "message": "fix(deps): upgrade grid to v1.0.1 to resolve integer overflow\n\nResolves a critical vulnerability in the grid crate where an integer\noverflow in expand_rows() could result in Undefined Behavior through\nsafe API calls. This is a transitive dependency of taffy.\n\nFixes GHSA-38c5-483c-4qqp",
+          "timestamp": "2026-05-02T08:36:22Z",
+          "url": "https://github.com/polymit/phantom-engine/commit/804f9979d21a5fd172520df714008b348cdada08"
+        },
+        "date": 1777877341179,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 580,
+            "range": "± 18",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 593,
+            "range": "± 2",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 486,
+            "range": "± 6",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 94,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 3295377,
+            "range": "± 81528",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3286116,
+            "range": "± 10145",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5455,
+            "range": "± 35",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3243,
+            "range": "± 24",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 206631,
+            "range": "± 5066",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "67acc62d8134ea7c383ced2ed74f9538e5a00b04",
+          "message": "feat(net): integrate Quik transport and bump to v0.2.0-alpha\n\nImplements the proprietary Quik transport layer for Chrome 134 parity.\nSynchronizes all workspace crates to v0.2.0-alpha.",
+          "timestamp": "2026-05-10T16:54:32+05:30",
+          "tree_id": "7a9d67dffbe06a5ef46aabba616e4b115fd4a0ce",
+          "url": "https://github.com/polymit/phantom-engine/commit/67acc62d8134ea7c383ced2ed74f9538e5a00b04"
+        },
+        "date": 1778412599659,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 702,
+            "range": "± 7",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 710,
+            "range": "± 3",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 611,
+            "range": "± 7",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 102,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 3216430,
+            "range": "± 9688",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3224902,
+            "range": "± 88677",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5532,
+            "range": "± 36",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3388,
+            "range": "± 76",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 202140,
+            "range": "± 1687",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "4361498bf89b9a361490a4425830e27cf8bfbab6",
+          "message": "docs(quik): update version badge to v0.2.0-alpha",
+          "timestamp": "2026-05-10T16:58:28+05:30",
+          "tree_id": "e05c7deeff44e73ecf5c73617d17d9689daba41b",
+          "url": "https://github.com/polymit/phantom-engine/commit/4361498bf89b9a361490a4425830e27cf8bfbab6"
+        },
+        "date": 1778412804992,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 554,
+            "range": "± 2",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 555,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 464,
+            "range": "± 17",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 79,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 2470120,
+            "range": "± 9754",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 2470092,
+            "range": "± 10907",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 4328,
+            "range": "± 10",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 2570,
+            "range": "± 58",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 155861,
+            "range": "± 2435",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "e432396579cf6e3768051f4c0179628972facabc",
+          "message": "chore: synchronize Cargo.lock with updated workspace dependencies",
+          "timestamp": "2026-05-11T12:47:39+05:30",
+          "tree_id": "0ebf30e7a5e6070a0182067ba6dc550ae7d4061a",
+          "url": "https://github.com/polymit/phantom-engine/commit/e432396579cf6e3768051f4c0179628972facabc"
+        },
+        "date": 1778484202896,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 587,
+            "range": "± 4",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 590,
+            "range": "± 8",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 487,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 95,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 3230047,
+            "range": "± 13333",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3251234,
+            "range": "± 148282",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5347,
+            "range": "± 21",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3265,
+            "range": "± 44",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 204370,
+            "range": "± 9854",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "polymit",
+            "username": "polymit-hq",
+            "email": "polymit.main@gmail.com"
+          },
+          "committer": {
+            "name": "polymit",
+            "username": "polymit-hq",
+            "email": "polymit.main@gmail.com"
+          },
+          "id": "e432396579cf6e3768051f4c0179628972facabc",
+          "message": "chore: synchronize Cargo.lock with updated workspace dependencies",
+          "timestamp": "2026-05-11T07:17:39Z",
+          "url": "https://github.com/polymit/phantom-engine/commit/e432396579cf6e3768051f4c0179628972facabc"
+        },
+        "date": 1778485978954,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 426,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 438,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 347,
+            "range": "± 4",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 91,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 3029273,
+            "range": "± 60395",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3083991,
+            "range": "± 11703",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5318,
+            "range": "± 12",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3228,
+            "range": "± 59",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 0,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 217752,
+            "range": "± 7276",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "4771cdda57fd8a3c875422d20a1bb7e195de0ba6",
+          "message": "docs(cli): update version badge to v0.2.0-alpha",
+          "timestamp": "2026-05-11T22:01:42+05:30",
+          "tree_id": "6a977b8f0110b32eb1d666e0bfca0d6f45207a6c",
+          "url": "https://github.com/polymit/phantom-engine/commit/4771cdda57fd8a3c875422d20a1bb7e195de0ba6"
+        },
+        "date": 1778517280972,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 598,
+            "range": "± 6",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 601,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 487,
+            "range": "± 3",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 94,
+            "range": "± 4",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 3259687,
+            "range": "± 52310",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3255186,
+            "range": "± 21911",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5378,
+            "range": "± 19",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3318,
+            "range": "± 35",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 208520,
+            "range": "± 2307",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "255144fbea53652a85e234bb22e023e40dfebfc2",
+          "message": "feat(quik): implement Gzip/Deflate decompression support",
+          "timestamp": "2026-05-11T22:22:15+05:30",
+          "tree_id": "8f9bd07b1a2a2a896e7065ae4e617f46563ffcd2",
+          "url": "https://github.com/polymit/phantom-engine/commit/255144fbea53652a85e234bb22e023e40dfebfc2"
+        },
+        "date": 1778518695370,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 586,
+            "range": "± 3",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 589,
+            "range": "± 7",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 486,
+            "range": "± 3",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 95,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 3256181,
+            "range": "± 86944",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3249164,
+            "range": "± 17963",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5495,
+            "range": "± 175",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3279,
+            "range": "± 113",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 207719,
+            "range": "± 1839",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "f7e80c84000f28ff52e445feb1d90124d5934350",
+          "message": "fix(serializer): include off-screen nodes in Full mode for complete page visibility",
+          "timestamp": "2026-05-11T23:26:40+05:30",
+          "tree_id": "1beb962a74198b35eaac71886b148dc05635b581",
+          "url": "https://github.com/polymit/phantom-engine/commit/f7e80c84000f28ff52e445feb1d90124d5934350"
+        },
+        "date": 1778522377016,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 586,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 588,
+            "range": "± 8",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 487,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 95,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 6272650,
+            "range": "± 137844",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3289107,
+            "range": "± 15686",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5261,
+            "range": "± 49",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3325,
+            "range": "± 33",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 205902,
+            "range": "± 1916",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "f21a4ab4bb4673418d251ff1e560d2a43800c168",
+          "message": "fix(quik): use robust, case-insensitive matching for Content-Encoding headers",
+          "timestamp": "2026-05-11T23:28:37+05:30",
+          "tree_id": "001e3a69a81cd72e2cd75cf5b4aff043b6366b8b",
+          "url": "https://github.com/polymit/phantom-engine/commit/f21a4ab4bb4673418d251ff1e560d2a43800c168"
+        },
+        "date": 1778522505257,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 559,
+            "range": "± 7",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 577,
+            "range": "± 43",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 472,
+            "range": "± 3",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 80,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 4801379,
+            "range": "± 101300",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 2519360,
+            "range": "± 49887",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 4139,
+            "range": "± 18",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 2587,
+            "range": "± 47",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 156580,
+            "range": "± 946",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "42a60300aad73a5242711fc8c07bc94e4a23a930",
+          "message": "style: apply cargo fmt across the workspace",
+          "timestamp": "2026-05-11T23:30:39+05:30",
+          "tree_id": "cb03b29aa7422c92140e1bb3203ea1cdda052bbf",
+          "url": "https://github.com/polymit/phantom-engine/commit/42a60300aad73a5242711fc8c07bc94e4a23a930"
+        },
+        "date": 1778522610892,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 427,
+            "range": "± 12",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 438,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 345,
+            "range": "± 3",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 91,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 5621552,
+            "range": "± 25243",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3067623,
+            "range": "± 17743",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5277,
+            "range": "± 15",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3262,
+            "range": "± 19",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 0,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 218243,
+            "range": "± 874",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "15ea838fa19578fa27147b4e6d319ff7bbb97333",
+          "message": "chore: ignore txt files from version control",
+          "timestamp": "2026-05-12T15:31:46+05:30",
+          "tree_id": "19ba399073a1f061fc42b920f94fe8c2d70507dd",
+          "url": "https://github.com/polymit/phantom-engine/commit/15ea838fa19578fa27147b4e6d319ff7bbb97333"
+        },
+        "date": 1778580277880,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 706,
+            "range": "± 4",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 722,
+            "range": "± 16",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 606,
+            "range": "± 4",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 102,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 6275327,
+            "range": "± 350173",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3293084,
+            "range": "± 24757",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5528,
+            "range": "± 19",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3318,
+            "range": "± 40",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 203240,
+            "range": "± 1448",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "579953c3931d7abcb3f6c80f7b2dc553096b4413",
+          "message": "chore(deps): regenerate lockfile for v0.2.1-alpha",
+          "timestamp": "2026-05-12T16:13:54+05:30",
+          "tree_id": "27fe46f7ed2c90bbca08dfcba3b8b23beb15bc7e",
+          "url": "https://github.com/polymit/phantom-engine/commit/579953c3931d7abcb3f6c80f7b2dc553096b4413"
+        },
+        "date": 1778582979301,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 582,
+            "range": "± 9",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 591,
+            "range": "± 4",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 506,
+            "range": "± 9",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 93,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 6204960,
+            "range": "± 60946",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3273456,
+            "range": "± 25613",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5318,
+            "range": "± 48",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3324,
+            "range": "± 24",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 207016,
+            "range": "± 820",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "314e2397152823d97aedcff91d185c279133c95a",
+          "message": "docs(release): remove local changelog after github publication",
+          "timestamp": "2026-05-12T16:16:20+05:30",
+          "tree_id": "1c151468338c5dbb650d37bf9f5733987b1504c3",
+          "url": "https://github.com/polymit/phantom-engine/commit/314e2397152823d97aedcff91d185c279133c95a"
+        },
+        "date": 1778583177887,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 583,
+            "range": "± 14",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 591,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 495,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 93,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 6135677,
+            "range": "± 16894",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3260832,
+            "range": "± 80871",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5243,
+            "range": "± 120",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3190,
+            "range": "± 46",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 205835,
+            "range": "± 1429",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "2a4a7522910c64d4f0d57b24fb8fd370fe10d893",
+          "message": "docs: update README and CONTRIBUTING for quik migration and correct defaults",
+          "timestamp": "2026-05-12T21:55:11+05:30",
+          "tree_id": "15f78cb4c91da33e1d5e028300e50523efa9a57a",
+          "url": "https://github.com/polymit/phantom-engine/commit/2a4a7522910c64d4f0d57b24fb8fd370fe10d893"
+        },
+        "date": 1778603289141,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 706,
+            "range": "± 10",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 714,
+            "range": "± 2",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 601,
+            "range": "± 17",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 102,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 6250340,
+            "range": "± 72332",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3301809,
+            "range": "± 66137",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5385,
+            "range": "± 59",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3336,
+            "range": "± 125",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 203158,
+            "range": "± 4783",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "2fe278c2fc149aeb29e37a70b1e6638d707968a8",
+          "message": "feat(mcp): add native Stdio transport for MCP agent integration\n\nImplement a Zero-Noise Stdio transport that enables direct integration\nwith Claude Code, Codex CLI, Cline, and 13+ other MCP-compatible agent\nframeworks via stdin/stdout JSON-RPC.\n\nKey design decisions:\n- V8 platform init is deferred until the first tools/call arrives,\n  keeping the initialize handshake under 100ms to avoid host timeouts\n- All tracing output routes to stderr via init_stdio(), ensuring zero\n  contamination of the stdout JSON-RPC stream\n- Tool dispatch reuses the existing handle_request pipeline, so HTTP\n  and Stdio modes share identical tool behavior\n\nNew files:\n- phantom-mcp/src/stdio.rs: NDJSON read loop, MCP protocol handling\n  (initialize, tools/list, tools/call), lazy engine init via OnceCell,\n  and full inputSchema definitions for all 15 browser tools\n\nModified files:\n- phantom-mcp/src/bin/phantom.rs: --stdio flag detection, branching\n  between HTTP (eager V8) and Stdio (deferred V8) entry points\n- phantom-mcp/src/telemetry.rs: new init_stdio() for stderr-only output\n- phantom-mcp/src/lib.rs: register stdio module\n- README.md: rewrite as quickstart guide, document Stdio mode, fix\n  incorrect tool method names in the MCP tools table",
+          "timestamp": "2026-05-12T22:57:33+05:30",
+          "tree_id": "1a0a9e6b38c079482f0b998adedbc4cc8556445d",
+          "url": "https://github.com/polymit/phantom-engine/commit/2fe278c2fc149aeb29e37a70b1e6638d707968a8"
+        },
+        "date": 1778607103697,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 588,
+            "range": "± 12",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 595,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 494,
+            "range": "± 7",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 92,
+            "range": "± 13",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 6165263,
+            "range": "± 139297",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3269382,
+            "range": "± 18906",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5344,
+            "range": "± 28",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3269,
+            "range": "± 76",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 206965,
+            "range": "± 1151",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "470e58af923952de55f981bbfb2c180562a9d82f",
+          "message": "fix(mcp): ensure Stdio mode respects all .env resource limits\n\n- Synchronized StdioState with HTTP mode environment variable handling\n- Added support for PHANTOM_SESSION_LIMIT and PHANTOM_RATE_LIMIT\n- Updated PHANTOM_CPU_QUOTA_MS handling with a 5s default for Stdio\n- Switched to McpServer::new_with_adapter_full to apply session/rate limits\n- Verified .env loading via dotenvy::dotenv() in the stdio loop",
+          "timestamp": "2026-05-12T23:44:58+05:30",
+          "tree_id": "8477b1c297dc0e2f6594e395c40b2553c7513b5e",
+          "url": "https://github.com/polymit/phantom-engine/commit/470e58af923952de55f981bbfb2c180562a9d82f"
+        },
+        "date": 1778609994130,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 572,
+            "range": "± 15",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 577,
+            "range": "± 9",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 468,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 83,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 4757769,
+            "range": "± 23775",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 2505289,
+            "range": "± 12150",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 4142,
+            "range": "± 54",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 2593,
+            "range": "± 45",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 155460,
+            "range": "± 775",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "78549c7f39ea50908027708981b6e1616e5abfb2",
+          "message": "chore(release): bump version to v0.2.2-alpha\n\nThe Stdio & Stability Update\n\n- Fixed Zero-Node Scene Graph bug in visibility calculation\n- Prevented cascading session invalidation on QuickJS OOM/Timeout\n- Fixed storage permission denied (os error 13) by updating .env.example\n- Overhauled tool descriptions to establish Agent-Engine trust\n- Bumped workspace versions to v0.2.2-alpha",
+          "timestamp": "2026-05-13T10:42:41+05:30",
+          "tree_id": "c61ecebdb882a0caec2f0a1dc2ec3f51124d2d34",
+          "url": "https://github.com/polymit/phantom-engine/commit/78549c7f39ea50908027708981b6e1616e5abfb2"
+        },
+        "date": 1778649501474,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 714,
+            "range": "± 4",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 721,
+            "range": "± 2",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 602,
+            "range": "± 18",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 102,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 6256736,
+            "range": "± 243306",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3345528,
+            "range": "± 27500",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5476,
+            "range": "± 19",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3335,
+            "range": "± 52",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 205075,
+            "range": "± 847",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "2ae542035e58a3e09349270151ac2b17dbddbf89",
+          "message": "test(security): expect session preservation on timeout and OOM\n\nThe previous tests asserted that the Phantom Engine would destroy the entire session\nupon a QuickJS OOM or timeout. Following the new resilience updates, the engine now\nisolates the QuickJS runtime crash and preserves the core session state.\n\nThis commit updates the assertions in js_eval_timeout_enforced and\njs_memory_limit_enforced_quickjs to expect .is_ok() instead of .is_err()\non the session broker.\n\nAdditionally, removes the temporary CHANGELOG.md file from the repository root.",
+          "timestamp": "2026-05-13T10:59:43+05:30",
+          "tree_id": "890335ae0127ec0a027764f8b55581033395f8ab",
+          "url": "https://github.com/polymit/phantom-engine/commit/2ae542035e58a3e09349270151ac2b17dbddbf89"
+        },
+        "date": 1778650352908,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 583,
+            "range": "± 3",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 591,
+            "range": "± 2",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 485,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 95,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 6384870,
+            "range": "± 142502",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3416697,
+            "range": "± 103631",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5391,
+            "range": "± 20",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3281,
+            "range": "± 276",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 205542,
+            "range": "± 1704",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "1ba4fac6a4e11a1834b048df7e021eaf8580ea7b",
+          "message": "test(budget): expect session preservation on resource limit exceed\n\nFollowing the resilience updates in v0.2.2-alpha, exceeding a resource\nbudget (heap, network, or CPU) no longer destroys the entire session.\n\nThis commit updates 'budget_exceeded_preserves_session' to assert that\nthe session remains active and retrievable after a budget error.",
+          "timestamp": "2026-05-13T11:16:12+05:30",
+          "tree_id": "0eb359cba633522d9c27322722f20c6e9bd17fe1",
+          "url": "https://github.com/polymit/phantom-engine/commit/1ba4fac6a4e11a1834b048df7e021eaf8580ea7b"
+        },
+        "date": 1778651348728,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 705,
+            "range": "± 2",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 709,
+            "range": "± 3",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 605,
+            "range": "± 8",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 102,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 6189013,
+            "range": "± 40044",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3336388,
+            "range": "± 24860",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5577,
+            "range": "± 32",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3363,
+            "range": "± 24",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 204516,
+            "range": "± 1129",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "6c97578f1f01f8e510081f9479f82447a18aa7e3",
+          "message": "docs(quik): implement comprehensive transport documentation and safety contracts\n\n- Add crate-level and module-level documentation for Chrome 134 parity.\n- Document HPACK sensitivity markers and H2 pseudo-header ordering logic.\n- Implement explicit // SAFETY: contracts for all BoringSSL FFI interactions.\n- Add technical citations for JA3/JA4/Akamai fingerprint constants.\n- Generate and migrate pre-rendered HTML documentation to quik/docs/.",
+          "timestamp": "2026-05-13T21:21:17+05:30",
+          "tree_id": "74af38bef1aaaa3474bf5cdf3501e0eb2a2a8a07",
+          "url": "https://github.com/polymit/phantom-engine/commit/6c97578f1f01f8e510081f9479f82447a18aa7e3"
+        },
+        "date": 1778687656923,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 708,
+            "range": "± 16",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 714,
+            "range": "± 10",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 604,
+            "range": "± 30",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 102,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 6172938,
+            "range": "± 41847",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3318345,
+            "range": "± 126271",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5488,
+            "range": "± 36",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3363,
+            "range": "± 45",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 206730,
+            "range": "± 1602",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "28ce86e14d6948f746861c0c4e5122614d897a75",
+          "message": "docs(quik): relocate documentation to root /docs and fix clippy warnings\n\n- Move documentation to repository root for GitHub Pages compatibility.\n- Fix redundant_closure clippy warning in response.rs body collection.",
+          "timestamp": "2026-05-13T21:32:36+05:30",
+          "tree_id": "a39454819f91df510a11621efd8fbe1d79227e71",
+          "url": "https://github.com/polymit/phantom-engine/commit/28ce86e14d6948f746861c0c4e5122614d897a75"
+        },
+        "date": 1778688331593,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 586,
+            "range": "± 15",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 594,
+            "range": "± 3",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 486,
+            "range": "± 2",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 100,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 6165700,
+            "range": "± 62510",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3359077,
+            "range": "± 21754",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5473,
+            "range": "± 14",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3248,
+            "range": "± 24",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 206854,
+            "range": "± 2078",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "a472d1920793801d8d3f63f0a81d9c704c812345",
+          "message": "docs: implement multi-crate documentation hub with premium landing page",
+          "timestamp": "2026-05-13T21:36:31+05:30",
+          "tree_id": "5807bd37e32ed3a25906d1184f62c9f45c7d4f8a",
+          "url": "https://github.com/polymit/phantom-engine/commit/a472d1920793801d8d3f63f0a81d9c704c812345"
+        },
+        "date": 1778688579779,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 584,
+            "range": "± 3",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 593,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 485,
+            "range": "± 6",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 95,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 6106320,
+            "range": "± 47449",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3334980,
+            "range": "± 63351",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5360,
+            "range": "± 43",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3289,
+            "range": "± 33",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 206715,
+            "range": "± 7265",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "b00b4a456e13f43e2d4b4410c999ac594c3e497f",
+          "message": "docs(quik): finalize client module documentation and formatting\n\n- Complete docstrings for connector, pool, and request injection.\n- Format ALPS settings data for better readability.",
+          "timestamp": "2026-05-13T21:37:40+05:30",
+          "tree_id": "437b9ae0cb12f757b1008670700148cff115819d",
+          "url": "https://github.com/polymit/phantom-engine/commit/b00b4a456e13f43e2d4b4410c999ac594c3e497f"
+        },
+        "date": 1778688659236,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 582,
+            "range": "± 21",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 590,
+            "range": "± 2",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 487,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 94,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 6109585,
+            "range": "± 28215",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3320155,
+            "range": "± 10329",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5224,
+            "range": "± 17",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3236,
+            "range": "± 24",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 205740,
+            "range": "± 950",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "928971b10a4e2703d77a77bca3f9a9ce2663be4f",
+          "message": "docs: restore full documentation structure including static assets",
+          "timestamp": "2026-05-13T21:43:37+05:30",
+          "tree_id": "84f9547818b814b6bedc8197227dbc675a6df4bb",
+          "url": "https://github.com/polymit/phantom-engine/commit/928971b10a4e2703d77a77bca3f9a9ce2663be4f"
+        },
+        "date": 1778689003688,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 428,
+            "range": "± 6",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 439,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 347,
+            "range": "± 6",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 95,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 5752932,
+            "range": "± 44357",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3205587,
+            "range": "± 24260",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5456,
+            "range": "± 13",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3253,
+            "range": "± 28",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 0,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 217295,
+            "range": "± 955",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "1aff0416b1403101aac1cef423d3b4cf23693d71",
+          "message": "docs(quik): rewrite README with deep technical context and documentation links",
+          "timestamp": "2026-05-13T21:55:27+05:30",
+          "tree_id": "874894210c8661b681756a4bd09a08a0d3879fa2",
+          "url": "https://github.com/polymit/phantom-engine/commit/1aff0416b1403101aac1cef423d3b4cf23693d71"
+        },
+        "date": 1778689703994,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 593,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 600,
+            "range": "± 3",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 487,
+            "range": "± 5",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 95,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 6137923,
+            "range": "± 45602",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3339343,
+            "range": "± 45576",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5319,
+            "range": "± 52",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3278,
+            "range": "± 26",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 207148,
+            "range": "± 1198",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "60fea74ace9cb15234ec54d4a8aa468115aa5b6d",
+          "message": "docs(phantom-net): add deep technical internal comments and professionalize orchestration logic",
+          "timestamp": "2026-05-13T22:23:59+05:30",
+          "tree_id": "4806b99000513bf948dacec2f4a5268330624abb",
+          "url": "https://github.com/polymit/phantom-engine/commit/60fea74ace9cb15234ec54d4a8aa468115aa5b6d"
+        },
+        "date": 1778691417531,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 433,
+            "range": "± 10",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 442,
+            "range": "± 1",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 344,
+            "range": "± 10",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 93,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 5751819,
+            "range": "± 34842",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3207088,
+            "range": "± 16987",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5311,
+            "range": "± 22",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3205,
+            "range": "± 22",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 0,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 217345,
+            "range": "± 1700",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "e8e9d879e3c26f1ccfa0ec8fad3b11cd1c4e9f70",
+          "message": "chore(phantom-net):Removing unnecessary comments in Cargo.toml",
+          "timestamp": "2026-05-13T22:28:03+05:30",
+          "tree_id": "ecebee5c4c8cfe8d37e24f36e10c95d45f69deaf",
+          "url": "https://github.com/polymit/phantom-engine/commit/e8e9d879e3c26f1ccfa0ec8fad3b11cd1c4e9f70"
+        },
+        "date": 1778691694655,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 583,
+            "range": "± 3",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 591,
+            "range": "± 2",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 490,
+            "range": "± 15",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 95,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 6141218,
+            "range": "± 54659",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3336417,
+            "range": "± 13426",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5288,
+            "range": "± 15",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3198,
+            "range": "± 30",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 207991,
+            "range": "± 1881",
+            "unit": "ns/iter"
+          }
+        ]
+      }
+    ]
+  }
+}

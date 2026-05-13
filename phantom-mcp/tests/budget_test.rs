@@ -7,7 +7,7 @@ use phantom_mcp::{engine, EngineAdapter};
 use phantom_session::ResourceBudget;
 
 #[tokio::test]
-async fn budget_exceeded_destroys_session() {
+async fn budget_exceeded_preserves_session() {
     engine::init_v8();
     let budget = ResourceBudget {
         max_heap_bytes: 8,
@@ -23,8 +23,8 @@ async fn budget_exceeded_destroys_session() {
         err,
         BrowserError::Session(BrowserSessionError::BudgetExceeded { .. })
     ));
-    assert!(adapter.broker.get(adapter.session_uuid).is_err());
-    assert!(!adapter.session_active.load(Ordering::Acquire));
+    assert!(adapter.broker.get(adapter.session_uuid).is_ok());
+    assert!(adapter.session_active.load(Ordering::Acquire));
 }
 
 #[tokio::test]

@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1778651349087,
+  "lastUpdate": 1778687657496,
   "repoUrl": "https://github.com/polymit/phantom-engine",
   "entries": {
     "Benchmark": [
@@ -4191,6 +4191,90 @@ window.BENCHMARK_DATA = {
             "name": "pool_acquire_tier1",
             "value": 204516,
             "range": "± 1129",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "committer": {
+            "email": "polymit.main@gmail.com",
+            "name": "polymit",
+            "username": "polymit-hq"
+          },
+          "distinct": true,
+          "id": "6c97578f1f01f8e510081f9479f82447a18aa7e3",
+          "message": "docs(quik): implement comprehensive transport documentation and safety contracts\n\n- Add crate-level and module-level documentation for Chrome 134 parity.\n- Document HPACK sensitivity markers and H2 pseudo-header ordering logic.\n- Implement explicit // SAFETY: contracts for all BoringSSL FFI interactions.\n- Add technical citations for JA3/JA4/Akamai fingerprint constants.\n- Generate and migrate pre-rendered HTML documentation to quik/docs/.",
+          "timestamp": "2026-05-13T21:21:17+05:30",
+          "tree_id": "74af38bef1aaaa3474bf5cdf3501e0eb2a2a8a07",
+          "url": "https://github.com/polymit/phantom-engine/commit/6c97578f1f01f8e510081f9479f82447a18aa7e3"
+        },
+        "date": 1778687656923,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "session_create_quickjs",
+            "value": 708,
+            "range": "± 16",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_create_v8",
+            "value": 714,
+            "range": "± 10",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_clone_cow",
+            "value": 604,
+            "range": "± 30",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "session_suspend_resume",
+            "value": 102,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_full_1000_nodes",
+            "value": 6172938,
+            "range": "± 41847",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_selective_1000_nodes",
+            "value": 3318345,
+            "range": "± 126271",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "cct_delta_10_mutations",
+            "value": 5488,
+            "range": "± 36",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "quickjs_eval_simple",
+            "value": 3363,
+            "range": "± 45",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "v8_eval_simple",
+            "value": 1,
+            "range": "± 0",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "pool_acquire_tier1",
+            "value": 206730,
+            "range": "± 1602",
             "unit": "ns/iter"
           }
         ]

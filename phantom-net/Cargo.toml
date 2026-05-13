@@ -23,7 +23,3 @@ encoding_rs = "0.8.35"
 [dev-dependencies]
 indextree = "=4.8.0"
 
-# DEFERRED TO v0.2 — BoringSSL linker conflict with wreq's boring2
-# tokio-quiche = "=0.16.1"
-# quiche       = { version = "=0.24.6", features = ["boringssl-boring-crate"] }
-# boring       = "^4.3"

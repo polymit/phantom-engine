@@ -1,51 +1,55 @@
-# Quik Transport Layer
+# Quik: High-Fidelity Stealth Transport Engine
 
-`quik` is a high-fidelity HTTP transport engine designed for absolute network identity parity with Google Chrome 134. It serves as the foundational networking stack for the [Phantom Engine](https://github.com/polymit/phantom-engine), providing the low-level byte control necessary to bypass modern anti-automation and fingerprinting heuristics.
+[![Crates.io](https://img.shields.io/crates/v/quik.svg)](https://crates.io/crates/quik)
+[![Docs.rs](https://docs.rs/quik/badge.svg)](https://docs.rs/quik)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE.md)
 
-Unlike generalized HTTP clients, `quik` is built to be indistinguishable from a standard browser at every layer of the networking stack—from TLS handshake permutation to HTTP/2 frame signaling.
+`quik` is a specialized HTTP transport library built in Rust, designed for absolute network identity parity with Google Chrome. It provides low-level control over the entire protocol stack—from TLS handshakes to HTTP/2 frame signaling—to ensure that every network interaction is indistinguishable from a real browser.
 
-## Key Features
+This crate is a core component of the [Phantom Engine](https://github.com/polymit/phantom-engine) ecosystem.
 
-- **Full Chrome 134 Identity**: Replicates the exact TLS and HTTP/2 fingerprints of Chrome 134, including JA3, JA4, and Akamai-specific markers.
-- **BoringSSL Integration**: Leverages BoringSSL for advanced handshake control, including ECH GREASE, certificate compression (Brotli), and specific signature algorithm ordering.
-- **Post-Quantum Security**: Implements the Chrome-identical `X25519MLKEM768` hybrid key exchange group.
-- **Precise H2 Signaling**: Enforces Chromium's exact HTTP/2 SETTINGS frame order, initial window deltas, and pseudo-header sequences (`m,a,s,p`).
-- **Stealth Navigation Engine**: Automates the mutation of `sec-fetch-*` metadata and priority headers during complex redirect flows.
-- **Advanced HPACK Management**: Explicitly marks sensitive headers (like cookies and authorization) as "Never Indexed" to mirror Chromium's security and fingerprinting behavior.
+## Why Quik?
 
-## Documentation
+Modern anti-bot systems (like Cloudflare, Akamai, and DataDome) use passive fingerprinting to identify automated traffic. `quik` bypasses these systems by replicating:
 
-Comprehensive technical documentation, including safety contracts and architecture deep-dives, is available at:
-**[https://polymit.github.io/phantom-engine/quik/index.html](https://polymit.github.io/phantom-engine/quik/index.html)**
+- **TLS Fingerprints (JA3/JA4)**: Replicates Chrome's ClientHello using a custom BoringSSL stack, including GREASE, extension permutation, and post-quantum key shares.
+- **HTTP/2 Fingerprints (Akamai)**: Replicates Chromium's SETTINGS frame order, pseudo-header sequences, and connection window increments.
+- **Behavioral Fingerprints**: Implements a Chrome-identical redirect state machine that handles `sec-fetch-*` headers and method rotation.
 
-## Usage
+## Core Capabilities
 
-`quik` is designed to be used as part of the Phantom Engine ecosystem. It provides a stateful `Client` that handles connection pooling, cookie management, and automated redirects.
+- **BoringSSL Integration**: Deep FFI bindings for low-level TLS control.
+- **Chrome 134 Identity**: Bit-perfect replication of the latest stable Chrome releases.
+- **Connection Pooling**: Managed H2 session reuse to maintain behavioral consistency.
+- **Customizable Profiles**: Easily target different platforms (macOS, Windows, Linux).
+
+## Quick Start
+
+Add `quik` to your `Cargo.toml`:
+
+```toml
+[dependencies]
+quik = "0.1"
+```
+
+Execute a stealth request:
 
 ```rust
-use quik::{Client, Result};
+use quik::{Client, Platform};
 
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() -> Result<(), quik::Error> {
+    // Create a client with a macOS Chrome 134 identity
     let client = Client::new();
+
+    // Execute a stealth GET request
     let response = client.get("https://example.com").await?;
-    
     println!("Status: {}", response.status());
-    let body = response.body().await?;
+
     Ok(())
 }
 ```
 
-## Part of Phantom Engine
-
-This crate is a core component of the **Phantom Engine** project. It works in conjunction with `phantom-net` and `phantom-session` to provide a complete, stealth-optimized browsing environment.
-
-## Contributing
-
-We welcome contributions that improve the fidelity of the transport layer or add support for newer Chrome versions. Please refer to the [CONTRIBUTING.md](https://github.com/polymit/phantom-engine/blob/main/CONTRIBUTING.md) at the repository root for our contribution guidelines and code of conduct.
-
 ## License
 
-Copyright © 2026 Polymit.
-
-Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at [http://www.apache.org/licenses/LICENSE-2.0](http://www.apache.org/licenses/LICENSE-2.0).
+This project is licensed under the [Apache License, Version 2.0](LICENSE.md).

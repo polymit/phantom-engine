@@ -13,19 +13,26 @@ pub mod chrome_134;
 pub type TlsVersion = SslVersion;
 
 /// Supported execution environments for profile targeting.
+///
+/// Hardware and OS markers are embedded in several layers, including the
+/// TLS ClientHello (via GREASE and curves) and the HTTP User-Agent.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Platform {
-    /// Apple Silicon (M1/M2/M3)
+    /// Apple Silicon (M1/M2/M3) - Targeted with specific X25519MLKEM768 support.
     MacOsArm,
-    /// Intel-based macOS
+    /// Intel-based macOS.
     MacOsX86,
-    /// 64-bit Windows
+    /// 64-bit Windows.
     WindowsX64,
-    /// 64-bit Linux (Generic)
+    /// 64-bit Linux (Generic).
     LinuxX64,
 }
 
 /// Configuration for the TLS 1.2/1.3 handshake layer.
+///
+/// This structure defines the Layer 4 identity of the client. Small changes
+/// here (such as the order of cipher suites) will change the JA3/JA4 
+/// fingerprint and can lead to immediate detection.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TlsProfile {
     /// Minimum allowed TLS version (typically TLS 1.2).
@@ -39,19 +46,19 @@ pub struct TlsProfile {
     pub cipher_list: &'static str,
     /// Numeric IDs for supported elliptic curve groups.
     pub curves: &'static [u16],
-    /// Whether to enable TLS GREASE (RFC 8701).
+    /// Whether to enable TLS GREASE (RFC 8701) to simulate randomized extensions.
     pub grease_enabled: bool,
     /// Whether to permute (shuffle) TLS extensions per connection.
     pub permute_extensions: bool,
-    /// Whether to send a dummy ECH (Encrypted Client Hello) extension.
+    /// Whether to send a dummy ECH (Encrypted Client Hello) extension for GREASE.
     pub enable_ech_grease: bool,
     /// Whether to enable ALPS (Application-Layer Protocol Settings).
     pub alps_enabled: bool,
     /// Whether to use the draft-01 or final ALPS codepoint.
     pub alps_use_new_codepoint: bool,
-    /// Whether to support RFC 8879 certificate compression.
+    /// Whether to support RFC 8879 certificate compression (Brotli).
     pub compress_certificate: bool,
-    /// Whether to enable stateless session tickets.
+    /// Whether to enable stateless session tickets for fast reconnection.
     pub session_ticket_enabled: bool,
     /// Ordered list of ALPN protocol identifiers.
     pub alpn_protocols: &'static [&'static [u8]],
@@ -60,6 +67,9 @@ pub struct TlsProfile {
 }
 
 /// Initial HTTP/2 SETTINGS frame parameters.
+///
+/// The values and the *order* in which they are sent are used by Akamai
+/// and other WAFs to identify the client implementation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SettingsFrame {
     /// SETTINGS_HEADER_TABLE_SIZE (ID 0x1).
@@ -73,6 +83,9 @@ pub struct SettingsFrame {
 }
 
 /// Configuration for the HTTP/2 protocol layer.
+///
+/// Defines the Layer 5 identity, focusing on behavioral markers like
+/// pseudo-header ordering and stream priority.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Http2Profile {
     /// Initial SETTINGS frame values and order.
@@ -80,9 +93,10 @@ pub struct Http2Profile {
     /// Total connection-level window size (default + delta).
     ///
     /// This value determines the initial `WINDOW_UPDATE` frame increment
-    /// sent immediately after the handshake.
+    /// sent immediately after the handshake. Chrome uses a specific non-standard
+    /// increment that acts as a strong identity signal.
     pub initial_connection_window_size: u32,
-    /// Ordering of pseudo-headers (e.g., m,a,s,p).
+    /// Ordering of pseudo-headers (e.g., :method, :authority, :scheme, :path).
     pub pseudo_order: [PseudoOrder; 4],
     /// Priority parameters for the initial HEADERS frame.
     pub headers_priority: HeadersPriority,

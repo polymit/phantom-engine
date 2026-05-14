@@ -16,10 +16,18 @@ use std::sync::RwLock;
 
 /// A stateful, pooling HTTP client that enforces Chrome 134 identity.
 ///
-/// The `Client` manages a pool of established HTTP/2 connections, a persistent
-/// cookie jar, and an automated redirect engine. It is designed to replace
-/// standard HTTP clients in environments where network fingerprinting must be
-/// avoided.
+/// The `Client` is the primary entry point for the `quik` library. It manages:
+/// 1. **Connection Pooling**: Reuses established HTTP/2 sessions to maintain persistent fingerprints.
+/// 2. **Cookie Persistence**: A synchronized cookie jar shared across all requests.
+/// 3. **Stealth Redirects**: Automatically follows redirects while mutating headers and methods
+///    to match Chromium's behavioral markers.
+///
+/// # Example
+/// ```rust
+/// use quik::Client;
+/// 
+/// let client = Client::new();
+/// ```
 #[derive(Clone)]
 pub struct Client {
     /// A synchronized pool of active H2 connections keyed by their origin and proxy.
@@ -29,6 +37,9 @@ pub struct Client {
     /// An optional proxy used for all outbound connections.
     proxy: Option<Proxy>,
     /// A synchronized cookie jar shared across all requests.
+    ///
+    /// This store is thread-safe and is automatically updated during redirect
+    /// chains and standard request execution.
     pub cookie_store: Arc<RwLock<CookieStore>>,
 }
 
@@ -40,6 +51,9 @@ impl Default for Client {
 
 impl Client {
     /// Creates a new `Client` with a default Chrome 134 macOS profile.
+    ///
+    /// This is a convenience method that builds a client with Apple Silicon
+    /// hardware signatures. For custom profiles or proxies, use [`Client::builder`].
     pub fn new() -> Self {
         Self::builder().build().unwrap_or_else(|_| Client {
             pool: Arc::new(Mutex::new(HashMap::new())),
@@ -49,7 +63,7 @@ impl Client {
         })
     }
 
-    /// Returns a builder to configure a specialized `Client` instance.
+    /// Returns a [`ClientBuilder`] to configure a specialized `Client` instance.
     pub fn builder() -> ClientBuilder {
         ClientBuilder::default()
     }
@@ -66,13 +80,16 @@ impl Client {
 
     /// Core request execution engine with automated, stateful redirect handling.
     ///
-    /// This method implements a Chrome-identical redirect state machine:
-    /// 1. **Sec-Fetch-Site Evolution**: Calculates origin relationships (same-origin, cross-site)
-    ///    across hops.
-    /// 2. **Header Mutation**: Strips `sec-fetch-user` and `upgrade-insecure-requests`
-    ///    after the first hop.
-    /// 3. **Method Rotation**: Mutates POST to GET for 301/302/303 status codes.
-    /// 4. **Connection Reuse**: Efficiently retrieves or dials connections based on target origin.
+    /// This method implements a high-fidelity Chromium redirect state machine:
+    ///
+    /// 1. **Sec-Fetch-Site Evolution**: Dynamically calculates origin relationships 
+    ///    (same-origin, same-site, cross-site) across hops to maintain stealth.
+    /// 2. **Header Mutation**: Automatically strips `sec-fetch-user` and 
+    ///    `upgrade-insecure-requests` after the first hop, exactly like Chrome.
+    /// 3. **Method Rotation**: Rotates POST requests to GET for 301, 302, and 303 
+    ///    status codes to prevent out-of-spec behavioral markers.
+    /// 4. **H2 Multiplexing**: Reuses existing connections from the pool to avoid 
+    ///    redundant TLS handshakes that could trigger anti-bot alerts.
     async fn execute_with_redirects(
         &self,
         initial_method: &str,

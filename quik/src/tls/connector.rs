@@ -37,12 +37,19 @@ impl CertificateCompressor for BrotliCompressor {
 
 /// Builds a `boring` TLS connector configured for bit-perfect Chrome 134 parity.
 ///
-/// This configuration includes:
-/// - **Cipher Suites**: Exact ordering of 15 suites.
-/// - **Handshake GREASE**: Randomized ciphers and extensions (RFC 8701).
-/// - **Extension Permutation**: Per-connection randomized ordering of extensions.
-/// - **Post-Quantum Cryptography**: Inclusion of the X25519MLKEM768 hybrid group.
-/// - **SCT Support**: Mandatory Signed Certificate Timestamps.
+/// This function translates the high-level [`TlsProfile`] into specific BoringSSL 
+/// configuration calls. It is the heart of the Layer 4 identity replication.
+///
+/// ## Identity Markers Applied:
+/// - **Cipher Suites**: Exact ordering of 15 suites, starting with TLS 1.3 GREASE.
+/// - **Handshake GREASE**: Randomized ciphers and extensions (RFC 8701) to 
+///   prevent "frozen" protocol Ossification.
+/// - **Extension Permutation**: Per-connection randomized ordering of extensions 
+///   to match modern Chromium behavior.
+/// - **Post-Quantum Cryptography**: Inclusion of the X25519MLKEM768 hybrid group 
+///   (Group ID 4588).
+/// - **SCT Support**: Mandatory Signed Certificate Timestamps to match Chrome's 
+///   Certificate Transparency policy.
 pub fn build_connector(profile: &TlsProfile) -> Result<SslConnector> {
     tracing::debug!("Building TLS connector...");
     let mut builder = SslConnector::builder(SslMethod::tls_client())?;

@@ -14,8 +14,9 @@ use crate::tls::build_connector;
 /// Represents an established HTTP/2 connection with a fixed Chrome identity.
 ///
 /// This structure holds the active H2 request handle and the profile used
-/// to establish the connection, ensuring that all requests on this stream
-/// adhere to the same behavioral constraints.
+/// to establish the connection. Reusing this connection ensures that all 
+/// subsequent requests adhere to the same behavioral constraints (e.g., 
+/// same SETTINGS, same window increments).
 pub struct QuikConnection {
     /// The handle used to initiate new H2 streams.
     pub h2: SendRequest<Bytes>,
@@ -23,12 +24,18 @@ pub struct QuikConnection {
     pub profile: ChromeProfile,
 }
 
-/// Establishes a new network connection following the Chrome transport pipeline.
+/// Establishes a new network connection following the Chrome 134 transport pipeline.
+///
+/// This function orchestrates a multi-stage handshake to ensure the resulting
+/// connection is indistinguishable from a real browser:
 ///
 /// 1. **Proxy/TCP**: Dials the target host (optionally via a SOCKS5/HTTP tunnel).
-/// 2. **TLS Handshake**: Performs a BoringSSL handshake with ClientHello permutation.
-/// 3. **ALPS/ECH**: Injects per-connection application settings and ECH GREASE.
-/// 4. **H2 Handshake**: Negotiates the HTTP/2 session with Chrome-identical SETTINGS.
+/// 2. **TLS Handshake**: Performs a BoringSSL handshake with ClientHello permutation,
+///    GREASE, and extension shuffling.
+/// 3. **ALPS/ECH**: Injects per-connection application settings (ALPS) and ECH GREASE
+///    via raw BoringSSL FFI calls.
+/// 4. **H2 Handshake**: Negotiates the HTTP/2 session using a specialized builder that
+///    replicates Chromium's SETTINGS frame order and connection window increments.
 pub async fn connect(
     host: &str,
     port: u16,
@@ -55,12 +62,14 @@ pub async fn connect(
 
     // SAFETY: The `ssl_ptr` is valid for the duration of the configuration phase.
     // We pass valid pointers for the ALPN protocol "h2" and the static ALPS buffer.
+    // These calls are required because high-level Rust wrappers often do not yet 
+    // expose the latest Chromium-specific BoringSSL features.
     unsafe {
         if profile.tls.enable_ech_grease {
             boring_sys::SSL_set_enable_ech_grease(ssl_ptr, 1);
         }
         if profile.tls.alps_enabled {
-            // Chrome 134 ALPS H2 settings:
+            // Chrome 134 ALPS H2 settings payload:
             // ID 1: 65536, ID 2: 0, ID 4: 6291456, ID 6: 262144
             let alps_data: [u8; 24] = [
                 0, 1, 0, 1, 0, 0, 0, 2, 0, 0, 0, 0, 0, 4, 0, 96, 0, 0, 0, 6, 0, 4, 0, 0,

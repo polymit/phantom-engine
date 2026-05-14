@@ -64,7 +64,7 @@ Most agent "browser tools" are thin wrappers around screenshots or raw HTML. Pha
 - **Two-tier JS execution**: QuickJS for fast stateless evaluation, V8/Deno Core for heavy stateful work.
 - **Full session persistence**: Cookies, localStorage, IndexedDB, and a Cache API — all on disk per session.
 - **Session lifecycle**: Suspend, resume, and clone sessions (copy-on-write) without reloading.
-- **Stealth networking**: All traffic goes through [Quik](quik/), a proprietary transport engine with Chrome 134 TLS and HTTP/2 fingerprint parity.
+- **Stealth networking**: All traffic goes through [http-quik](https://github.com/polymit/quik), a proprietary transport engine with Chrome 134 TLS and HTTP/2 fingerprint parity.
 
 ---
 
@@ -141,7 +141,6 @@ All configuration is via environment variables (loaded from `.env`).
 ```
 phantom-mcp             JSON-RPC server + Stdio transport, auth, metrics
 ├── phantom-net          Navigation orchestration and protocol negotiation
-├── quik                 Chrome 134 transport engine (BoringSSL, TLS/H2 parity)
 ├── phantom-core         HTML parse → CSS cascade → Taffy layout → visibility
 ├── phantom-js           QuickJS (Tier 1) + V8/Deno (Tier 2) runtime pools
 ├── phantom-serializer   CCT serialization, delta diffs, selective mode
@@ -150,6 +149,9 @@ phantom-mcp             JSON-RPC server + Stdio transport, auth, metrics
 ├── phantom-anti-detect  Browser persona pool, GPU profiles, timing
 └── phantom-cli          Native CLI for management and debugging
 ```
+
+> [!NOTE]
+> **Transport Layer**: High-fidelity Chrome transport is handled by the standalone [http-quik](https://github.com/polymit/quik) engine. This decoupling ensures that the core engine remains focused on DOM/JS execution while benefiting from bit-perfect network identity parity.
 
 ---
 

@@ -65,11 +65,11 @@ A **circuit breaker** (`phantom-js/src/circuit_breaker.rs`) sits in front of bot
 
 JavaScript shims (`phantom-js/js/`) polyfill browser APIs that headless environments lack: `EventTarget`, `Location`, `MutationObserver`, `fetch`, and various `window.*` properties.
 
-### Network layer (`phantom-net/` + `quik/`)
+### Network layer (`phantom-net/` + `http-quik`)
 
-HTTP is handled by Quik — a proprietary, high-fidelity transport engine built on BoringSSL. This is intentional and non-negotiable. Quik achieves bit-perfect parity with Chrome 134 across TLS handshakes (JA4 signatures), HTTP/2 frame signaling (SETTINGS, WINDOW_UPDATE, pseudo-header ordering), and HPACK compression sensitivity. This makes Phantom Engine's network requests indistinguishable from a real browser to bot-detection systems. `reqwest`, `hyper-rustls`, `native-tls`, and `wreq` are explicitly banned in `deny.toml` because they produce detectable TLS fingerprints.
+HTTP is handled by [http-quik](https://github.com/polymit/quik) — a proprietary, high-fidelity transport engine built on BoringSSL. This is intentional and non-negotiable. http-quik achieves bit-perfect parity with Chrome 134 across TLS handshakes (JA4 signatures), HTTP/2 frame signaling (SETTINGS, WINDOW_UPDATE, pseudo-header ordering), and HPACK compression sensitivity. This makes Phantom Engine's network requests indistinguishable from a real browser to bot-detection systems. `reqwest`, `hyper-rustls`, `native-tls`, and `wreq` are explicitly banned in `deny.toml` because they produce detectable TLS fingerprints.
 
-The `SmartNetworkClient` in `phantom-net` orchestrates navigation on top of Quik, handling redirect chains, `Alt-Svc` upgrades, and per-persona client construction so TLS fingerprints stay consistent with the JS-level `User-Agent`.
+The `SmartNetworkClient` in `phantom-net` orchestrates navigation on top of http-quik, handling redirect chains, `Alt-Svc` upgrades, and per-persona client construction so TLS fingerprints stay consistent with the JS-level `User-Agent`.
 
 ### Anti-detection (`phantom-anti-detect/`)
 

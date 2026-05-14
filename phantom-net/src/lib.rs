@@ -2,7 +2,7 @@
 //
 // This crate provides high-level network orchestration for the Phantom Engine,
 // managing the complex lifecycle of browser-identical navigations. It serves
-// as the primary interface between the engine core and the specialized `quik`
+// as the primary interface between the engine core and the specialized `http-quik`
 // transport layer.
 //
 // ## Technical Architecture
@@ -137,7 +137,7 @@ impl SmartNetworkClient {
         // success rate against Akamai's TLS-fingerprint active probes.
         let profile = match persona.chrome_version {
             ChromeProfile::Chrome133 | ChromeProfile::Chrome134 => {
-                quik::profile::chrome_134::profile(quik::Platform::MacOsArm)
+                http_quik::profile::chrome_134::profile(http_quik::Platform::MacOsArm)
             }
         };
 
@@ -266,7 +266,7 @@ impl SmartNetworkClient {
         let parsed_url = Url::parse(url).map_err(|e| PhantomNetError::InvalidUrl(e.to_string()))?;
 
         // Primary transport execution via Quik. This handles TLS/H2 fingerprinting.
-        // Technical Note: quik::Client handles connection pooling internally;
+        // Technical Note: http_quik::Client handles connection pooling internally;
         // fetch() here manages the orchestration of that data.
         let res = self
             .client
@@ -308,7 +308,7 @@ impl SmartNetworkClient {
         }
 
         // Aggregate body bytes. Response decompression (gzip/br/zstd) is handled
-        // transparently by the quik::Response layer via async-compression.
+        // transparently by the http_quik::Response layer via async-compression.
         let body = res
             .bytes()
             .await
@@ -358,7 +358,7 @@ mod tests {
 
     // **Why this test is necessary**:
     // Most servers do not advertise Alt-Svc. We must ensure that the orchestrator
-    // consistently defaults to the high-stealth HTTP/2 (quik) transport to
+    // consistently defaults to the high-stealth HTTP/2 (http-quik) transport to
     // maintain the browser-identical identity without leaking protocol-agnostic behavior.
     #[test]
     fn unknown_authority_defaults_to_h2() {

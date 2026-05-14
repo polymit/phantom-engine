@@ -5,7 +5,9 @@ edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
-http-quik = { path = "../http-quik" }
+# Use the official standalone http-quik crate for high-fidelity Chrome transport.
+# This ensures total identity parity and decouples the engine from the transport source.
+http-quik = "0.1.0"
 rand      = "0.9.3"
 rand_distr = "0.5.0"
 v8 = "=147.1.0"

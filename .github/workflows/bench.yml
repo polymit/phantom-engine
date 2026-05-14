@@ -55,15 +55,19 @@ jobs:
         with:
           tool: cargo
           output-file-path: bench_output.txt
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          # Use the cross-repo PAT secret
+          github-token: ${{ secrets.METRICS_DEPLOY_TOKEN }}
+          gh-repository: github.com/polymit/phantom-docs
           auto-push: true
           gh-pages-branch: main
           name: "Phantom Engine Performance Firewall"
-          skip-fetch-gh-pages: true
+          # Set to false to ensure we sync with the external repo history
+          skip-fetch-gh-pages: false
           alert-threshold: "110%"
           comment-on-alert: true
           fail-on-alert: false
-          benchmark-data-dir-path: docs/benchmarks
+          # Store in the root of the phantom-docs repository
+          benchmark-data-dir-path: benchmarks
       - name: Print performance goal checklist
         run: |
           echo "=== Performance Goals Check ==="

@@ -40,3 +40,6 @@ phantom-mcp/storage/
 .phantom-fuzzer/
 
 
+# Agent and scratch data
+scratch/
+.agents/

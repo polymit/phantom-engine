@@ -20,7 +20,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use std::time::Instant;
 
-use quik::Client;
+use http_quik::Client;
 use url::Url;
 
 pub mod navigate;

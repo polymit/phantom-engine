@@ -11,7 +11,7 @@ members = [
     "phantom-anti-detect",
     "phantom-cli",
     "phantom-fuzzer",
-    "quik"
+    "http-quik"
 ]
 
 [workspace.dependencies]

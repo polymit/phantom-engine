@@ -5,7 +5,7 @@ edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
-quik = { path = "../quik" }
+http-quik = { path = "../http-quik" }
 rand      = "0.9.3"
 rand_distr = "0.5.0"
 v8 = "=147.1.0"

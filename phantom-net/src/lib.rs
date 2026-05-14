@@ -131,13 +131,25 @@ impl SmartNetworkClient {
     pub fn with_persona(persona: &phantom_anti_detect::Persona) -> Self {
         use phantom_anti_detect::ChromeProfile;
 
-        // Resolve the transport profile based on the engine's persona configuration.
-        // AI/Developer Note: We consolidate on the Chrome 134 profile even for 133
-        // because 134 represents the current 'Stable' baseline with the highest
-        // success rate against Akamai's TLS-fingerprint active probes.
+        // Determine the low-level transport platform based on the persona's identity.
+        // This ensures the TLS/H2 handshake matches the User-Agent's OS/Arch.
+        let quik_platform = match (
+            persona.ua_platform.as_str(),
+            persona.ua_architecture.as_str(),
+        ) {
+            ("Windows", "x86") => http_quik::Platform::WindowsX64,
+            ("macOS", "arm") => http_quik::Platform::MacOsArm,
+            ("macOS", "x86") => http_quik::Platform::MacOsX86,
+            ("Linux", "x86") => http_quik::Platform::LinuxX64,
+            // Safety Fallback: Default to MacOsArm for unknown combinations.
+            _ => http_quik::Platform::MacOsArm,
+        };
+
+        // Resolve the transport profile. http-quik 0.1.2 handles OS-specific
+        // quirks (like ALPS payloads for Windows) automatically based on the platform.
         let profile = match persona.chrome_version {
             ChromeProfile::Chrome133 | ChromeProfile::Chrome134 => {
-                http_quik::profile::chrome_134::profile(http_quik::Platform::MacOsArm)
+                http_quik::profile::chrome_134::profile(quik_platform)
             }
         };
 

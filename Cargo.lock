@@ -1576,9 +1576,9 @@ dependencies = [
 
 [[package]]
 name = "http-quik"
-version = "0.1.0"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "33c6393db73543a4d51e376c7764d97561969bd8a8e4470c1b735baa420c335c"
+checksum = "9b729989bbe7c7c079f97356d5b14046eb7de9cfab571eecfd1ce89da6e85fcc"
 dependencies = [
  "boring",
  "boring-sys",

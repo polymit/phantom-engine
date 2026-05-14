@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["Platform","PseudoOrder"],"mod":["chrome_134"],"struct":["ChromeProfile","HeaderProfile","HeadersPriority","Http2Profile","SettingsFrame","TlsProfile"],"type":["TlsVersion"]};

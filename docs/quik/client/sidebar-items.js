@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["Proxy"],"fn":["connect"],"struct":["Client","ClientBuilder","QuikConnection","Response"]};

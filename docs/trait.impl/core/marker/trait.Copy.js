@@ -1,9 +1,0 @@
-(function() {
-    const implementors = Object.fromEntries([["quik",[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/marker/trait.Copy.html\" title=\"trait core::marker::Copy\">Copy</a> for <a class=\"enum\" href=\"quik/profile/enum.Platform.html\" title=\"enum quik::profile::Platform\">Platform</a>",0],["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/marker/trait.Copy.html\" title=\"trait core::marker::Copy\">Copy</a> for <a class=\"enum\" href=\"quik/profile/enum.PseudoOrder.html\" title=\"enum quik::profile::PseudoOrder\">PseudoOrder</a>",0],["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/marker/trait.Copy.html\" title=\"trait core::marker::Copy\">Copy</a> for <a class=\"struct\" href=\"quik/profile/struct.HeadersPriority.html\" title=\"struct quik::profile::HeadersPriority\">HeadersPriority</a>",0],["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/marker/trait.Copy.html\" title=\"trait core::marker::Copy\">Copy</a> for <a class=\"struct\" href=\"quik/profile/struct.Http2Profile.html\" title=\"struct quik::profile::Http2Profile\">Http2Profile</a>",0],["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/marker/trait.Copy.html\" title=\"trait core::marker::Copy\">Copy</a> for <a class=\"struct\" href=\"quik/profile/struct.SettingsFrame.html\" title=\"struct quik::profile::SettingsFrame\">SettingsFrame</a>",0],["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/marker/trait.Copy.html\" title=\"trait core::marker::Copy\">Copy</a> for <a class=\"struct\" href=\"quik/profile/struct.TlsProfile.html\" title=\"struct quik::profile::TlsProfile\">TlsProfile</a>",0]]]]);
-    if (window.register_implementors) {
-        window.register_implementors(implementors);
-    } else {
-        window.pending_implementors = implementors;
-    }
-})()
-//{"start":59,"fragment_lengths":[1657]}

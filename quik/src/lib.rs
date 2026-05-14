@@ -1,6 +1,6 @@
-//! # Quik: High-Fidelity stealth transport engine
+//! # http-quik: High-Fidelity stealth transport engine
 //!
-//! `quik` is a specialized HTTP transport library designed for absolute network identity parity
+//! `http-quik` is a specialized HTTP transport library designed for absolute network identity parity
 //! with Google Chrome. It provides low-level control over the entire protocol stack—from TLS
 //! handshakes to HTTP/2 frame signaling—to ensure that every network interaction is
 //! indistinguishable from a real browser.
@@ -8,13 +8,13 @@
 //! This crate is a core component of the [Phantom Engine](https://github.com/polymit/phantom-engine) 
 //! ecosystem and provides the high-stealth transport layer required for modern agentic navigation.
 //!
-//! ## Why Quik?
+//! ## Why http-quik?
 //! Modern Anti-Bot systems (like Cloudflare, Akamai, and DataDome) use "Passive Fingerprinting"
 //! to identify automated traffic. They inspect:
 //! 1. **TLS Fingerprint (JA3/JA4)**: The order of cipher suites, extensions, and elliptic curves.
 //! 2. **HTTP/2 Fingerprint (Akamai)**: The SETTINGS frame values, the order of pseudo-headers, and stream priority.
 //!
-//! `quik` solves this by using a custom BoringSSL stack and a specialized HTTP/2 builder to replicate
+//! `http-quik` solves this by using a custom BoringSSL stack and a specialized HTTP/2 builder to replicate
 //! these fingerprints with bit-perfect accuracy.
 //!
 //! ## Core Features
@@ -26,13 +26,13 @@
 //! ## Getting Started
 //!
 //! ```rust
-//! use quik::{Client, ChromeProfile, Platform};
+//! use http_quik::{Client, ChromeProfile, Platform};
 //!
 //! #[tokio::main]
-//! async fn main() -> Result<(), quik::Error> {
+//! async fn main() -> Result<(), http_quik::Error> {
 //!     // Create a client with a macOS Chrome 134 identity
 //!     let client = Client::builder()
-//!         .profile(quik::profile::chrome_134::profile(Platform::MacOsArm))
+//!         .profile(http_quik::profile::chrome_134::profile(Platform::MacOsArm))
 //!         .build()?;
 //!
 //!     // Execute a stealth request

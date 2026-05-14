@@ -1,12 +1,12 @@
 [package]
-name        = "quik"
+name        = "http-quik"
 version     = "0.1.0"
 edition     = "2021"
 license     = "Apache-2.0"
 description = "High-fidelity, stealth-optimized HTTP transport engine for Chrome 134 identity parity."
 repository  = "https://github.com/polymit/quik"
 homepage    = "https://github.com/polymit/quik"
-documentation = "https://docs.rs/quik"
+documentation = "https://docs.rs/http-quik"
 readme      = "README.md"
 keywords    = ["http2", "boringssl", "stealth", "fingerprinting", "tls"]
 categories  = ["network-programming", "web-programming"]

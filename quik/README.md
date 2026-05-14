@@ -1,16 +1,16 @@
-# Quik: High-Fidelity Stealth Transport Engine
+# http-quik: High-Fidelity Stealth Transport Engine
 
-[![Crates.io](https://img.shields.io/crates/v/quik.svg)](https://crates.io/crates/quik)
-[![Docs.rs](https://docs.rs/quik/badge.svg)](https://docs.rs/quik)
+[![Crates.io](https://img.shields.io/crates/v/http-quik.svg)](https://crates.io/crates/http-quik)
+[![Docs.rs](https://docs.rs/http-quik/badge.svg)](https://docs.rs/http-quik)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE.md)
 
-`quik` is a specialized HTTP transport library built in Rust, designed for absolute network identity parity with Google Chrome. It provides low-level control over the entire protocol stack—from TLS handshakes to HTTP/2 frame signaling—to ensure that every network interaction is indistinguishable from a real browser.
+`http-quik` is a specialized HTTP transport library built in Rust, designed for absolute network identity parity with Google Chrome. It provides low-level control over the entire protocol stack—from TLS handshakes to HTTP/2 frame signaling—to ensure that every network interaction is indistinguishable from a real browser.
 
 This crate is a core component of the [Phantom Engine](https://github.com/polymit/phantom-engine) ecosystem.
 
-## Why Quik?
+## Why http-quik?
 
-Modern anti-bot systems (like Cloudflare, Akamai, and DataDome) use passive fingerprinting to identify automated traffic. `quik` bypasses these systems by replicating:
+Modern anti-bot systems (like Cloudflare, Akamai, and DataDome) use passive fingerprinting to identify automated traffic. `http-quik` bypasses these systems by replicating:
 
 - **TLS Fingerprints (JA3/JA4)**: Replicates Chrome's ClientHello using a custom BoringSSL stack, including GREASE, extension permutation, and post-quantum key shares.
 - **HTTP/2 Fingerprints (Akamai)**: Replicates Chromium's SETTINGS frame order, pseudo-header sequences, and connection window increments.
@@ -25,20 +25,20 @@ Modern anti-bot systems (like Cloudflare, Akamai, and DataDome) use passive fing
 
 ## Quick Start
 
-Add `quik` to your `Cargo.toml`:
+Add `http-quik` to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-quik = "0.1"
+http-quik = "0.1"
 ```
 
 Execute a stealth request:
 
 ```rust
-use quik::{Client, Platform};
+use http_quik::{Client, Platform};
 
 #[tokio::main]
-async fn main() -> Result<(), quik::Error> {
+async fn main() -> Result<(), http_quik::Error> {
     // Create a client with a macOS Chrome 134 identity
     let client = Client::new();
 

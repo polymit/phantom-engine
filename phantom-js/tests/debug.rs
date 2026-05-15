@@ -3,7 +3,7 @@ use phantom_core::dom::DomTree;
 use phantom_js::tier1::session::Tier1Session;
 #[tokio::main]
 async fn main() {
-    let mut session = Tier1Session::new().await.unwrap();
+    let mut session = Tier1Session::new(None).await.unwrap();
     let tree = DomTree::new();
     session.attach_dom(tree).await;
     let res = session

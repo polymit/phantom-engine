@@ -104,4 +104,48 @@ impl DomNode {
             aria_label: None,
         }
     }
+
+    pub fn is_interactive(&self) -> bool {
+        if !self.event_listeners.is_empty() {
+            return true;
+        }
+        if let NodeData::Element { tag_name, .. } = &self.data {
+            let t = tag_name.to_lowercase();
+            if matches!(
+                t.as_str(),
+                "button" | "input" | "a" | "select" | "textarea" | "form"
+            ) {
+                return true;
+            }
+        }
+        if let Some(role) = &self.aria_role {
+            return matches!(role, AriaRole::Button | AriaRole::Link | AriaRole::Input);
+        }
+        false
+    }
+
+    pub fn is_landmark(&self) -> bool {
+        if let NodeData::Element { tag_name, .. } = &self.data {
+            let t = tag_name.to_lowercase();
+            if matches!(
+                t.as_str(),
+                "main" | "nav" | "header" | "footer" | "aside" | "form" | "section"
+            ) {
+                return true;
+            }
+        }
+        if let Some(role) = &self.aria_role {
+            return matches!(
+                role,
+                AriaRole::Main
+                    | AriaRole::Navigation
+                    | AriaRole::Header
+                    | AriaRole::Footer
+                    | AriaRole::Aside
+                    | AriaRole::Form
+                    | AriaRole::Search
+            );
+        }
+        false
+    }
 }

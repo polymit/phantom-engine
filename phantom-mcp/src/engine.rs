@@ -59,6 +59,8 @@ pub struct SessionPage {
     pub status: u16,
     pub viewport_width: f32,
     pub viewport_height: f32,
+    pub scroll_x: f32,
+    pub scroll_y: f32,
 }
 
 impl SessionPage {
@@ -79,6 +81,8 @@ impl SessionPage {
             status,
             viewport_width,
             viewport_height,
+            scroll_x: 0.0,
+            scroll_y: 0.0,
         }
     }
 
@@ -88,6 +92,8 @@ impl SessionPage {
             &self.url,
             self.viewport_width,
             self.viewport_height,
+            self.scroll_x,
+            self.scroll_y,
         )
         .ok()
     }
@@ -191,7 +197,7 @@ impl EngineAdapter {
         let broker = SessionBroker::new();
 
         // Tier1Pool::new() already wraps in Arc internally.
-        let tier1 = Tier1Pool::new(t1_max, t1_pre).await;
+        let tier1 = Tier1Pool::new(t1_max, t1_pre, Some(budget.max_heap_bytes)).await;
 
         // Tier2Pool::new() returns Self — we wrap it ourselves.
         let tier2 = Arc::new(Tier2Pool::new(t2_max, t2_pre, Some(budget.max_heap_bytes)));
@@ -409,6 +415,24 @@ impl EngineAdapter {
         .flatten()?;
 
         Some((parsed, page.url, page.viewport_width, page.viewport_height))
+    }
+
+    /// Update the scroll position of the currently active page.
+    pub fn update_scroll(&self, x: f32, y: f32) -> bool {
+        let key = *self.active_page_key.lock();
+        let mut store = self.page_store.lock();
+        let page = match key {
+            Some(tab_id) => store.get_mut(&tab_id),
+            None => store.get_mut(&uuid::Uuid::nil()),
+        };
+
+        if let Some(sp) = page {
+            sp.scroll_x = x;
+            sp.scroll_y = y;
+            true
+        } else {
+            false
+        }
     }
 
     /// Get the URL of the currently stored page.

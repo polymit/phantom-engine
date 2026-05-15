@@ -53,7 +53,7 @@ async fn phase2_full_pipeline_tier1() {
     // STEP 2: Create Tier 1 QuickJS session
     // ═══════════════════════════════════════════════════════
     let session_start = Instant::now();
-    let mut session = Tier1Session::new()
+    let mut session = Tier1Session::new(None)
         .await
         .expect("Tier1Session must create successfully");
     let session_elapsed = session_start.elapsed();

@@ -12,16 +12,22 @@ pub struct Tier1Pool {
     live_count: AtomicUsize,
     max_count: usize,
     circuit_breaker: CircuitBreaker,
+    max_heap_bytes: Option<usize>,
 }
 
 impl Tier1Pool {
     /// Create a pool and pre-warm `pre_warm_count` sessions immediately.
     /// Pre-warm is a one-time constructor warm-up only.
-    pub async fn new(max_count: usize, pre_warm_count: usize) -> Arc<Self> {
+    pub async fn new(
+        max_count: usize,
+        pre_warm_count: usize,
+        max_heap_bytes: Option<usize>,
+    ) -> Arc<Self> {
         let pool = Arc::new(Self {
             live_count: AtomicUsize::new(0),
             max_count,
             circuit_breaker: CircuitBreaker::new(),
+            max_heap_bytes,
         });
         pool.pre_warm(pre_warm_count).await;
         pool
@@ -34,7 +40,7 @@ impl Tier1Pool {
     /// cross-thread queue because QuickJS runtime objects are thread-affine.
     async fn pre_warm(&self, count: usize) {
         for _ in 0..count.min(self.max_count) {
-            match Tier1Session::new().await {
+            match Tier1Session::new(self.max_heap_bytes).await {
                 Ok(session) => session.destroy(),
                 Err(e) => tracing::warn!("Tier1Pool pre-warm skipped: {:?}", e),
             }
@@ -64,7 +70,7 @@ impl Tier1Pool {
                 });
             }
 
-            let session = match Tier1Session::new().await {
+            let session = match Tier1Session::new(self.max_heap_bytes).await {
                 Ok(session) => session,
                 Err(err) => {
                     self.live_count.fetch_sub(1, Ordering::AcqRel);

@@ -63,11 +63,15 @@ impl HeadlessSerializer {
         let viewport = if config.mode == SerialiserMode::Full {
             ViewportBounds::new(0.0, 0.0, config.viewport_width, f32::MAX)
         } else {
+            // Add 2000px padding above/below for context retention in Selective mode
+            let padding = 2000.0;
+            let padded_y = (config.scroll_y - padding).max(0.0);
+            let padded_height = config.viewport_height + (padding * 2.0);
             ViewportBounds::new(
                 config.scroll_x,
-                config.scroll_y,
+                padded_y,
                 config.viewport_width,
-                config.viewport_height,
+                padded_height,
             )
         };
 
@@ -115,18 +119,9 @@ impl HeadlessSerializer {
                     continue;
                 };
                 let cct_role = CctAriaRole::from_aria_role(&dom_node.aria_role);
-                let is_interactive = semantic.events.click
-                    || semantic.events.input
-                    || semantic.events.focus
-                    || matches!(dom_node.data, NodeData::Element{ ref tag_name, .. } if is_interactive_tag(tag_name));
-                let mut is_landmark = false;
-                if let NodeData::Element { tag_name, .. } = &dom_node.data {
-                    if LandmarkType::from_tag(tag_name.as_str()).is_some()
-                        || LandmarkType::from_cct_role(&cct_role).is_some()
-                    {
-                        is_landmark = true;
-                    }
-                }
+                let is_interactive = dom_node.is_interactive();
+                let is_landmark = dom_node.is_landmark();
+
                 let relevance_score = if actual_mode == SerialiserMode::Selective {
                     compute_relevance(dom_node, semantic, hint)
                 } else {
@@ -255,12 +250,4 @@ impl HeadlessSerializer {
         BUFFER_POOL.release(buffer);
         final_string
     }
-}
-
-fn is_interactive_tag(tag: &str) -> bool {
-    let t = tag.to_lowercase();
-    matches!(
-        t.as_str(),
-        "button" | "input" | "a" | "select" | "textarea" | "form"
-    )
 }

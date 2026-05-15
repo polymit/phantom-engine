@@ -9,7 +9,7 @@ async fn eval(s: &Tier1Session, code: &str) -> String {
 
 /// Stand up a Tier1Session with full shims loaded
 async fn session_with_shims() -> Tier1Session {
-    let mut session = Tier1Session::new().await.unwrap();
+    let mut session = Tier1Session::new(None).await.unwrap();
     let tree = DomTree::new();
     session.attach_dom(tree).await;
     session

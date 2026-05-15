@@ -33,7 +33,7 @@ fn build_runtime() -> tokio::runtime::Runtime {
 fn bench_quickjs_eval_simple(c: &mut Criterion) {
     let runtime = build_runtime();
     let session = runtime
-        .block_on(Tier1Session::new())
+        .block_on(Tier1Session::new(None))
         .expect("tier1 session should initialise");
 
     let start = std::time::Instant::now();
@@ -91,7 +91,7 @@ fn bench_v8_eval_simple(c: &mut Criterion) {
 
 fn bench_pool_acquire_tier1(c: &mut Criterion) {
     let runtime = build_runtime();
-    let pool = runtime.block_on(Tier1Pool::new(32, 0));
+    let pool = runtime.block_on(Tier1Pool::new(32, 0, None));
 
     let start = std::time::Instant::now();
     let warm = runtime

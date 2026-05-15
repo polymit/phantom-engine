@@ -35,6 +35,11 @@ pub fn compute_relevance(node: &DomNode, semantic: &SemanticInfo, task_hint: &st
         }
     }
 
+    // Baseline score for any node with text to ensure context retention
+    if !semantic.visible_text.trim().is_empty() {
+        score += 0.1;
+    }
+
     score.min(1.0)
 }
 
@@ -47,5 +52,6 @@ pub fn should_include_in_selective(
     if is_interactive || is_landmark {
         return true;
     }
-    relevance > 0.4
+    // Lowered threshold from 0.4 to 0.2
+    relevance > 0.2
 }

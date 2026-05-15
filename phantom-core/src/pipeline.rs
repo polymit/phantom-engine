@@ -17,6 +17,8 @@ pub struct ParsedPage {
     pub tree: DomTree,
     pub layout_map: LayoutMap,
     pub url: String,
+    pub total_width: f32,
+    pub total_height: f32,
 }
 
 /// Parses `html` into a DOM tree, applies CSS cascade, computes layout, and
@@ -45,7 +47,7 @@ pub fn process_html(
         apply_css_pass(&mut tree, root, None, false, Some(&stylesheet));
     }
 
-    rebuild_page_from_tree(tree, url, viewport_width, viewport_height)
+    rebuild_page_from_tree(tree, url, viewport_width, viewport_height, 0.0, 0.0)
 }
 
 fn collect_stylesheets(tree: &DomTree, node_id: NodeId, stylesheet: &mut Stylesheet) {
@@ -84,6 +86,8 @@ pub fn rebuild_page_from_tree(
     url: &str,
     viewport_width: f32,
     viewport_height: f32,
+    scroll_x: f32,
+    scroll_y: f32,
 ) -> Result<ParsedPage, CoreError> {
     // Pass 2: Layout computation
     let mut layout = LayoutEngine::new();
@@ -105,7 +109,7 @@ pub fn rebuild_page_from_tree(
 
     // Pass 3: Final visibility state using CSS + layout bounds.
     if let Some(root) = tree.document_root {
-        let viewport = ViewportBounds::new(0.0, 0.0, viewport_width, viewport_height);
+        let viewport = ViewportBounds::new(scroll_x, scroll_y, viewport_width, viewport_height);
         apply_layout_visibility_pass(&mut tree, &layout, &viewport, root, (0.0, 0.0), false);
     }
 
@@ -113,10 +117,19 @@ pub fn rebuild_page_from_tree(
     // This allows ParsedPage to be Send + Sync and moved across threads.
     let layout_map = layout.compute_absolute_map(&tree);
 
+    let mut total_width: f32 = viewport_width;
+    let mut total_height: f32 = viewport_height;
+    for bounds in layout_map.values() {
+        total_width = total_width.max(bounds.x + bounds.width);
+        total_height = total_height.max(bounds.y + bounds.height);
+    }
+
     Ok(ParsedPage {
         tree,
         layout_map,
         url: url.to_string(),
+        total_width,
+        total_height,
     })
 }
 

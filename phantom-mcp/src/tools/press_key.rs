@@ -28,16 +28,60 @@ pub async fn handle_press_key(
         ));
     }
 
-    let tree = {
-        let page = adapter.get_page().await.ok_or_else(|| {
+    let (tree, delta_node_id, current_sx, current_sy, v_height, t_height) = {
+        let key_active = adapter.current_page_key();
+        let page_data = {
+            let store = adapter.page_store.lock();
+            store.get(&key_active).cloned()
+        }
+        .ok_or_else(|| {
             (
                 StatusCode::BAD_REQUEST,
                 json!({ "error": { "code": "no_page_loaded", "message": "no page loaded" } }),
             )
         })?;
-        page.tree.clone()
+
+        let pp = page_data.to_parsed_page().ok_or_else(|| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                json!({ "error": { "code": "pipeline_error", "message": "failed to layout page" } }),
+            )
+        })?;
+
+        (
+            pp.tree.clone(),
+            pp.tree.document_root,
+            page_data.scroll_x,
+            page_data.scroll_y,
+            page_data.viewport_height,
+            pp.total_height,
+        )
     };
-    let delta_node_id = tree.document_root;
+
+    // Keyboard-driven scroll logic
+    let mut scroll_y_delta = 0.0;
+    let mut target_scroll_y: Option<f32> = None;
+
+    match key.as_str() {
+        "PageDown" | " " => scroll_y_delta = v_height * 0.9,
+        "PageUp" => scroll_y_delta = -v_height * 0.9,
+        "ArrowDown" => scroll_y_delta = 100.0,
+        "ArrowUp" => scroll_y_delta = -100.0,
+        "Home" => target_scroll_y = Some(0.0),
+        "End" => target_scroll_y = Some(t_height - v_height),
+        _ => {}
+    }
+
+    if scroll_y_delta != 0.0 || target_scroll_y.is_some() {
+        let new_sy = if let Some(target) = target_scroll_y {
+            target
+        } else {
+            current_sy + scroll_y_delta
+        };
+        let clamped_sy = new_sy.clamp(0.0, (t_height - v_height).max(0.0));
+        adapter.update_scroll(current_sx, clamped_sy);
+        tracing::info!(key = %key, scroll_y = clamped_sy, "keyboard-driven scroll");
+    }
 
     let mut session = adapter.tier1.acquire().await.map_err(|_| {
         (

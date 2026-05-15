@@ -134,7 +134,7 @@ async fn tier1_pool_acquire_and_release() {
     use phantom_js::tier1::pool::Tier1Pool;
 
     // Small pool so the test stays fast
-    let pool = Tier1Pool::new(5, 2).await;
+    let pool = Tier1Pool::new(5, 2, None).await;
 
     let session = pool
         .acquire()
@@ -164,7 +164,7 @@ async fn tier1_pool_hard_cap_under_concurrent_acquire() {
     use phantom_js::error::PhantomJsError;
     use phantom_js::tier1::pool::Tier1Pool;
 
-    let pool = Tier1Pool::new(2, 0).await;
+    let pool = Tier1Pool::new(2, 0, None).await;
     let (r1, r2, r3, r4) = tokio::join!(
         pool.acquire(),
         pool.acquire(),

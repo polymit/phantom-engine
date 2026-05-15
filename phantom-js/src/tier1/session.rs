@@ -248,14 +248,15 @@ impl Tier1Session {
     ///
     /// Uses AsyncRuntime + AsyncContext — NOT sync Runtime/Context.
     /// All JS execution goes through async_with! macro.
-    pub async fn new() -> Result<Self, PhantomJsError> {
+    pub async fn new(max_heap_bytes: Option<usize>) -> Result<Self, PhantomJsError> {
         let runtime =
             AsyncRuntime::new().map_err(|e| PhantomJsError::QuickJsRuntime(e.to_string()))?;
 
-        // 50 MB memory limit
+        // Apply dynamic memory limit or fallback to 256 MB.
         // This is a NOOP if rust-alloc feature is enabled.
         // Our Cargo.toml intentionally omits rust-alloc. This works.
-        runtime.set_memory_limit(50 * 1024 * 1024).await;
+        let limit = max_heap_bytes.unwrap_or(256 * 1024 * 1024);
+        runtime.set_memory_limit(limit).await;
 
         // 1 MB stack limit
         runtime.set_max_stack_size(1024 * 1024).await;

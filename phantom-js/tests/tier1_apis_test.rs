@@ -31,7 +31,7 @@ async fn install_timers(session: &Tier1Session, session_id: u64, cancelled: Arc<
 
 #[tokio::test]
 async fn test_set_timeout_fires() {
-    let session = Tier1Session::new().await.unwrap();
+    let session = Tier1Session::new(None).await.unwrap();
 
     // Set a global flag in JS, then use setTimeout to flip it
     session
@@ -66,7 +66,7 @@ async fn test_set_timeout_fires() {
 
 #[tokio::test]
 async fn test_set_timeout_without_localset_fires() {
-    let session = Tier1Session::new().await.unwrap();
+    let session = Tier1Session::new(None).await.unwrap();
 
     session
         .eval("globalThis.__timer_fired_no_local = false;")
@@ -98,7 +98,7 @@ async fn test_set_timeout_without_localset_fires() {
 
 #[tokio::test]
 async fn test_set_interval_repeats_and_stops() {
-    let session = Tier1Session::new().await.unwrap();
+    let session = Tier1Session::new(None).await.unwrap();
 
     let session_id = next_session_id();
     let cancelled = Arc::new(AtomicBool::new(false));
@@ -157,7 +157,7 @@ async fn test_set_interval_repeats_and_stops() {
 async fn test_mutation_bridge_dispatches() {
     use phantom_js::tier1::apis::mutation_observer::MutationBridge;
 
-    let session = Tier1Session::new().await.unwrap();
+    let session = Tier1Session::new(None).await.unwrap();
 
     // Set up a MutationObserver in JS
     session
@@ -193,7 +193,7 @@ async fn test_mutation_bridge_dispatches() {
 
 #[tokio::test]
 async fn test_fetch_stub_exists() {
-    let session = Tier1Session::new().await.unwrap();
+    let session = Tier1Session::new(None).await.unwrap();
 
     let ctx = session.context.clone();
     rquickjs::async_with!(ctx => |qjs_ctx| {
@@ -266,7 +266,7 @@ async fn test_fetch_stub_exists() {
 async fn test_session_startup_time() {
     use std::time::Instant;
     let start = Instant::now();
-    let session = phantom_js::tier1::session::Tier1Session::new()
+    let session = phantom_js::tier1::session::Tier1Session::new(None)
         .await
         .unwrap();
     let elapsed = start.elapsed();

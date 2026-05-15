@@ -2,7 +2,7 @@
 #[tokio::test]
 async fn test_tier1_eval_basic_js() {
     phantom_js::init_v8_platform();
-    let session = phantom_js::tier1::session::Tier1Session::new()
+    let session = phantom_js::tier1::session::Tier1Session::new(None)
         .await
         .expect("session creation must not fail");
 
@@ -26,7 +26,7 @@ async fn test_tier1_memory_limit_set() {
     // disabled (rust-alloc bug), session still works but limit is gone.
     // We cannot test the limit without allocating huge amounts of memory,
     // but we can verify the session starts correctly.
-    let session = phantom_js::tier1::session::Tier1Session::new()
+    let session = phantom_js::tier1::session::Tier1Session::new(None)
         .await
         .expect("session must create with memory limit configured");
 
@@ -42,10 +42,10 @@ async fn test_tier1_memory_limit_set() {
 async fn test_tier1_session_isolates_globals() {
     // Two sessions must NOT share JS globals
     // This is the "burn it down" model — D-08
-    let s1 = phantom_js::tier1::session::Tier1Session::new()
+    let s1 = phantom_js::tier1::session::Tier1Session::new(None)
         .await
         .unwrap();
-    let s2 = phantom_js::tier1::session::Tier1Session::new()
+    let s2 = phantom_js::tier1::session::Tier1Session::new(None)
         .await
         .unwrap();
 
@@ -71,7 +71,7 @@ async fn test_tier1_session_isolates_globals() {
 #[tokio::test]
 async fn test_shims_browser_shims_js_syntax() {
     use phantom_js::tier1::session::Tier1Session;
-    let session = Tier1Session::new().await.unwrap();
+    let session = Tier1Session::new(None).await.unwrap();
 
     let persona_init = r#"
         globalThis.__phantom_persona = {
@@ -201,7 +201,7 @@ async fn test_shims_browser_shims_js_syntax() {
 async fn test_audio_noise_uses_distinct_seed_from_canvas_noise() {
     use phantom_js::tier1::session::Tier1Session;
 
-    let session = Tier1Session::new().await.unwrap();
+    let session = Tier1Session::new(None).await.unwrap();
     let init = r#"
         globalThis.window = globalThis;
         globalThis.navigator = {};
@@ -304,7 +304,7 @@ async fn test_element_value_getter_setter_for_form_controls() {
     )
     .expect("html parse must succeed");
 
-    let mut session = Tier1Session::new().await.expect("session must create");
+    let mut session = Tier1Session::new(None).await.expect("session must create");
     session.attach_dom(page.tree).await;
 
     let input_result = session
@@ -353,7 +353,7 @@ async fn test_element_is_content_editable_and_text_content_setter() {
     )
     .expect("html parse must succeed");
 
-    let mut session = Tier1Session::new().await.expect("session must create");
+    let mut session = Tier1Session::new(None).await.expect("session must create");
     session.attach_dom(page.tree).await;
 
     let result = session

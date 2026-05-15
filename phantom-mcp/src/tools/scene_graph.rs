@@ -40,6 +40,10 @@ pub async fn handle_get_scene_graph(
             )
         })?;
 
+        if let (Some(sx), Some(sy)) = (params.scroll_x, params.scroll_y) {
+            adapter.update_scroll(sx, sy);
+        }
+
         let (page, url, viewport_width, viewport_height) =
             adapter.get_page_with_viewport().await.ok_or_else(|| {
                 (
@@ -69,7 +73,7 @@ pub async fn handle_get_scene_graph(
             scroll_y: params.scroll_y.unwrap_or(0.0),
             viewport_width,
             viewport_height,
-            total_height: viewport_height,
+            total_height: page.total_height,
             mode: mode.clone(),
             task_hint: params.task_hint,
         };

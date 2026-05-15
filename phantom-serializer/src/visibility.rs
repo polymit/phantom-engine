@@ -88,8 +88,11 @@ fn process_node_visibility(
 
                 if let Some(bounds) = layout_map.get(&node_id) {
                     let c2 = dom_node.computed_visibility != Visibility::Hidden;
-                    let c4 = bounds.width > 0.0;
-                    let c5 = bounds.height > 0.0;
+                    let is_interactive = dom_node.is_interactive();
+
+                    // Lenient bounds for interactive elements: allow 0x0 if interactive
+                    let c4 = bounds.width > 0.0 || is_interactive;
+                    let c5 = bounds.height > 0.0 || is_interactive;
                     let c6 = bounds.intersects(viewport);
                     (c1 && c2 && c3 && c4 && c5 && c6, hides_children)
                 } else {

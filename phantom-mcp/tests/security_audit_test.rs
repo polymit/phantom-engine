@@ -218,7 +218,7 @@ async fn js_memory_limit_enforced_quickjs() {
 
     let result = tokio::time::timeout(
         Duration::from_secs(11),
-        evaluate::handle_evaluate(&adapter, json!({ "script": "new ArrayBuffer(134217728)" })),
+        evaluate::handle_evaluate(&adapter, json!({ "script": "new ArrayBuffer(536870912)" })), // 512MB allocation
     )
     .await
     .expect("OOM evaluation should finish promptly");

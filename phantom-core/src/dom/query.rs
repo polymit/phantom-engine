@@ -176,10 +176,8 @@ impl<'a> selectors::Element for DomElement<'a> {
                     arena: self.arena,
                 });
             }
-            match node.previous_sibling() {
-                Some(prev) => curr = prev,
-                None => return None,
-            }
+            let prev = node.previous_sibling()?;
+            curr = prev;
         }
     }
 
@@ -193,10 +191,8 @@ impl<'a> selectors::Element for DomElement<'a> {
                     arena: self.arena,
                 });
             }
-            match node.next_sibling() {
-                Some(next) => curr = next,
-                None => return None,
-            }
+            let next = node.next_sibling()?;
+            curr = next;
         }
     }
 

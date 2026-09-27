@@ -37,10 +37,9 @@ async fn run_http() -> Result<(), Box<dyn std::error::Error>> {
     telemetry::init();
 
     let bind_addr = env::var("PHANTOM_BIND_ADDR").unwrap_or_else(|_| "0.0.0.0:8080".to_string());
-    let api_key =
-        env::var("PHANTOM_API_KEY")
-            .ok()
-            .and_then(|v| if v.trim().is_empty() { None } else { Some(v) });
+    let api_key = env::var("PHANTOM_API_KEY")
+        .ok()
+        .filter(|v| !v.trim().is_empty());
 
     let rate_limit = env::var("PHANTOM_RATE_LIMIT")
         .ok()
